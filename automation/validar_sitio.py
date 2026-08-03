@@ -18,6 +18,12 @@ HISTORIC_REQUIRED = {
     "resumen", "implicancia", "estado", "fuente",
 }
 
+VIGENCIA_INSTRUMENT_REQUIRED = {
+    "id", "region", "comuna", "tipo_ipt", "nombre",
+    "estado_alerta", "confianza", "resumen_alerta",
+    "linea_tiempo", "alertas", "mapa",
+}
+
 IPT_CHANGE_REQUIRED = {
     "region", "comuna", "territorio", "tipo_ipt", "acto", "numero",
     "fecha_publicacion", "estado", "resumen", "vigencia", "fuente",
@@ -31,6 +37,16 @@ def load_js_array(path: Path, prefix: str) -> list:
     value = json.loads(raw[len(prefix):-1])
     if not isinstance(value, list):
         raise ValueError(f"La base no es una lista: {path.name}")
+    return value
+
+
+def load_js_object(path: Path, prefix: str) -> dict:
+    raw = path.read_text(encoding="utf-8").strip()
+    if not raw.startswith(prefix) or not raw.endswith(";"):
+        raise ValueError(f"Formato inválido: {path.name}")
+    value = json.loads(raw[len(prefix):-1])
+    if not isinstance(value, dict):
+        raise ValueError(f"La base no es un objeto: {path.name}")
     return value
 
 
@@ -115,9 +131,29 @@ def main() -> int:
                 if report.get(key):
                     validate_file(ROOT / report[key], key)
 
+
+        vigencia = load_js_object(
+            ROOT / "data" / "vigencia_cartografica.js",
+            "window.VIGENCIA_CARTOGRAFICA = ",
+        )
+        if "instrumentos" not in vigencia or not isinstance(vigencia["instrumentos"], list):
+            raise ValueError("La base de vigencia no contiene una lista de instrumentos.")
+
+        for position, instrument in enumerate(vigencia["instrumentos"]):
+            missing = sorted(VIGENCIA_INSTRUMENT_REQUIRED - set(instrument))
+            if missing:
+                raise ValueError(
+                    f"Instrumento cartográfico {position} incompleto: {', '.join(missing)}"
+                )
+
+        for key in ("word_url", "csv_url"):
+            if vigencia.get(key):
+                validate_file(ROOT / vigencia[key], key)
+
         print(
             f"Validación correcta. Diarios: {len(daily)} · "
-            f"IPT: {len(ipt)} · Históricos: {len(historic)}"
+            f"IPT: {len(ipt)} · Históricos: {len(historic)} · "
+            f"Vigencia: {len(vigencia['instrumentos'])}"
         )
         return 0
 

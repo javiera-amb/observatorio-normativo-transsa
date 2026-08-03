@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "instrumentos": [
+    {
+      "id": "comuna-prc-vigente",
+      "region": "Región",
+      "comuna": "Comuna",
+      "tipo_ipt": "PRC",
+      "nombre": "Plan Regulador Comunal",
+      "fecha_instrumento_base": "2007-01-01",
+      "fecha_version_cartografica": "2007-01-01",
+      "fuente_cartografia": "URL oficial de descarga",
+      "archivo_geojson": "cartografia/comuna/prc_vigente.geojson",
+      "campo_zona": "ZONA",
+      "zonas_presentes": [
+        "Z1",
+        "Z2",
+        "Z3"
+      ],
+      "actos_incorporados": [
+        "Decreto 100 2012"
+      ],
+      "actos_no_incorporados": [
+        "Modificación 2018"
+      ],
+      "validacion_espacial": {
+        "estado": "no_ejecutada",
+        "fecha": "",
+        "coincidencia_porcentaje": null,
+        "observacion": ""
+      },
+      "notas": "Ejemplo. Reemplazar por datos reales."
+    }
+  ],
+  "actos_manuales": [
+    {
+      "id": "comuna-modificacion-2018",
+      "region": "Región",
+      "comuna": "Comuna",
+      "tipo_ipt": "PRC",
+      "tipo_acto": "Modificación",
+      "numero": "Decreto 250",
+      "fecha_publicacion": "2018-06-15",
+      "estado": "Vigente",
+      "titulo": "Modificación del PRC",
+      "resumen": "Reemplaza la zonificación del sector indicado.",
+      "fuente": "URL oficial",
+      "requiere_cambio_cartografico": true,
+      "zonas_afectadas": [
+        "Z4"
+      ],
+      "archivo_geojson": "cartografia/comuna/modificacion_2018.geojson",
+      "campo_zona": "ZONA",
+      "zona_esperada": "Z4",
+      "operacion": "reemplazar"
+    }
+  ],
+  "parametros": {
+    "umbral_actualizado": 0.95,
+    "umbral_desactualizado": 0.7,
+    "considerar_actos_en_tramitacion": false
+  }
+}

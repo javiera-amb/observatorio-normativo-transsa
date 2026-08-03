@@ -37,3 +37,14 @@ Lee `CONFIGURACION_AUTOMATICA.md`.
 - Cartografía base: OpenStreetMap.
 - Visualización: marcadores regionales agregados.
 - Fuentes: Diario Oficial, IPT e histórico anual.
+
+
+## Vigencia cartográfica
+
+- Módulo web con línea de tiempo por instrumento.
+- Catálogo: `config/cartografia_ipt.json`.
+- Ejemplo: `config/cartografia_ipt_ejemplo.json`.
+- Base generada: `data/vigencia_cartografica.js`.
+- Script: `automation/actualizar_vigencia_cartografica.py`.
+- Workflow: `.github/workflows/actualizar-vigencia-cartografica.yml`.
+- Comparación espacial opcional mediante GeoJSON y Shapely.

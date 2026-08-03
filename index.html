@@ -36,6 +36,7 @@
       <button class="module-tab" data-module="ipt">Actualizaciones IPT</button>
       <button class="module-tab" data-module="historico">Histórico anual</button>
       <button class="module-tab" data-module="mapa">Mapa territorial</button>
+      <button class="module-tab" data-module="vigencia">Vigencia cartográfica</button>
     </nav>
 
     <span class="private-badge">
@@ -59,11 +60,12 @@
           <button class="secondary-button" data-module-jump="ipt">Ver actualizaciones IPT</button>
           <button class="secondary-button" data-module-jump="historico">Ver histórico 2025</button>
           <button class="secondary-button" data-module-jump="mapa">Ver mapa territorial</button>
+          <button class="secondary-button" data-module-jump="vigencia">Ver vigencia cartográfica</button>
         </div>
       </div>
 
       <aside class="coverage-card">
-        <p class="eyebrow">CUATRO LÍNEAS DE SEGUIMIENTO</p>
+        <p class="eyebrow">CINCO LÍNEAS DE SEGUIMIENTO</p>
         <div class="coverage-row">
           <span class="coverage-number">01</span>
           <div>
@@ -92,6 +94,14 @@
           <div>
             <strong>Mapa territorial</strong>
             <p>Visualización interactiva de cambios por región, comuna, módulo y período.</p>
+          </div>
+        </div>
+
+        <div class="coverage-row">
+          <span class="coverage-number">05</span>
+          <div>
+            <strong>Vigencia cartográfica</strong>
+            <p>Líneas de tiempo por PRC y alertas de actos posiblemente no incorporados en el shape.</p>
           </div>
         </div>
       </aside>
@@ -465,6 +475,130 @@
       </section>
     </section>
 
+    <section id="module-vigencia" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">CONTROL DE CONSISTENCIA IPT</p>
+          <h2>Vigencia cartográfica</h2>
+          <p>
+            Compara la línea normativa de cada instrumento con la versión
+            cartográfica registrada y genera alertas cuando existen actos
+            posteriores sin evidencia de incorporación.
+          </p>
+        </div>
+        <div class="vigencia-downloads" id="vigenciaDownloads"></div>
+      </div>
+
+      <section class="vigencia-summary">
+        <article class="ipt-kpi">
+          <span>Instrumentos evaluados</span>
+          <strong id="vigenciaMetricTotal">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Actualizados o probables</span>
+          <strong id="vigenciaMetricOk">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Revisión necesaria</span>
+          <strong id="vigenciaMetricReview">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Desactualizados / sin shape</span>
+          <strong id="vigenciaMetricAlert">0</strong>
+        </article>
+      </section>
+
+      <section class="search-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">FILTROS</p>
+            <h2>Buscar instrumento</h2>
+            <p class="section-description">
+              Filtra por región, comuna, tipo de IPT y estado de alerta.
+            </p>
+          </div>
+          <button id="clearVigenciaFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="vigencia-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="vigenciaSearchInput" type="search" placeholder="Comuna, PRC, modificación, zona o decreto…">
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="vigenciaRegionFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Tipo de IPT</span>
+            <select id="vigenciaTypeFilter"><option value="">Todos</option></select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="vigenciaStatusFilter">
+              <option value="">Todos</option>
+              <option value="Actualizado">Actualizado</option>
+              <option value="Probablemente actualizado">Probablemente actualizado</option>
+              <option value="Revisión necesaria">Revisión necesaria</option>
+              <option value="Desactualizado">Desactualizado</option>
+              <option value="Sin cartografía">Sin cartografía</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="vigencia-workspace">
+        <aside class="vigencia-list-panel">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">INSTRUMENTOS</p>
+              <h3>Estado por comuna</h3>
+            </div>
+            <span id="vigenciaResultCount" class="result-count"></span>
+          </div>
+
+          <div id="vigenciaInstrumentList" class="vigencia-instrument-list"></div>
+
+          <div id="vigenciaEmptyState" class="empty-state">
+            <div>IPT</div>
+            <h3>Aún no hay instrumentos evaluados</h3>
+            <p>
+              Ejecuta “Actualizar vigencia cartográfica” en GitHub. Los actos
+              IPT sin shape registrado aparecerán como “Sin cartografía”.
+            </p>
+            <a class="template-link" href="config/cartografia_ipt_ejemplo.json" download>
+              Descargar plantilla del catálogo
+            </a>
+          </div>
+        </aside>
+
+        <div class="vigencia-detail-panel">
+          <div id="vigenciaDetail" class="vigencia-detail-empty">
+            <div class="vigencia-empty-symbol">↗</div>
+            <h3>Selecciona un instrumento</h3>
+            <p>
+              Aquí se mostrará la línea de tiempo, la versión del shape,
+              los actos pendientes y la comparación espacial disponible.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="method-card">
+        <div>
+          <p class="eyebrow">CÓMO INTERPRETAR LAS ALERTAS</p>
+          <h3>La fecha es un control preliminar, no una prueba definitiva</h3>
+        </div>
+        <div class="method-status-grid">
+          <div><span class="vigencia-status actualizado"></span><strong>Actualizado</strong><p>Comparación espacial validada.</p></div>
+          <div><span class="vigencia-status probable"></span><strong>Probablemente actualizado</strong><p>No hay actos pendientes, pero falta validación espacial.</p></div>
+          <div><span class="vigencia-status revision"></span><strong>Revisión necesaria</strong><p>Hay actos posteriores sin evidencia suficiente.</p></div>
+          <div><span class="vigencia-status desactualizado"></span><strong>Desactualizado</strong><p>Existe evidencia explícita o espacial de omisión.</p></div>
+          <div><span class="vigencia-status sin-cartografia"></span><strong>Sin cartografía</strong><p>No existe shape registrado para comparar.</p></div>
+        </div>
+      </section>
+    </section>
+
   </main>
 
   <footer>
@@ -492,6 +626,7 @@
   <script src="data/reportes.js"></script>
   <script src="data/ipt_reportes.js"></script>
   <script src="data/historicos.js"></script>
+  <script src="data/vigencia_cartografica.js"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

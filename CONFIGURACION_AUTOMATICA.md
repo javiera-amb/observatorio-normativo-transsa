@@ -135,3 +135,47 @@ representa la ubicación exacta del predio o acto dentro de la comuna.
 Esta versión corrige la carga del CSS de Leaflet y añade reglas estructurales
 de respaldo. Los mosaicos quedan contenidos dentro del panel, el tamaño se
 recalcula al abrir la pestaña y el mapa se encuadra automáticamente sobre Chile.
+
+
+## Vigencia cartográfica de IPT
+
+El quinto módulo cruza las líneas de tiempo normativas con un catálogo de
+versiones cartográficas.
+
+### Activación rápida
+
+1. Ejecuta en GitHub:
+   `Actions → Actualizar vigencia cartográfica → Run workflow`.
+2. Los actos IPT que ya existan, pero no tengan shape registrado, aparecerán
+   como `Sin cartografía`.
+3. Completa `config/cartografia_ipt.json` para registrar cada capa vigente.
+4. Vuelve a ejecutar el workflow.
+
+### Comparación espacial
+
+Para validar geometrías:
+
+1. Exporta desde QGIS la capa vigente y la modificación a GeoJSON.
+2. Guarda los archivos dentro del repositorio, por ejemplo:
+   `cartografia/calera_de_tango/prc.geojson`.
+3. Registra las rutas en `config/cartografia_ipt.json`.
+4. Indica el campo de zona y, en el acto, la zona esperada.
+5. Ejecuta nuevamente la acción.
+
+La regla espacial calcula qué porcentaje del polígono de la modificación está
+cubierto por la zona esperada del shape:
+
+- 95% o más: incorporado;
+- menos de 70%: no incorporado;
+- entre ambos valores: revisión necesaria.
+
+Los umbrales se pueden cambiar en el catálogo.
+
+### Estados
+
+- `Actualizado`: existe validación espacial satisfactoria.
+- `Probablemente actualizado`: no hay actos pendientes detectados, pero falta
+  validación espacial completa.
+- `Revisión necesaria`: hay actos posteriores al shape sin evidencia suficiente.
+- `Desactualizado`: existe evidencia explícita o espacial de omisión.
+- `Sin cartografía`: hay actos IPT, pero no se registró una capa para comparar.

@@ -1,14 +1,21 @@
 const reports = Array.isArray(window.REPORTES) ? [...window.REPORTES] : [];
 const iptReports = Array.isArray(window.IPT_REPORTES) ? [...window.IPT_REPORTES] : [];
 const annualReports = Array.isArray(window.HISTORICOS) ? [...window.HISTORICOS] : [];
+const vigenciaData = window.VIGENCIA_CARTOGRAFICA && typeof window.VIGENCIA_CARTOGRAFICA === "object"
+  ? window.VIGENCIA_CARTOGRAFICA
+  : { resumen: {}, instrumentos: [], word_url: "", csv_url: "" };
 
 const $ = (id) => document.getElementById(id);
 const state = { search: "", scale: "", category: "", status: "" };
 const iptState = { search: "", region: "", status: "" };
 const annualState = { search: "", month: "", module: "", region: "" };
 const mapState = { search: "", module: "", period: "", region: "", selectedRegion: "" };
+const vigenciaState = { search: "", region: "", type: "", status: "", selectedId: "" };
 let territorialMap = null;
 let territorialLayer = null;
+let vigenciaMap = null;
+let vigenciaBaseLayer = null;
+let vigenciaOverlayLayer = null;
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -68,6 +75,12 @@ function switchModule(moduleName) {
   if (moduleName === "mapa") {
     setTimeout(renderTerritorialMap, 80);
     setTimeout(() => territorialMap?.invalidateSize({ pan: false }), 350);
+  }
+  if (moduleName === "vigencia") {
+    setTimeout(() => {
+      renderVigencia();
+      vigenciaMap?.invalidateSize({ pan: false });
+    }, 80);
   }
 }
 
@@ -766,6 +779,479 @@ function populateMapFilters() {
   );
 }
 
+
+function vigenciaInstruments() {
+  return Array.isArray(vigenciaData.instrumentos)
+    ? [...vigenciaData.instrumentos]
+    : [];
+}
+
+function vigenciaStatusClass(status = "") {
+  const classes = {
+    "Actualizado": "actualizado",
+    "Probablemente actualizado": "probable",
+    "Revisión necesaria": "revision",
+    "Desactualizado": "desactualizado",
+    "Sin cartografía": "sin-cartografia"
+  };
+  return classes[status] || "sin-cartografia";
+}
+
+function filteredVigenciaInstruments() {
+  const q = vigenciaState.search.trim().toLowerCase();
+
+  return vigenciaInstruments()
+    .filter(item => !vigenciaState.region || item.region === vigenciaState.region)
+    .filter(item => !vigenciaState.type || item.tipo_ipt === vigenciaState.type)
+    .filter(item => !vigenciaState.status || item.estado_alerta === vigenciaState.status)
+    .filter(item => {
+      if (!q) return true;
+      return [
+        item.region, item.comuna, item.tipo_ipt, item.nombre,
+        item.estado_alerta, item.resumen_alerta, item.notas,
+        ...(item.zonas_presentes || []),
+        ...(item.linea_tiempo || []).flatMap(event => [
+          event.fecha, event.tipo, event.titulo, event.numero,
+          event.estado, event.resumen, ...(event.zonas_afectadas || [])
+        ])
+      ].join(" ").toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      const order = {
+        "Desactualizado": 0,
+        "Revisión necesaria": 1,
+        "Sin cartografía": 2,
+        "Probablemente actualizado": 3,
+        "Actualizado": 4
+      };
+      return (order[a.estado_alerta] ?? 9) - (order[b.estado_alerta] ?? 9)
+        || String(a.region).localeCompare(String(b.region), "es")
+        || String(a.comuna).localeCompare(String(b.comuna), "es");
+    });
+}
+
+function renderVigenciaMetrics() {
+  const summary = vigenciaData.resumen || {};
+  $("vigenciaMetricTotal").textContent = summary.instrumentos || 0;
+  $("vigenciaMetricOk").textContent =
+    (summary.actualizados || 0) + (summary.probablemente_actualizados || 0);
+  $("vigenciaMetricReview").textContent = summary.revision_necesaria || 0;
+  $("vigenciaMetricAlert").textContent =
+    (summary.desactualizados || 0) + (summary.sin_cartografia || 0);
+
+  const links = [];
+  if (vigenciaData.word_url) {
+    links.push(`
+      <a href="${escapeAttribute(vigenciaData.word_url)}" download>
+        Descargar Word
+      </a>
+    `);
+  }
+  if (vigenciaData.csv_url) {
+    links.push(`
+      <a href="${escapeAttribute(vigenciaData.csv_url)}" download>
+        Abrir alertas en Excel
+      </a>
+    `);
+  }
+  $("vigenciaDownloads").innerHTML = links.join("");
+}
+
+function vigenciaCardTemplate(item) {
+  const statusClass = vigenciaStatusClass(item.estado_alerta);
+  const selected = vigenciaState.selectedId === item.id ? "selected" : "";
+
+  return `
+    <button class="vigencia-instrument-card ${selected}" data-vigencia-id="${escapeAttribute(item.id)}">
+      <div class="vigencia-card-heading">
+        <span class="vigencia-status ${statusClass}"></span>
+        <div>
+          <strong>${escapeHtml(item.comuna || "Territorio sin comuna")}</strong>
+          <span>${escapeHtml(item.region || "")}</span>
+        </div>
+      </div>
+      <div class="vigencia-card-body">
+        <span class="vigencia-type-pill">${escapeHtml(item.tipo_ipt || "IPT")}</span>
+        <p>${escapeHtml(item.nombre || item.tipo_ipt || "Instrumento")}</p>
+      </div>
+      <div class="vigencia-card-footer">
+        <span class="vigencia-alert-label ${statusClass}">
+          ${escapeHtml(item.estado_alerta || "Sin clasificación")}
+        </span>
+        <span>${Number(item.actos_posteriores_pendientes || 0)} pendientes</span>
+      </div>
+    </button>
+  `;
+}
+
+function renderVigenciaList() {
+  const items = filteredVigenciaInstruments();
+  $("vigenciaInstrumentList").innerHTML = items.map(vigenciaCardTemplate).join("");
+  $("vigenciaResultCount").textContent =
+    `${items.length} ${items.length === 1 ? "instrumento" : "instrumentos"}`;
+  $("vigenciaEmptyState").hidden = items.length !== 0;
+
+  if (items.length && !items.some(item => item.id === vigenciaState.selectedId)) {
+    vigenciaState.selectedId = items[0].id;
+  }
+
+  renderVigenciaDetail();
+}
+
+function timelineEventClass(event) {
+  const incorporation = event.incorporacion || "";
+  if (incorporation === "incorporado" || incorporation === "base" || incorporation === "shape") {
+    return "incorporado";
+  }
+  if (incorporation === "no_incorporado") return "no-incorporado";
+  if (incorporation === "probablemente_incorporado") return "probable";
+  return "pendiente";
+}
+
+function timelineTemplate(event) {
+  const eventClass = timelineEventClass(event);
+  const zones = Array.isArray(event.zonas_afectadas) && event.zonas_afectadas.length
+    ? `<p class="timeline-zones">Zonas: ${escapeHtml(event.zonas_afectadas.join(", "))}</p>`
+    : "";
+
+  return `
+    <article class="timeline-event ${eventClass}">
+      <div class="timeline-node"></div>
+      <div class="timeline-content">
+        <div class="timeline-topline">
+          <span>${escapeHtml(event.fecha || "Sin fecha")}</span>
+          <span class="timeline-incorporation ${eventClass}">
+            ${escapeHtml(String(event.incorporacion || "sin verificar").replaceAll("_", " "))}
+          </span>
+        </div>
+        <h4>${escapeHtml(event.titulo || event.tipo || "Acto")}</h4>
+        <p class="timeline-type">
+          ${escapeHtml([event.tipo, event.numero, event.estado].filter(Boolean).join(" · "))}
+        </p>
+        ${event.resumen ? `<p>${escapeHtml(event.resumen)}</p>` : ""}
+        ${zones}
+        ${event.fuente ? `
+          <a href="${escapeAttribute(event.fuente)}" target="_blank" rel="noopener noreferrer">
+            Ver fuente oficial
+          </a>
+        ` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function spatialResultTemplate(result) {
+  const stateClass = result.estado === "incorporado"
+    ? "actualizado"
+    : result.estado === "no_incorporado"
+      ? "desactualizado"
+      : "revision";
+
+  return `
+    <article class="spatial-result">
+      <span class="vigencia-status ${stateClass}"></span>
+      <div>
+        <strong>${escapeHtml(result.acto || "Comparación espacial")}</strong>
+        <p>${escapeHtml(result.observacion || "")}</p>
+      </div>
+      <span class="spatial-percentage">
+        ${result.coincidencia_porcentaje === null || result.coincidencia_porcentaje === undefined
+          ? "—"
+          : `${Number(result.coincidencia_porcentaje).toFixed(1)}%`}
+      </span>
+    </article>
+  `;
+}
+
+function initVigenciaMap() {
+  const mapElement = $("vigenciaComparisonMap");
+  if (!mapElement || typeof L === "undefined") return;
+
+  if (vigenciaMap) {
+    vigenciaMap.remove();
+  }
+
+  vigenciaMap = L.map(mapElement, {
+    zoomControl: true,
+    scrollWheelZoom: false,
+    minZoom: 3,
+    maxZoom: 16,
+    preferCanvas: true
+  });
+
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+  }).addTo(vigenciaMap);
+
+  vigenciaBaseLayer = L.layerGroup().addTo(vigenciaMap);
+  vigenciaOverlayLayer = L.layerGroup().addTo(vigenciaMap);
+}
+
+async function fetchGeoJson(reference) {
+  if (!reference) return null;
+  try {
+    const response = await fetch(reference);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.warn("No se pudo cargar GeoJSON:", reference, error);
+    return null;
+  }
+}
+
+function geoJsonStyle(kind, incorporation = "") {
+  if (kind === "base") {
+    return {
+      color: "#4a4cfb",
+      weight: 2,
+      fillColor: "#4a4cfb",
+      fillOpacity: 0.16
+    };
+  }
+
+  if (incorporation === "no_incorporado") {
+    return {
+      color: "#c84d55",
+      weight: 3,
+      fillColor: "#c84d55",
+      fillOpacity: 0.26
+    };
+  }
+
+  if (incorporation === "incorporado") {
+    return {
+      color: "#2b7a5a",
+      weight: 3,
+      fillColor: "#2b7a5a",
+      fillOpacity: 0.22
+    };
+  }
+
+  return {
+    color: "#c18a23",
+    weight: 3,
+    dashArray: "7 5",
+    fillColor: "#e9b44c",
+    fillOpacity: 0.22
+  };
+}
+
+async function renderVigenciaMap(item) {
+  const mapContainer = $("vigenciaComparisonMap");
+  if (!mapContainer) return;
+
+  initVigenciaMap();
+  if (!vigenciaMap) return;
+
+  vigenciaBaseLayer.clearLayers();
+  vigenciaOverlayLayer.clearLayers();
+
+  const bounds = [];
+  const baseReference = item.mapa?.base_geojson || item.archivo_geojson || "";
+  const baseData = await fetchGeoJson(baseReference);
+
+  if (baseData) {
+    const layer = L.geoJSON(baseData, {
+      style: () => geoJsonStyle("base"),
+      onEachFeature: (feature, featureLayer) => {
+        const properties = feature.properties || {};
+        const zoneField = item.campo_zona || "";
+        const zoneValue = zoneField ? properties[zoneField] : "";
+        if (zoneValue) {
+          featureLayer.bindTooltip(String(zoneValue), { sticky: true });
+        }
+      }
+    }).addTo(vigenciaBaseLayer);
+    if (layer.getBounds().isValid()) bounds.push(layer.getBounds());
+  }
+
+  const overlayList = item.mapa?.capas_modificaciones || [];
+  for (const overlay of overlayList) {
+    const overlayData = await fetchGeoJson(overlay.archivo_geojson);
+    if (!overlayData) continue;
+
+    const layer = L.geoJSON(overlayData, {
+      style: () => geoJsonStyle("overlay", overlay.incorporacion),
+      onEachFeature: (_feature, featureLayer) => {
+        featureLayer.bindPopup(`
+          <div class="map-popup">
+            <h4>${escapeHtml(overlay.titulo || "Modificación")}</h4>
+            <p>${escapeHtml(String(overlay.incorporacion || "sin verificar").replaceAll("_", " "))}</p>
+            ${overlay.zona_esperada ? `<p>Zona esperada: ${escapeHtml(overlay.zona_esperada)}</p>` : ""}
+          </div>
+        `);
+      }
+    }).addTo(vigenciaOverlayLayer);
+    if (layer.getBounds().isValid()) bounds.push(layer.getBounds());
+  }
+
+  if (bounds.length) {
+    const combined = bounds.reduce((current, next) => current.extend(next));
+    vigenciaMap.fitBounds(combined, { padding: [24, 24], maxZoom: 14 });
+    $("vigenciaMapNotice").textContent =
+      "Azul: shape base. Verde: modificación incorporada. Amarillo: sin verificar. Rojo: no incorporada.";
+  } else {
+    const center = REGION_CENTERS[normalizeRegionName(item.region)] || [-35.6, -71.5];
+    vigenciaMap.setView(center, item.comuna ? 7 : 5);
+    L.marker(center).addTo(vigenciaOverlayLayer).bindPopup(
+      `<div class="map-popup"><h4>${escapeHtml(item.comuna || item.region || "Chile")}</h4><p>No hay GeoJSON registrado para comparar.</p></div>`
+    );
+    $("vigenciaMapNotice").textContent =
+      "No hay geometría cargada. Exporta el shape y las modificaciones a GeoJSON y regístralos en config/cartografia_ipt.json.";
+  }
+
+  requestAnimationFrame(() => vigenciaMap.invalidateSize({ pan: false }));
+  setTimeout(() => vigenciaMap?.invalidateSize({ pan: false }), 250);
+}
+
+function renderVigenciaDetail() {
+  const item = vigenciaInstruments().find(
+    instrument => instrument.id === vigenciaState.selectedId
+  );
+
+  if (!item) {
+    $("vigenciaDetail").className = "vigencia-detail-empty";
+    $("vigenciaDetail").innerHTML = `
+      <div class="vigencia-empty-symbol">↗</div>
+      <h3>Selecciona un instrumento</h3>
+      <p>Aquí se mostrará su línea de tiempo y la comparación cartográfica.</p>
+    `;
+    return;
+  }
+
+  const statusClass = vigenciaStatusClass(item.estado_alerta);
+  const timeline = item.linea_tiempo || [];
+  const spatial = item.comparaciones_espaciales || [];
+  const alerts = item.alertas || [];
+
+  $("vigenciaDetail").className = "vigencia-detail-content";
+  $("vigenciaDetail").innerHTML = `
+    <div class="vigencia-detail-header">
+      <div>
+        <div class="vigencia-title-row">
+          <span class="vigencia-status large ${statusClass}"></span>
+          <div>
+            <p class="eyebrow">${escapeHtml(item.tipo_ipt || "IPT")}</p>
+            <h3>${escapeHtml(item.comuna || "Territorio sin comuna")}</h3>
+          </div>
+        </div>
+        <p class="vigencia-instrument-name">${escapeHtml(item.nombre || item.tipo_ipt || "")}</p>
+      </div>
+      <div class="vigencia-alert-box ${statusClass}">
+        <strong>${escapeHtml(item.estado_alerta || "")}</strong>
+        <span>Confianza ${escapeHtml(item.confianza || "sin definir")}</span>
+      </div>
+    </div>
+
+    <p class="vigencia-summary-text">${escapeHtml(item.resumen_alerta || "")}</p>
+
+    <div class="detail-grid">
+      <div class="detail-item">
+        <span>Región</span>
+        <strong>${escapeHtml(item.region || "—")}</strong>
+      </div>
+      <div class="detail-item">
+        <span>Instrumento base</span>
+        <strong>${escapeHtml(item.fecha_instrumento_base || "Sin fecha")}</strong>
+      </div>
+      <div class="detail-item">
+        <span>Versión cartográfica</span>
+        <strong>${escapeHtml(item.fecha_version_cartografica || "No registrada")}</strong>
+      </div>
+      <div class="detail-item">
+        <span>Actos pendientes</span>
+        <strong>${Number(item.actos_posteriores_pendientes || 0)}</strong>
+      </div>
+    </div>
+
+    ${alerts.length ? `
+      <section class="vigencia-alert-list">
+        <h4>Alertas detectadas</h4>
+        ${alerts.map(alert => `
+          <article class="vigencia-alert-row ${alert.nivel || "medio"}">
+            <strong>${escapeHtml(alert.tipo || "Alerta")}</strong>
+            <p>${escapeHtml(alert.mensaje || "")}</p>
+          </article>
+        `).join("")}
+      </section>
+    ` : ""}
+
+    <section class="vigencia-map-section">
+      <div class="section-heading compact">
+        <div>
+          <p class="eyebrow">COMPARACIÓN ESPACIAL</p>
+          <h3>Shape y modificaciones</h3>
+        </div>
+        ${item.fuente_cartografia ? `
+          <a class="annual-source-link" href="${escapeAttribute(item.fuente_cartografia)}"
+             target="_blank" rel="noopener noreferrer">Fuente cartográfica</a>
+        ` : ""}
+      </div>
+      <div id="vigenciaComparisonMap" class="vigencia-comparison-map"></div>
+      <p id="vigenciaMapNotice" class="vigencia-map-notice"></p>
+    </section>
+
+    ${spatial.length ? `
+      <section class="spatial-results-section">
+        <h4>Resultados espaciales</h4>
+        <div class="spatial-results-list">
+          ${spatial.map(spatialResultTemplate).join("")}
+        </div>
+      </section>
+    ` : ""}
+
+    <section class="timeline-section">
+      <div class="section-heading compact">
+        <div>
+          <p class="eyebrow">LÍNEA DE TIEMPO</p>
+          <h3>Instrumento, modificaciones y enmiendas</h3>
+        </div>
+        <span class="result-count">${timeline.length} hitos</span>
+      </div>
+      <div class="timeline">
+        ${timeline.length
+          ? timeline.map(timelineTemplate).join("")
+          : `<div class="empty-state"><p>No hay hitos normativos disponibles.</p></div>`}
+      </div>
+    </section>
+
+    ${item.zonas_presentes?.length ? `
+      <section class="vigencia-zones-section">
+        <h4>Zonas presentes en el shape</h4>
+        <div class="vigencia-zone-list">
+          ${item.zonas_presentes.map(zone => `<span>${escapeHtml(zone)}</span>`).join("")}
+        </div>
+      </section>
+    ` : ""}
+
+    ${item.notas ? `<p class="vigencia-notes">${escapeHtml(item.notas)}</p>` : ""}
+  `;
+
+  renderVigenciaMap(item);
+}
+
+function renderVigencia() {
+  renderVigenciaMetrics();
+  renderVigenciaList();
+}
+
+function populateVigenciaFilters() {
+  const items = vigenciaInstruments();
+
+  addOptions(
+    $("vigenciaRegionFilter"),
+    [...new Set(items.map(item => item.region).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "es"))
+  );
+
+  addOptions(
+    $("vigenciaTypeFilter"),
+    [...new Set(items.map(item => item.tipo_ipt).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "es"))
+  );
+}
+
 function bindEvents() {
   document.querySelectorAll(".module-tab").forEach(button => {
     button.addEventListener("click", () => switchModule(button.dataset.module));
@@ -891,7 +1377,50 @@ function bindEvents() {
     renderTerritorialMap();
   });
 
+
+  $("vigenciaSearchInput").addEventListener("input", event => {
+    vigenciaState.search = event.target.value;
+    renderVigenciaList();
+  });
+  $("vigenciaRegionFilter").addEventListener("change", event => {
+    vigenciaState.region = event.target.value;
+    renderVigenciaList();
+  });
+  $("vigenciaTypeFilter").addEventListener("change", event => {
+    vigenciaState.type = event.target.value;
+    renderVigenciaList();
+  });
+  $("vigenciaStatusFilter").addEventListener("change", event => {
+    vigenciaState.status = event.target.value;
+    renderVigenciaList();
+  });
+  $("clearVigenciaFilters").addEventListener("click", () => {
+    Object.assign(vigenciaState, {
+      search: "",
+      region: "",
+      type: "",
+      status: "",
+      selectedId: ""
+    });
+    $("vigenciaSearchInput").value = "";
+    $("vigenciaRegionFilter").value = "";
+    $("vigenciaTypeFilter").value = "";
+    $("vigenciaStatusFilter").value = "";
+    renderVigenciaList();
+  });
+
   document.addEventListener("click", event => {
+    const vigenciaButton = event.target.closest("[data-vigencia-id]");
+    if (vigenciaButton) {
+      vigenciaState.selectedId = vigenciaButton.dataset.vigenciaId;
+      renderVigenciaList();
+      document.querySelector(".vigencia-detail-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+      return;
+    }
+
     const mapRegionButton = event.target.closest("[data-map-region]");
     if (mapRegionButton) {
       mapState.selectedRegion = mapRegionButton.dataset.mapRegion;
@@ -943,6 +1472,8 @@ function init() {
   renderAnnualMetrics();
   renderAnnualReports();
   populateMapFilters();
+  populateVigenciaFilters();
+  renderVigenciaMetrics();
   bindEvents();
 
   const requestedModule = location.hash === "#ipt"
@@ -951,9 +1482,12 @@ function init() {
       ? "historico"
       : location.hash === "#mapa"
         ? "mapa"
-        : "diario";
+        : location.hash === "#vigencia"
+          ? "vigencia"
+          : "diario";
   switchModule(requestedModule);
   if (requestedModule === "mapa") renderTerritorialMap();
+  if (requestedModule === "vigencia") renderVigencia();
 }
 
 init();

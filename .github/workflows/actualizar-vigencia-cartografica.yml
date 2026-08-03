@@ -1,8 +1,8 @@
-name: Actualizar IPT mensual
+name: Actualizar vigencia cartográfica
 
 on:
   schedule:
-    - cron: "0 8 1 * *"
+    - cron: "30 8 2 * *"
       timezone: "America/Santiago"
   workflow_dispatch:
 
@@ -10,14 +10,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: actualizar-ipt-mensual
+  group: actualizar-vigencia-cartografica
   cancel-in-progress: false
 
 jobs:
   actualizar:
-    name: Revisar IPT de Chile
+    name: Cruzar IPT y cartografía
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
 
     steps:
       - name: Descargar repositorio
@@ -33,13 +33,7 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r automation/requirements.txt
 
-      - name: Revisar actualizaciones IPT
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
-        run: python automation/actualizar_ipt_mensual.py
-
-      - name: Actualizar vigencia cartográfica
+      - name: Evaluar vigencia cartográfica
         run: python automation/actualizar_vigencia_cartografica.py
 
       - name: Validar portal
@@ -52,8 +46,8 @@ jobs:
             exit 0
           fi
 
-          git config user.name "Observatorio IPT Bot"
+          git config user.name "Observatorio Cartográfico Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/ipt_reportes.js data/vigencia_cartografica.js documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
-          git commit -m "Actualización IPT mensual $(date +'%Y-%m')"
+          git add data/vigencia_cartografica.js documentos/vigencia/ consolidados/vigencia/
+          git commit -m "Actualizar vigencia cartográfica $(date +'%Y-%m-%d')"
           git push
