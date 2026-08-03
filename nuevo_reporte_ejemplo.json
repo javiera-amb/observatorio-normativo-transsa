@@ -1,0 +1,16 @@
+{
+  "fecha": "2026-08-04",
+  "titulo": "Ejemplo de nuevo reporte",
+  "estado": "Con novedades",
+  "escala": "Comunal",
+  "categoria": "Planificación urbana",
+  "region": "Región de ejemplo",
+  "comuna": "Comuna de ejemplo",
+  "organismo": "Organismo emisor",
+  "tipo_norma": "Resolución Exenta",
+  "numero": "N.º 000",
+  "resumen": "Descripción breve de lo publicado.",
+  "implicancia": "Implicancia práctica para la planificación, construcción o gestión territorial.",
+  "impactados": "Municipio, propietarios, profesionales, desarrolladores u otros actores.",
+  "destacado": false
+}

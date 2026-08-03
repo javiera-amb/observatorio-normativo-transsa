@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Portal interno del Departamento de Estudios Inmobiliarios de Transsa para seguimiento normativo urbano e instrumentos de planificación territorial">
+  <meta name="theme-color" content="#0f0f69">
+  <title>Observatorio Normativo | Transsa</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Inicio">
+      <span class="brand-symbol" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </span>
+      <span class="brand-copy">
+        <strong>transsa</strong>
+        <small>Departamento de Estudios Inmobiliarios</small>
+      </span>
+    </a>
+
+    <nav class="module-nav" aria-label="Módulos del observatorio">
+      <button class="module-tab active" data-module="diario">Diario Oficial</button>
+      <button class="module-tab" data-module="ipt">Actualizaciones IPT</button>
+    </nav>
+
+    <span class="private-badge">
+      <span class="status-dot"></span>
+      Portal interno
+    </span>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div class="intro-copy">
+        <p class="eyebrow">OBSERVATORIO NORMATIVO</p>
+        <h1>Información territorial clara para mejores decisiones inmobiliarias.</h1>
+        <p class="intro-text">
+          Seguimiento diario de normativa urbana y monitoreo mensual de cambios
+          en instrumentos de planificación territorial para Chile.
+        </p>
+
+        <div class="intro-actions">
+          <button class="primary-button" data-module-jump="diario">Ver Diario Oficial</button>
+          <button class="secondary-button" data-module-jump="ipt">Ver actualizaciones IPT</button>
+        </div>
+      </div>
+
+      <aside class="coverage-card">
+        <p class="eyebrow">DOS LÍNEAS DE SEGUIMIENTO</p>
+        <div class="coverage-row">
+          <span class="coverage-number">01</span>
+          <div>
+            <strong>Reporte diario</strong>
+            <p>Urbanismo, construcción, arquitectura, vivienda, patrimonio y evaluación ambiental.</p>
+          </div>
+        </div>
+        <div class="coverage-row">
+          <span class="coverage-number">02</span>
+          <div>
+            <strong>Reporte IPT mensual</strong>
+            <p>PRC, PRI, PRM, seccionales, enmiendas, límites urbanos y otros actos territoriales.</p>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="module-diario" class="module-panel active">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">ACTUALIZACIÓN DIARIA · 08:30</p>
+          <h2>Diario Oficial</h2>
+          <p>Publicaciones con incidencia en planificación, construcción y mercado inmobiliario.</p>
+        </div>
+      </div>
+
+      <section class="daily-feature">
+        <aside class="latest-card" id="latestCard" aria-label="Último reporte diario">
+          <div class="skeleton large"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton short"></div>
+        </aside>
+
+        <div class="metrics" aria-label="Resumen diario">
+          <article class="metric-card">
+            <span>Reportes disponibles</span>
+            <strong id="metricTotal">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Con novedades</span>
+            <strong id="metricChanges">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Comunas identificadas</span>
+            <strong id="metricCommunes">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Última actualización</span>
+            <strong id="metricDate">—</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="search-panel" id="buscador">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSULTA</p>
+            <h2>Buscador normativo</h2>
+            <p class="section-description">
+              Filtra los reportes por territorio, escala, materia o estado.
+            </p>
+          </div>
+          <button id="clearFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="filters">
+          <label class="search-field">
+            <span>Buscar</span>
+            <input id="searchInput" type="search" placeholder="Comuna, organismo, norma o materia…">
+          </label>
+          <label>
+            <span>Escala</span>
+            <select id="scaleFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Materia</span>
+            <select id="categoryFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="statusFilter">
+              <option value="">Todos</option>
+              <option value="Con novedades">Con novedades</option>
+              <option value="Sin novedades">Sin novedades</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section id="reportes" class="reports-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SEGUIMIENTO DIARIO</p>
+            <h2>Reportes recientes</h2>
+            <p class="section-description">
+              Cada ficha resume la publicación, su alcance territorial y sus implicancias prácticas.
+            </p>
+          </div>
+          <span id="resultCount" class="result-count"></span>
+        </div>
+
+        <div id="reportGrid" class="report-grid"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <div>⌕</div>
+          <h3>No encontramos resultados</h3>
+          <p>Prueba con otra comuna, organismo o materia.</p>
+        </div>
+      </section>
+    </section>
+
+    <section id="module-ipt" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">ACTUALIZACIÓN MENSUAL · DÍA 1</p>
+          <h2>Actualizaciones de instrumentos de planificación territorial</h2>
+          <p>
+            Seguimiento nacional de modificaciones, enmiendas, aprobaciones,
+            promulgaciones y procesos en tramitación de IPT.
+          </p>
+        </div>
+      </div>
+
+      <section class="ipt-summary">
+        <article class="ipt-kpi">
+          <span>Reportes mensuales</span>
+          <strong id="iptMetricReports">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Cambios registrados</span>
+          <strong id="iptMetricChanges">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Comunas con cambios</span>
+          <strong id="iptMetricCommunes">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Último período</span>
+          <strong id="iptMetricPeriod">—</strong>
+        </article>
+      </section>
+
+      <section class="search-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSULTA IPT</p>
+            <h2>Historial mensual</h2>
+            <p class="section-description">
+              Revisa el resumen mensual y accede al Word y al consolidado para Excel.
+            </p>
+          </div>
+          <button id="clearIptFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="ipt-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="iptSearchInput" type="search" placeholder="Comuna, región, tipo de IPT o acto…">
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="iptRegionFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="iptStateFilter">
+              <option value="">Todos</option>
+              <option value="Vigente">Vigente</option>
+              <option value="En tramitación">En tramitación</option>
+              <option value="Consulta">Consulta</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="reports-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSOLIDADO NACIONAL</p>
+            <h2>Reportes IPT</h2>
+          </div>
+          <span id="iptResultCount" class="result-count"></span>
+        </div>
+
+        <div id="iptReportGrid" class="ipt-report-grid"></div>
+
+        <div id="iptEmptyState" class="empty-state">
+          <div>IPT</div>
+          <h3>Aún no hay reportes IPT sincronizados</h3>
+          <p>
+            El primer registro automático se incorporará cuando se ejecute el flujo
+            mensual desde GitHub.
+          </p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-brand">
+      <strong>transsa</strong>
+      <span>Departamento de Estudios Inmobiliarios</span>
+    </div>
+    <p>Herramienta interna de seguimiento normativo y territorial.</p>
+  </footer>
+
+  <dialog id="reportDialog">
+    <form method="dialog" class="dialog-card">
+      <button class="dialog-close" aria-label="Cerrar">×</button>
+      <div id="dialogContent"></div>
+    </form>
+  </dialog>
+
+  <dialog id="iptDialog">
+    <form method="dialog" class="dialog-card ipt-dialog-card">
+      <button class="dialog-close" aria-label="Cerrar">×</button>
+      <div id="iptDialogContent"></div>
+    </form>
+  </dialog>
+
+  <script src="data/reportes.js"></script>
+  <script src="data/ipt_reportes.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
