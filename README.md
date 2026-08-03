@@ -29,3 +29,11 @@ Lee `CONFIGURACION_AUTOMATICA.md`.
 - Script: `automation/cargar_historico_anual.py`
 - Word: `documentos/historicos/`
 - Consolidado: `consolidados/historicos/`
+
+
+## Mapa territorial
+
+- Biblioteca: Leaflet 1.9.4.
+- Cartografía base: OpenStreetMap.
+- Visualización: marcadores regionales agregados.
+- Fuentes: Diario Oficial, IPT e histórico anual.

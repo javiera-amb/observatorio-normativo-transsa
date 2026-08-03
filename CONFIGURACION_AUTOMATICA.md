@@ -109,3 +109,22 @@ La ejecución puede tardar entre varios minutos y más de una hora, según la
 cantidad de fuentes y la respuesta de la API. También puede generar consumo
 adicional de OpenAI API. Para reducir el costo o recuperar una ejecución
 interrumpida, usa `month` con un número entre 1 y 12.
+
+
+## Mapa territorial
+
+El portal incorpora una pestaña `Mapa territorial` desarrollada con Leaflet y
+OpenStreetMap.
+
+Características:
+
+- agrupa registros por región;
+- muestra cantidad de registros y comunas;
+- filtra por Diario Oficial, IPT e histórico anual;
+- filtra por período y región;
+- permite buscar por comuna, materia o título;
+- se actualiza automáticamente cuando cambian las bases JavaScript.
+
+El mapa usa coordenadas centrales regionales para evitar depender de servicios
+de geocodificación. Esto permite una visualización estable y rápida, pero no
+representa la ubicación exacta del predio o acto dentro de la comuna.

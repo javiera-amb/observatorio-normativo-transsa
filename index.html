@@ -11,6 +11,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ3ynh1Z5tIg4MZfB8E5h7T7vYQv5Qw="
+    crossorigin=""
+  >
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -29,6 +35,7 @@
       <button class="module-tab active" data-module="diario">Diario Oficial</button>
       <button class="module-tab" data-module="ipt">Actualizaciones IPT</button>
       <button class="module-tab" data-module="historico">Histórico anual</button>
+      <button class="module-tab" data-module="mapa">Mapa territorial</button>
     </nav>
 
     <span class="private-badge">
@@ -51,11 +58,12 @@
           <button class="primary-button" data-module-jump="diario">Ver Diario Oficial</button>
           <button class="secondary-button" data-module-jump="ipt">Ver actualizaciones IPT</button>
           <button class="secondary-button" data-module-jump="historico">Ver histórico 2025</button>
+          <button class="secondary-button" data-module-jump="mapa">Ver mapa territorial</button>
         </div>
       </div>
 
       <aside class="coverage-card">
-        <p class="eyebrow">TRES LÍNEAS DE SEGUIMIENTO</p>
+        <p class="eyebrow">CUATRO LÍNEAS DE SEGUIMIENTO</p>
         <div class="coverage-row">
           <span class="coverage-number">01</span>
           <div>
@@ -76,6 +84,14 @@
           <div>
             <strong>Histórico anual</strong>
             <p>Consolidado de Diario Oficial e IPT, organizado por año, mes, región y comuna.</p>
+          </div>
+        </div>
+
+        <div class="coverage-row">
+          <span class="coverage-number">04</span>
+          <div>
+            <strong>Mapa territorial</strong>
+            <p>Visualización interactiva de cambios por región, comuna, módulo y período.</p>
           </div>
         </div>
       </aside>
@@ -350,6 +366,105 @@
       </section>
     </section>
 
+  
+    <section id="module-mapa" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">VISUALIZACIÓN TERRITORIAL</p>
+          <h2>Mapa de cambios normativos</h2>
+          <p>
+            Explora la distribución territorial de publicaciones del Diario
+            Oficial, actualizaciones IPT e información histórica.
+          </p>
+        </div>
+      </div>
+
+      <section class="map-layout">
+        <aside class="map-sidebar">
+          <div class="map-filter-card">
+            <p class="eyebrow">FILTROS DEL MAPA</p>
+
+            <label>
+              <span>Fuente</span>
+              <select id="mapModuleFilter">
+                <option value="">Todas</option>
+                <option value="Diario Oficial">Diario Oficial</option>
+                <option value="IPT">Actualizaciones IPT</option>
+                <option value="Histórico">Histórico anual</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Período</span>
+              <select id="mapPeriodFilter">
+                <option value="">Todos</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Región</span>
+              <select id="mapRegionFilter">
+                <option value="">Todas</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Buscar territorio</span>
+              <input id="mapSearchInput" type="search" placeholder="Región, comuna o materia…">
+            </label>
+
+            <button id="clearMapFilters" class="secondary-button map-clear-button">
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div class="map-stat-grid">
+            <article class="map-stat">
+              <span>Registros visibles</span>
+              <strong id="mapMetricItems">0</strong>
+            </article>
+            <article class="map-stat">
+              <span>Regiones</span>
+              <strong id="mapMetricRegions">0</strong>
+            </article>
+            <article class="map-stat">
+              <span>Comunas</span>
+              <strong id="mapMetricCommunes">0</strong>
+            </article>
+          </div>
+
+          <div class="map-legend">
+            <p class="eyebrow">LECTURA</p>
+            <div><span class="legend-dot small"></span> 1 a 2 registros</div>
+            <div><span class="legend-dot medium"></span> 3 a 5 registros</div>
+            <div><span class="legend-dot large"></span> 6 o más registros</div>
+          </div>
+        </aside>
+
+        <div class="map-main">
+          <div id="territorialMap" class="territorial-map" aria-label="Mapa interactivo de Chile"></div>
+
+          <div class="map-results-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">DETALLE TERRITORIAL</p>
+                <h3 id="mapResultsTitle">Todos los territorios</h3>
+              </div>
+              <span id="mapResultCount" class="result-count"></span>
+            </div>
+
+            <div id="mapResultsList" class="map-results-list"></div>
+
+            <div id="mapEmptyState" class="empty-state" hidden>
+              <div>⌖</div>
+              <h3>No hay resultados para estos filtros</h3>
+              <p>Prueba con otra región, comuna o período.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
   </main>
 
   <footer>
@@ -377,6 +492,11 @@
   <script src="data/reportes.js"></script>
   <script src="data/ipt_reportes.js"></script>
   <script src="data/historicos.js"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script src="app.js"></script>
 </body>
 </html>

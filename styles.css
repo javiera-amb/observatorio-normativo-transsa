@@ -1237,3 +1237,277 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 }
+
+
+.map-layout {
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.map-sidebar {
+  display: grid;
+  gap: 15px;
+  position: sticky;
+  top: 104px;
+}
+
+.map-filter-card,
+.map-stat-grid,
+.map-legend,
+.map-main,
+.map-results-panel {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.map-filter-card {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.map-filter-card label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.map-clear-button {
+  width: 100%;
+  margin-top: 3px;
+}
+
+.map-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+}
+
+.map-stat {
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.map-stat:last-child {
+  border-bottom: 0;
+}
+
+.map-stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.map-stat strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--transsa-navy);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.map-legend {
+  padding: 20px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.map-legend div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.legend-dot {
+  display: inline-block;
+  border-radius: 50%;
+  background: var(--transsa-blue);
+  opacity: 0.65;
+}
+
+.legend-dot.small {
+  width: 9px;
+  height: 9px;
+}
+
+.legend-dot.medium {
+  width: 14px;
+  height: 14px;
+}
+
+.legend-dot.large {
+  width: 19px;
+  height: 19px;
+}
+
+.map-main {
+  overflow: hidden;
+}
+
+.territorial-map {
+  width: 100%;
+  height: 620px;
+  background: #eef0f7;
+}
+
+.leaflet-container {
+  font-family: "Outfit", "Segoe UI", Arial, sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(15, 15, 105, 0.14);
+}
+
+.leaflet-popup-content {
+  min-width: 220px;
+  margin: 15px 17px;
+}
+
+.map-popup h4 {
+  margin: 0 0 7px;
+  color: var(--transsa-navy);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.map-popup p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.map-popup button {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 10px;
+  border: 1px solid var(--transsa-blue);
+  border-radius: 9px;
+  color: #ffffff;
+  background: var(--transsa-blue);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.region-marker {
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--transsa-blue);
+  box-shadow: 0 5px 16px rgba(15, 15, 105, 0.24);
+  font-family: "Outfit", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.map-results-panel {
+  padding: 24px;
+  border-width: 1px 0 0;
+  border-radius: 0;
+}
+
+.section-heading.compact {
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.section-heading.compact h3 {
+  margin: 0;
+  color: var(--transsa-navy);
+  font-size: 1.24rem;
+}
+
+.map-results-list {
+  display: grid;
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.map-result-item {
+  display: grid;
+  grid-template-columns: 106px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #ffffff;
+}
+
+.map-result-source {
+  display: inline-flex;
+  justify-content: center;
+  padding: 6px 8px;
+  border-radius: 999px;
+  color: var(--transsa-blue);
+  background: var(--transsa-pale);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.map-result-content h4 {
+  margin: 0 0 4px;
+  color: var(--transsa-navy);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.map-result-content p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.map-result-territory {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+@media (max-width: 960px) {
+  .map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .map-sidebar {
+    position: static;
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+
+  .territorial-map {
+    height: 560px;
+  }
+}
+
+@media (max-width: 700px) {
+  .map-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .territorial-map {
+    height: 480px;
+  }
+
+  .map-result-item {
+    grid-template-columns: 1fr;
+  }
+
+  .map-result-source {
+    justify-self: start;
+  }
+
+  .map-result-territory {
+    text-align: left;
+  }
+}

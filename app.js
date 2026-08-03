@@ -6,6 +6,9 @@ const $ = (id) => document.getElementById(id);
 const state = { search: "", scale: "", category: "", status: "" };
 const iptState = { search: "", region: "", status: "" };
 const annualState = { search: "", month: "", module: "", region: "" };
+const mapState = { search: "", module: "", period: "", region: "", selectedRegion: "" };
+let territorialMap = null;
+let territorialLayer = null;
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -62,6 +65,9 @@ function switchModule(moduleName) {
   });
 
   history.replaceState(null, "", `#${moduleName}`);
+  if (moduleName === "mapa") {
+    setTimeout(renderTerritorialMap, 50);
+  }
 }
 
 function filteredReports() {
@@ -507,6 +513,245 @@ function renderAnnualReports() {
   }
 }
 
+
+const REGION_CENTERS = {
+  "Arica y Parinacota": [-18.47, -70.31],
+  "Tarapacá": [-20.22, -70.14],
+  "Antofagasta": [-23.65, -70.40],
+  "Atacama": [-27.37, -70.33],
+  "Coquimbo": [-29.91, -71.25],
+  "Valparaíso": [-33.05, -71.62],
+  "Metropolitana de Santiago": [-33.45, -70.67],
+  "Región Metropolitana": [-33.45, -70.67],
+  "O'Higgins": [-34.17, -70.74],
+  "Libertador General Bernardo O'Higgins": [-34.17, -70.74],
+  "Maule": [-35.43, -71.67],
+  "Ñuble": [-36.61, -72.10],
+  "Biobío": [-36.83, -73.05],
+  "La Araucanía": [-38.74, -72.59],
+  "Los Ríos": [-39.82, -73.24],
+  "Los Lagos": [-41.47, -72.94],
+  "Aysén": [-45.57, -72.07],
+  "Aysén del General Carlos Ibáñez del Campo": [-45.57, -72.07],
+  "Magallanes y de la Antártica Chilena": [-53.16, -70.91],
+  "Chile": [-33.45, -70.67]
+};
+
+function normalizeRegionName(value = "") {
+  const region = String(value).trim();
+
+  const aliases = {
+    "RM": "Metropolitana de Santiago",
+    "Metropolitana": "Metropolitana de Santiago",
+    "Región Metropolitana de Santiago": "Metropolitana de Santiago",
+    "Libertador Bernardo O'Higgins": "O'Higgins",
+    "Libertador General Bernardo O’Higgins": "O'Higgins",
+    "Aysén del General Carlos Ibáñez del Campo": "Aysén"
+  };
+
+  return aliases[region] || region;
+}
+
+function mapItems() {
+  const daily = reports.map(item => ({
+    source: "Diario Oficial",
+    period: item.fecha ? String(item.fecha).slice(0, 7) : "",
+    date: item.fecha || "",
+    region: normalizeRegionName(item.region || "Chile"),
+    commune: item.comuna || "",
+    title: item.titulo || "",
+    summary: item.resumen || "",
+    category: item.categoria || "",
+    status: item.estado || "",
+    sourceUrl: item.source_url || "",
+    itemType: "daily"
+  }));
+
+  const ipt = iptReports.flatMap(report =>
+    (Array.isArray(report.cambios) ? report.cambios : []).map(item => ({
+      source: "IPT",
+      period: report.periodo || "",
+      date: item.fecha_publicacion || "",
+      region: normalizeRegionName(item.region || "Chile"),
+      commune: item.comuna || "",
+      title: [item.tipo_ipt, item.acto].filter(Boolean).join(" · "),
+      summary: item.resumen || "",
+      category: item.tipo_ipt || "",
+      status: item.estado || "",
+      sourceUrl: item.fuente || "",
+      itemType: "ipt"
+    }))
+  );
+
+  const historic = annualReports.flatMap(report =>
+    (Array.isArray(report.items) ? report.items : []).map(item => ({
+      source: "Histórico",
+      period: item.periodo || "",
+      date: item.fecha || "",
+      region: normalizeRegionName(item.region || "Chile"),
+      commune: item.comuna || "",
+      title: item.titulo || "",
+      summary: item.resumen || "",
+      category: item.categoria || item.tipo_norma || "",
+      status: item.estado || "",
+      sourceUrl: item.fuente || "",
+      itemType: "historic"
+    }))
+  );
+
+  return [...daily, ...ipt, ...historic]
+    .filter(item => item.region && REGION_CENTERS[item.region]);
+}
+
+function filteredMapItems() {
+  const q = mapState.search.trim().toLowerCase();
+
+  return mapItems()
+    .filter(item => !mapState.module || item.source === mapState.module)
+    .filter(item => !mapState.period || item.period === mapState.period)
+    .filter(item => !mapState.region || item.region === mapState.region)
+    .filter(item => !mapState.selectedRegion || item.region === mapState.selectedRegion)
+    .filter(item => {
+      if (!q) return true;
+      return [
+        item.source, item.period, item.date, item.region, item.commune,
+        item.title, item.summary, item.category, item.status
+      ].join(" ").toLowerCase().includes(q);
+    });
+}
+
+function mapMarkerSize(count) {
+  if (count >= 10) return 42;
+  if (count >= 6) return 36;
+  if (count >= 3) return 30;
+  return 24;
+}
+
+function initTerritorialMap() {
+  if (territorialMap || typeof L === "undefined") return;
+
+  territorialMap = L.map("territorialMap", {
+    zoomControl: true,
+    scrollWheelZoom: false,
+    minZoom: 3,
+    maxZoom: 10
+  }).setView([-35.6, -71.5], 4);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(territorialMap);
+
+  territorialLayer = L.layerGroup().addTo(territorialMap);
+}
+
+function renderTerritorialMap() {
+  initTerritorialMap();
+  if (!territorialMap || !territorialLayer) return;
+
+  const items = filteredMapItems();
+  territorialLayer.clearLayers();
+
+  const grouped = new Map();
+
+  items.forEach(item => {
+    if (!grouped.has(item.region)) grouped.set(item.region, []);
+    grouped.get(item.region).push(item);
+  });
+
+  grouped.forEach((regionItems, region) => {
+    const center = REGION_CENTERS[region];
+    if (!center) return;
+
+    const size = mapMarkerSize(regionItems.length);
+    const communes = new Set(regionItems.map(item => item.commune).filter(Boolean)).size;
+
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="region-marker" style="width:${size}px;height:${size}px">${regionItems.length}</div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
+    });
+
+    const marker = L.marker(center, { icon }).addTo(territorialLayer);
+
+    marker.bindPopup(`
+      <div class="map-popup">
+        <h4>${escapeHtml(region)}</h4>
+        <p><strong>${regionItems.length}</strong> registros visibles</p>
+        <p><strong>${communes}</strong> comunas identificadas</p>
+        <button type="button" data-map-region="${escapeAttribute(region)}">
+          Ver detalle territorial
+        </button>
+      </div>
+    `);
+  });
+
+  renderMapResults();
+
+  if (mapState.region && REGION_CENTERS[mapState.region]) {
+    territorialMap.setView(REGION_CENTERS[mapState.region], 6);
+  } else if (mapState.selectedRegion && REGION_CENTERS[mapState.selectedRegion]) {
+    territorialMap.setView(REGION_CENTERS[mapState.selectedRegion], 6);
+  } else {
+    territorialMap.setView([-35.6, -71.5], 4);
+  }
+
+  setTimeout(() => territorialMap.invalidateSize(), 100);
+}
+
+function mapResultTemplate(item) {
+  const territory = [item.commune, item.region].filter(Boolean).join(" · ");
+  const dateOrPeriod = item.date || item.period || "";
+
+  return `
+    <article class="map-result-item">
+      <span class="map-result-source">${escapeHtml(item.source)}</span>
+      <div class="map-result-content">
+        <h4>${escapeHtml(item.title || item.category || "Actualización normativa")}</h4>
+        <p>${escapeHtml(item.summary || "")}</p>
+      </div>
+      <div class="map-result-territory">
+        <strong>${escapeHtml(territory)}</strong><br>
+        <span>${escapeHtml(dateOrPeriod)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderMapResults() {
+  const items = filteredMapItems();
+  const regions = new Set(items.map(item => item.region).filter(Boolean)).size;
+  const communes = new Set(items.map(item => item.commune).filter(Boolean)).size;
+
+  $("mapMetricItems").textContent = items.length;
+  $("mapMetricRegions").textContent = regions;
+  $("mapMetricCommunes").textContent = communes;
+  $("mapResultCount").textContent =
+    `${items.length} ${items.length === 1 ? "registro" : "registros"}`;
+
+  const titleRegion = mapState.selectedRegion || mapState.region;
+  $("mapResultsTitle").textContent = titleRegion || "Todos los territorios";
+
+  $("mapResultsList").innerHTML = items.slice(0, 100).map(mapResultTemplate).join("");
+  $("mapEmptyState").hidden = items.length !== 0;
+}
+
+function populateMapFilters() {
+  const items = mapItems();
+
+  addOptions(
+    $("mapPeriodFilter"),
+    [...new Set(items.map(item => item.period).filter(Boolean))].sort().reverse()
+  );
+
+  addOptions(
+    $("mapRegionFilter"),
+    [...new Set(items.map(item => item.region).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "es"))
+  );
+}
+
 function bindEvents() {
   document.querySelectorAll(".module-tab").forEach(button => {
     button.addEventListener("click", () => switchModule(button.dataset.module));
@@ -591,7 +836,58 @@ function bindEvents() {
     renderAnnualReports();
   });
 
+
+  $("mapModuleFilter").addEventListener("change", event => {
+    mapState.module = event.target.value;
+    mapState.selectedRegion = "";
+    renderTerritorialMap();
+  });
+
+  $("mapPeriodFilter").addEventListener("change", event => {
+    mapState.period = event.target.value;
+    mapState.selectedRegion = "";
+    renderTerritorialMap();
+  });
+
+  $("mapRegionFilter").addEventListener("change", event => {
+    mapState.region = event.target.value;
+    mapState.selectedRegion = "";
+    renderTerritorialMap();
+  });
+
+  $("mapSearchInput").addEventListener("input", event => {
+    mapState.search = event.target.value;
+    renderTerritorialMap();
+  });
+
+  $("clearMapFilters").addEventListener("click", () => {
+    Object.assign(mapState, {
+      search: "",
+      module: "",
+      period: "",
+      region: "",
+      selectedRegion: ""
+    });
+
+    $("mapModuleFilter").value = "";
+    $("mapPeriodFilter").value = "";
+    $("mapRegionFilter").value = "";
+    $("mapSearchInput").value = "";
+
+    renderTerritorialMap();
+  });
+
   document.addEventListener("click", event => {
+    const mapRegionButton = event.target.closest("[data-map-region]");
+    if (mapRegionButton) {
+      mapState.selectedRegion = mapRegionButton.dataset.mapRegion;
+      $("mapRegionFilter").value = mapState.selectedRegion;
+      mapState.region = mapState.selectedRegion;
+      renderTerritorialMap();
+      territorialMap?.closePopup();
+      return;
+    }
+
     const dailyButton = event.target.closest("[data-daily-index]");
     if (dailyButton) {
       showDailyReport(dailyButton.dataset.dailyIndex);
@@ -632,14 +928,18 @@ function init() {
   renderIptReports();
   renderAnnualMetrics();
   renderAnnualReports();
+  populateMapFilters();
   bindEvents();
 
   const requestedModule = location.hash === "#ipt"
     ? "ipt"
     : location.hash === "#historico"
       ? "historico"
-      : "diario";
+      : location.hash === "#mapa"
+        ? "mapa"
+        : "diario";
   switchModule(requestedModule);
+  if (requestedModule === "mapa") renderTerritorialMap();
 }
 
 init();
