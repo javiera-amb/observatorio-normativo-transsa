@@ -1511,3 +1511,190 @@ dialog::backdrop {
     text-align: left;
   }
 }
+
+
+/* =========================================================
+   RESPALDO DE ESTRUCTURA LEAFLET
+   Evita que los mosaicos se apilen sobre el resto del portal.
+   ========================================================= */
+
+.leaflet-container {
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  background: #eef0f7;
+  outline: 0;
+}
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.leaflet-map-pane,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.leaflet-map-pane { z-index: 200; }
+.leaflet-tile-pane { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane { z-index: 500; }
+.leaflet-marker-pane { z-index: 600; }
+.leaflet-tooltip-pane { z-index: 650; }
+.leaflet-popup-pane { z-index: 700; }
+
+.leaflet-tile {
+  width: 256px;
+  height: 256px;
+  border: 0;
+  visibility: hidden;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.leaflet-tile-loaded {
+  visibility: inherit;
+}
+
+.leaflet-zoom-animated {
+  transform-origin: 0 0;
+}
+
+.leaflet-control {
+  position: relative;
+  z-index: 800;
+  pointer-events: auto;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.leaflet-top { top: 0; }
+.leaflet-right { right: 0; }
+.leaflet-bottom { bottom: 0; }
+.leaflet-left { left: 0; }
+
+.leaflet-control-zoom {
+  margin: 12px;
+}
+
+.leaflet-control-zoom a {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-bottom: 1px solid #d9dbea;
+  color: var(--transsa-navy);
+  background: #ffffff;
+  text-decoration: none;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.leaflet-control-zoom a:first-child {
+  border-radius: 9px 9px 0 0;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: 0;
+  border-radius: 0 0 9px 9px;
+}
+
+.leaflet-control-attribution {
+  margin: 0;
+  padding: 3px 7px;
+  color: #737487;
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 10px;
+}
+
+.leaflet-control-attribution a {
+  color: var(--transsa-blue);
+}
+
+.leaflet-popup {
+  position: absolute;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #ffffff;
+}
+
+.leaflet-popup-tip-container {
+  position: absolute;
+  left: 50%;
+  width: 40px;
+  height: 20px;
+  margin-left: -20px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.leaflet-popup-tip {
+  width: 17px;
+  height: 17px;
+  margin: -10px auto 0;
+  transform: rotate(45deg);
+}
+
+.leaflet-popup-close-button {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  z-index: 2;
+  border: 0;
+  color: #737487;
+  background: transparent;
+  text-decoration: none;
+  font-size: 20px;
+}
+
+.map-main {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.territorial-map {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  height: 560px;
+  min-height: 480px;
+}
+
+.map-results-panel {
+  position: relative;
+  z-index: 2;
+  background: var(--surface);
+}
+
+@media (max-width: 700px) {
+  .territorial-map {
+    height: 440px;
+    min-height: 400px;
+  }
+}

@@ -66,7 +66,8 @@ function switchModule(moduleName) {
 
   history.replaceState(null, "", `#${moduleName}`);
   if (moduleName === "mapa") {
-    setTimeout(renderTerritorialMap, 50);
+    setTimeout(renderTerritorialMap, 80);
+    setTimeout(() => territorialMap?.invalidateSize({ pan: false }), 350);
   }
 }
 
@@ -634,12 +635,19 @@ function initTerritorialMap() {
     zoomControl: true,
     scrollWheelZoom: false,
     minZoom: 3,
-    maxZoom: 10
-  }).setView([-35.6, -71.5], 4);
+    maxZoom: 10,
+    zoomSnap: 0.25,
+    preferCanvas: true
+  });
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  territorialMap.fitBounds(
+    [[-56.2, -76.2], [-17.2, -66.0]],
+    { padding: [24, 24] }
+  );
+
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
   }).addTo(territorialMap);
 
   territorialLayer = L.layerGroup().addTo(territorialMap);
@@ -694,10 +702,16 @@ function renderTerritorialMap() {
   } else if (mapState.selectedRegion && REGION_CENTERS[mapState.selectedRegion]) {
     territorialMap.setView(REGION_CENTERS[mapState.selectedRegion], 6);
   } else {
-    territorialMap.setView([-35.6, -71.5], 4);
+    territorialMap.fitBounds(
+      [[-56.2, -76.2], [-17.2, -66.0]],
+      { padding: [24, 24] }
+    );
   }
 
-  setTimeout(() => territorialMap.invalidateSize(), 100);
+  requestAnimationFrame(() => {
+    territorialMap.invalidateSize({ pan: false });
+  });
+  setTimeout(() => territorialMap.invalidateSize({ pan: false }), 250);
 }
 
 function mapResultTemplate(item) {

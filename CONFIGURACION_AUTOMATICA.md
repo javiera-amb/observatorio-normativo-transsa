@@ -128,3 +128,10 @@ Características:
 El mapa usa coordenadas centrales regionales para evitar depender de servicios
 de geocodificación. Esto permite una visualización estable y rápida, pero no
 representa la ubicación exacta del predio o acto dentro de la comuna.
+
+
+## Corrección del mapa
+
+Esta versión corrige la carga del CSS de Leaflet y añade reglas estructurales
+de respaldo. Los mosaicos quedan contenidos dentro del panel, el tamaño se
+recalcula al abrir la pestaña y el mapa se encuadra automáticamente sobre Chile.
