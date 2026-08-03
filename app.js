@@ -1,9 +1,11 @@
 const reports = Array.isArray(window.REPORTES) ? [...window.REPORTES] : [];
 const iptReports = Array.isArray(window.IPT_REPORTES) ? [...window.IPT_REPORTES] : [];
+const annualReports = Array.isArray(window.HISTORICOS) ? [...window.HISTORICOS] : [];
 
 const $ = (id) => document.getElementById(id);
 const state = { search: "", scale: "", category: "", status: "" };
 const iptState = { search: "", region: "", status: "" };
+const annualState = { search: "", month: "", module: "", region: "" };
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -397,6 +399,114 @@ function showIptReport(index) {
   $("iptDialog").showModal();
 }
 
+
+function annualItems() {
+  return annualReports.flatMap(report =>
+    (Array.isArray(report.items) ? report.items : []).map(item => ({
+      ...item,
+      annualYear: report.year,
+      annualIndex: annualReports.indexOf(report)
+    }))
+  );
+}
+
+function annualMonthLabel(value) {
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) return value || "—";
+  const [year, month] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-CL", {
+    month: "long",
+    year: "numeric"
+  }).format(new Date(year, month - 1, 15));
+}
+
+function filteredAnnualItems() {
+  const q = annualState.search.trim().toLowerCase();
+
+  return annualItems()
+    .filter(item => !annualState.month || item.periodo === annualState.month)
+    .filter(item => !annualState.module || item.modulo === annualState.module)
+    .filter(item => !annualState.region || item.region === annualState.region)
+    .filter(item => {
+      if (!q) return true;
+      return [
+        item.periodo, item.modulo, item.fecha, item.region, item.comuna,
+        item.categoria, item.tipo_norma, item.numero, item.organismo,
+        item.titulo, item.resumen, item.implicancia, item.estado, item.fuente
+      ].join(" ").toLowerCase().includes(q);
+    })
+    .sort((a, b) => String(b.fecha || b.periodo).localeCompare(String(a.fecha || a.periodo)));
+}
+
+function renderAnnualMetrics() {
+  const items = annualItems();
+  const communes = new Set(items.map(item => item.comuna).filter(Boolean)).size;
+  const regions = new Set(items.map(item => item.region).filter(Boolean)).size;
+  const years = annualReports.map(report => report.year).filter(Boolean).sort().reverse();
+
+  $("annualMetricItems").textContent = items.length;
+  $("annualMetricCommunes").textContent = communes;
+  $("annualMetricRegions").textContent = regions;
+  $("annualMetricYear").textContent = years[0] || "—";
+}
+
+function annualCardTemplate(item) {
+  return `
+    <article class="annual-item-card">
+      <div class="card-top">
+        <span class="annual-module-pill">${escapeHtml(item.modulo || "Histórico")}</span>
+        <span class="scale-pill">${escapeHtml(item.estado || item.escala || "Registro")}</span>
+      </div>
+
+      <p class="card-date">${escapeHtml(annualMonthLabel(item.periodo))}</p>
+      <h3>${escapeHtml(item.titulo || item.resumen || "Actualización normativa")}</h3>
+      <p class="card-summary">${escapeHtml(item.resumen || "")}</p>
+
+      <div class="annual-item-meta">
+        <span>${escapeHtml(item.region || "Chile")}</span>
+        <span>${escapeHtml(item.comuna || item.categoria || "")}</span>
+      </div>
+
+      <div class="card-footer">
+        <span>${escapeHtml(item.tipo_norma || item.categoria || "")}</span>
+        ${item.fuente ? `
+          <a class="annual-source-link" href="${escapeAttribute(item.fuente)}"
+             target="_blank" rel="noopener noreferrer">Fuente oficial →</a>
+        ` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderAnnualReports() {
+  const items = filteredAnnualItems();
+  $("annualReportGrid").innerHTML = items.map(annualCardTemplate).join("");
+  $("annualResultCount").textContent =
+    `${items.length} ${items.length === 1 ? "registro" : "registros"}`;
+  $("annualEmptyState").hidden = items.length !== 0;
+
+  const report = annualReports[0];
+  if (report && items.length) {
+    const downloads = `
+      <article class="annual-download-card">
+        <div>
+          <p class="eyebrow">DESCARGAS</p>
+          <h3>${escapeHtml(report.titulo || `Reporte anual ${report.year}`)}</h3>
+          <p>${escapeHtml(report.resumen_ejecutivo || "")}</p>
+        </div>
+        <div class="annual-download-actions">
+          ${report.word_url ? `
+            <a href="${escapeAttribute(report.word_url)}" download>Descargar Word</a>
+          ` : ""}
+          ${report.csv_url ? `
+            <a href="${escapeAttribute(report.csv_url)}" download>Consolidado para Excel</a>
+          ` : ""}
+        </div>
+      </article>
+    `;
+    $("annualReportGrid").insertAdjacentHTML("afterbegin", downloads);
+  }
+}
+
 function bindEvents() {
   document.querySelectorAll(".module-tab").forEach(button => {
     button.addEventListener("click", () => switchModule(button.dataset.module));
@@ -455,6 +565,32 @@ function bindEvents() {
     renderIptReports();
   });
 
+
+  $("annualSearchInput").addEventListener("input", event => {
+    annualState.search = event.target.value;
+    renderAnnualReports();
+  });
+  $("annualMonthFilter").addEventListener("change", event => {
+    annualState.month = event.target.value;
+    renderAnnualReports();
+  });
+  $("annualModuleFilter").addEventListener("change", event => {
+    annualState.module = event.target.value;
+    renderAnnualReports();
+  });
+  $("annualRegionFilter").addEventListener("change", event => {
+    annualState.region = event.target.value;
+    renderAnnualReports();
+  });
+  $("clearAnnualFilters").addEventListener("click", () => {
+    Object.assign(annualState, { search: "", month: "", module: "", region: "" });
+    $("annualSearchInput").value = "";
+    $("annualMonthFilter").value = "";
+    $("annualModuleFilter").value = "";
+    $("annualRegionFilter").value = "";
+    renderAnnualReports();
+  });
+
   document.addEventListener("click", event => {
     const dailyButton = event.target.closest("[data-daily-index]");
     if (dailyButton) {
@@ -473,6 +609,17 @@ function init() {
   addOptions($("scaleFilter"), uniqueValues(reports, "escala"));
   addOptions($("categoryFilter"), uniqueValues(reports, "categoria"));
   addOptions(
+    $("annualMonthFilter"),
+    [...new Set(annualItems().map(item => item.periodo).filter(Boolean))]
+      .sort()
+  );
+  addOptions(
+    $("annualRegionFilter"),
+    [...new Set(annualItems().map(item => item.region).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "es"))
+  );
+
+  addOptions(
     $("iptRegionFilter"),
     [...new Set(iptAllChanges().map(change => change.region).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b, "es"))
@@ -483,9 +630,15 @@ function init() {
   renderReports();
   renderIptMetrics();
   renderIptReports();
+  renderAnnualMetrics();
+  renderAnnualReports();
   bindEvents();
 
-  const requestedModule = location.hash === "#ipt" ? "ipt" : "diario";
+  const requestedModule = location.hash === "#ipt"
+    ? "ipt"
+    : location.hash === "#historico"
+      ? "historico"
+      : "diario";
   switchModule(requestedModule);
 }
 

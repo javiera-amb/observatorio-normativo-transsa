@@ -12,6 +12,12 @@ DAILY_REQUIRED = {
     "organismo", "tipo_norma", "numero", "resumen", "implicancia", "impactados",
 }
 
+HISTORIC_REQUIRED = {
+    "periodo", "modulo", "fecha", "region", "comuna", "escala",
+    "categoria", "tipo_norma", "numero", "organismo", "titulo",
+    "resumen", "implicancia", "estado", "fuente",
+}
+
 IPT_CHANGE_REQUIRED = {
     "region", "comuna", "territorio", "tipo_ipt", "acto", "numero",
     "fecha_publicacion", "estado", "resumen", "vigencia", "fuente",
@@ -80,8 +86,38 @@ def main() -> int:
                 if report.get(key):
                     validate_file(ROOT / report[key], key)
 
+
+        historic = load_js_array(
+            ROOT / "data" / "historicos.js",
+            "window.HISTORICOS = ",
+        )
+        for report_position, report in enumerate(historic):
+            for key in ("year", "titulo", "fecha_generacion", "items"):
+                if key not in report:
+                    raise ValueError(
+                        f"Reporte histórico {report_position} sin campo {key}"
+                    )
+
+            if not isinstance(report["items"], list):
+                raise ValueError(
+                    f"items no es lista en histórico {report_position}"
+                )
+
+            for item_position, item in enumerate(report["items"]):
+                missing = sorted(HISTORIC_REQUIRED - set(item))
+                if missing:
+                    raise ValueError(
+                        f"Histórico {report_position}:{item_position} "
+                        f"incompleto: {', '.join(missing)}"
+                    )
+
+            for key in ("word_url", "csv_url"):
+                if report.get(key):
+                    validate_file(ROOT / report[key], key)
+
         print(
-            f"Validación correcta. Diarios: {len(daily)} · IPT: {len(ipt)}"
+            f"Validación correcta. Diarios: {len(daily)} · "
+            f"IPT: {len(ipt)} · Históricos: {len(historic)}"
         )
         return 0
 

@@ -20,3 +20,12 @@ Lee `CONFIGURACION_AUTOMATICA.md`.
 
 - `data/reportes.js`
 - `data/ipt_reportes.js`
+
+
+## Histórico anual
+
+- Base: `data/historicos.js`
+- Acción: `.github/workflows/cargar-historico-anual.yml`
+- Script: `automation/cargar_historico_anual.py`
+- Word: `documentos/historicos/`
+- Consolidado: `consolidados/historicos/`

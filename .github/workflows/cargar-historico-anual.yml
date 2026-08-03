@@ -1,0 +1,72 @@
+name: Cargar histórico anual
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Año que se cargará"
+        required: true
+        default: "2025"
+        type: string
+      month:
+        description: "Mes: all o número 1-12"
+        required: true
+        default: "all"
+        type: string
+      force:
+        description: "Reprocesar aunque el período ya exista"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cargar-historico-anual
+  cancel-in-progress: false
+
+jobs:
+  cargar:
+    name: Construir histórico
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: automation/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r automation/requirements.txt
+
+      - name: Investigar y consolidar histórico
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
+          HISTORIC_YEAR: ${{ inputs.year }}
+          HISTORIC_MONTH: ${{ inputs.month }}
+          HISTORIC_FORCE: ${{ inputs.force }}
+        run: python automation/cargar_historico_anual.py
+
+      - name: Validar portal
+        run: python automation/validar_sitio.py
+
+      - name: Guardar cambios
+        run: |
+          if git diff --quiet; then
+            echo "No hay cambios nuevos."
+            exit 0
+          fi
+
+          git config user.name "Observatorio Histórico Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/historicos.js documentos/historicos/ consolidados/historicos/
+          git commit -m "Carga histórica ${{ inputs.year }} ${{ inputs.month }}"
+          git push

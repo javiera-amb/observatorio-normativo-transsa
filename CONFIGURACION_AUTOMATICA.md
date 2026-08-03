@@ -84,3 +84,28 @@ La automatización crea un CSV con codificación UTF-8 y separador punto y coma,
 que se abre correctamente en Excel. La tarea mensual de ChatGPT puede continuar
 generando el XLSX formal. El portal ya admite un campo `excel_url` para
 incorporarlo cuando se automatice su carga.
+
+
+## Histórico anual 2025
+
+El paquete incluye una tercera acción:
+
+`Actions → Cargar histórico anual → Run workflow`
+
+Parámetros recomendados:
+
+- `year`: `2025`
+- `month`: `all`
+- `force`: desmarcado
+
+La ejecución investigará los doce meses y generará:
+
+- un módulo web “Histórico anual”;
+- Word anual;
+- CSV compatible con Excel;
+- filtros por mes, módulo, región y texto.
+
+La ejecución puede tardar entre varios minutos y más de una hora, según la
+cantidad de fuentes y la respuesta de la API. También puede generar consumo
+adicional de OpenAI API. Para reducir el costo o recuperar una ejecución
+interrumpida, usa `month` con un número entre 1 y 12.

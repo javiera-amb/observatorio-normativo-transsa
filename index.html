@@ -28,6 +28,7 @@
     <nav class="module-nav" aria-label="Módulos del observatorio">
       <button class="module-tab active" data-module="diario">Diario Oficial</button>
       <button class="module-tab" data-module="ipt">Actualizaciones IPT</button>
+      <button class="module-tab" data-module="historico">Histórico anual</button>
     </nav>
 
     <span class="private-badge">
@@ -49,11 +50,12 @@
         <div class="intro-actions">
           <button class="primary-button" data-module-jump="diario">Ver Diario Oficial</button>
           <button class="secondary-button" data-module-jump="ipt">Ver actualizaciones IPT</button>
+          <button class="secondary-button" data-module-jump="historico">Ver histórico 2025</button>
         </div>
       </div>
 
       <aside class="coverage-card">
-        <p class="eyebrow">DOS LÍNEAS DE SEGUIMIENTO</p>
+        <p class="eyebrow">TRES LÍNEAS DE SEGUIMIENTO</p>
         <div class="coverage-row">
           <span class="coverage-number">01</span>
           <div>
@@ -66,6 +68,14 @@
           <div>
             <strong>Reporte IPT mensual</strong>
             <p>PRC, PRI, PRM, seccionales, enmiendas, límites urbanos y otros actos territoriales.</p>
+          </div>
+        </div>
+
+        <div class="coverage-row">
+          <span class="coverage-number">03</span>
+          <div>
+            <strong>Histórico anual</strong>
+            <p>Consolidado de Diario Oficial e IPT, organizado por año, mes, región y comuna.</p>
           </div>
         </div>
       </aside>
@@ -250,6 +260,96 @@
         </div>
       </section>
     </section>
+
+    <section id="module-historico" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">CARGA HISTÓRICA</p>
+          <h2>Reporte anual 2025</h2>
+          <p>
+            Consolidado de publicaciones del Diario Oficial y cambios en
+            instrumentos de planificación territorial durante el año 2025.
+          </p>
+        </div>
+      </div>
+
+      <section class="annual-summary">
+        <article class="ipt-kpi">
+          <span>Registros históricos</span>
+          <strong id="annualMetricItems">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Comunas identificadas</span>
+          <strong id="annualMetricCommunes">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Regiones cubiertas</span>
+          <strong id="annualMetricRegions">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Año disponible</span>
+          <strong id="annualMetricYear">—</strong>
+        </article>
+      </section>
+
+      <section class="search-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSULTA HISTÓRICA</p>
+            <h2>Buscar en el año</h2>
+            <p class="section-description">
+              Filtra por mes, módulo, región, comuna, materia o estado.
+            </p>
+          </div>
+          <button id="clearAnnualFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="annual-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="annualSearchInput" type="search" placeholder="Comuna, norma, IPT, organismo o materia…">
+          </label>
+          <label>
+            <span>Mes</span>
+            <select id="annualMonthFilter"><option value="">Todos</option></select>
+          </label>
+          <label>
+            <span>Módulo</span>
+            <select id="annualModuleFilter">
+              <option value="">Todos</option>
+              <option value="Diario Oficial">Diario Oficial</option>
+              <option value="IPT">IPT</option>
+            </select>
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="annualRegionFilter"><option value="">Todas</option></select>
+          </label>
+        </div>
+      </section>
+
+      <section class="reports-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSOLIDADO ANUAL</p>
+            <h2>Histórico disponible</h2>
+          </div>
+          <span id="annualResultCount" class="result-count"></span>
+        </div>
+
+        <div id="annualReportGrid" class="annual-report-grid"></div>
+
+        <div id="annualEmptyState" class="empty-state">
+          <div>2025</div>
+          <h3>El histórico aún no ha sido cargado</h3>
+          <p>
+            Ejecuta en GitHub la acción “Cargar histórico anual” para incorporar
+            Diario Oficial e IPT del año 2025.
+          </p>
+        </div>
+      </section>
+    </section>
+
   </main>
 
   <footer>
@@ -276,6 +376,7 @@
 
   <script src="data/reportes.js"></script>
   <script src="data/ipt_reportes.js"></script>
+  <script src="data/historicos.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
