@@ -1,0 +1,9 @@
+{
+  "base_url": "http://localhost:11434",
+  "model": "qwen3:8b",
+  "timeout_seconds": 240,
+  "temperature": 0.1,
+  "num_ctx": 8192,
+  "max_input_characters": 24000,
+  "retries": 2
+}

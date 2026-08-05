@@ -4,3 +4,20 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# Archivos temporales de SQLite
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+_local/
+data/db/
+data/inbox/
+documentos/diario_oficial/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+*.log
+~$*.docx
+Thumbs.db
+.DS_Store

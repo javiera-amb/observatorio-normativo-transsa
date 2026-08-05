@@ -1,865 +1,545 @@
 #!/usr/bin/env python3
-"""
-Actualiza el Observatorio Normativo Urbano a partir de la edición más reciente
-del Diario Oficial de la República de Chile.
+"""Pipeline local del Diario Oficial para Transsa Urban Intelligence.
 
-Flujo:
-1. Descarga el sumario oficial.
-2. Detecta la edición y sus publicaciones PDF.
-3. Usa OpenAI para seleccionar las materias pertinentes.
-4. Descarga y extrae el texto de los PDF oficiales.
-5. Genera registros estructurados para el portal.
-6. Crea un Word diario descargable.
-7. Actualiza data/reportes.js sin duplicar registros.
-
-Variables de entorno:
-- OPENAI_API_KEY: obligatoria cuando existe una nueva edición por analizar.
-- OPENAI_MODEL: opcional. Valor por defecto: gpt-5-mini.
+No usa OpenAI ni servicios pagados. Descarga la edición más reciente, aplica
+un prefiltro por reglas, analiza candidatos con Ollama local, guarda documentos
+originales, crea eventos canónicos en SQLite, exporta datos web y genera un Word
+preliminar compatible con el portal heredado.
 """
 
 from __future__ import annotations
 
-import io
+import argparse
 import json
-import os
-import re
 import sys
-from dataclasses import dataclass
+import traceback
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
 import requests
-from bs4 import BeautifulSoup
-from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Cm, Pt
-from openai import OpenAI
-from pypdf import PdfReader
-
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_FILE = ROOT / "data" / "reportes.js"
-DOCUMENTS_DIR = ROOT / "documentos"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-INDEX_URL = (
-    "https://www.diariooficial.interior.gob.cl/"
-    "edicionelectronica/index.php/bom.php"
+from automation.ollama.analyzer import analyze_document
+from automation.ollama.client import OllamaClient, OllamaError
+from automation.ollama.config import load_ollama_config
+from automation.reports.daily_report import (
+    event_to_legacy_report,
+    generate_daily_docx,
+    no_news_legacy_report,
 )
+from automation.sources.diario_oficial import (
+    INDEX_URL,
+    DiarioOficialError,
+    Publication,
+    create_session,
+    extract_edition,
+    extract_publications,
+    fetch_bytes,
+    fetch_text,
+    pdf_to_text,
+    save_publication_files,
+    select_candidates,
+)
+from core.database import connect, initialize_database, upsert_events
+from core.events import write_event_json
+from core.ingest import build_events
+from core.legacy import read_legacy_reports, write_legacy_reports
+from core.paths import ProjectPaths
+
 TIMEZONE = ZoneInfo("America/Santiago")
-MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
-REQUEST_TIMEOUT = 45
-MAX_PDF_CHARS = 45_000
-USER_AGENT = (
-    "Mozilla/5.0 (compatible; ObservatorioNormativoTranssa/1.0; "
-    "+https://www.diariooficial.interior.gob.cl/)"
-)
-
-MONTHS = {
-    "enero": 1,
-    "febrero": 2,
-    "marzo": 3,
-    "abril": 4,
-    "mayo": 5,
-    "junio": 6,
-    "julio": 7,
-    "agosto": 8,
-    "septiembre": 9,
-    "setiembre": 9,
-    "octubre": 10,
-    "noviembre": 11,
-    "diciembre": 12,
-}
-
-RELEVANCE_CRITERIA = """
-Selecciona publicaciones que tengan relación directa o material con alguna
-de estas materias:
-
-- planificación urbana, territorial o metropolitana;
-- instrumentos de planificación territorial, PRC, PRI, PRM, planes
-  seccionales, enmiendas, límites urbanos o declaratorias;
-- usos de suelo, subdivisiones, loteos, urbanizaciones y aportes al espacio
-  público;
-- permisos, anteproyectos, recepciones, regularizaciones y Direcciones de
-  Obras Municipales;
-- LGUC, OGUC, normas técnicas, construcción, arquitectura, edificación,
-  accesibilidad, seguridad, instalaciones o eficiencia energética;
-- vivienda, subsidios y programas habitacionales cuando cambien reglas,
-  montos, llamados o condiciones aplicables a proyectos;
-- patrimonio arquitectónico, zonas típicas, monumentos, inmuebles de
-  conservación o arqueología vinculada a obras;
-- evaluación ambiental de proyectos urbanos, inmobiliarios, industriales o
-  de infraestructura con efectos territoriales, viales, patrimoniales o de
-  construcción;
-- movilidad, vialidad, expropiaciones, infraestructura urbana y espacio
-  público;
-- normas regionales o comunales que puedan afectar análisis inmobiliarios.
-
-Ante duda razonable, incluye la publicación. Excluye materias claramente
-ajenas, como pesca, tipos de cambio, nombramientos internos o procedimientos
-administrativos sin efecto territorial.
-""".strip()
+PIPELINE_NAME = "diario_oficial_local"
+RULES_VERSION = "do-prefilter-v2-official-fields"
 
 
-@dataclass(frozen=True)
-class Publication:
-    index: int
-    title: str
-    context: str
-    pdf_url: str
-    cve: str
+class PipelineError(RuntimeError):
+    """Error controlado del pipeline local."""
 
 
-class AutomationError(RuntimeError):
-    """Error controlado de la automatización."""
-
-
-def session() -> requests.Session:
-    current = requests.Session()
-    current.headers.update({"User-Agent": USER_AGENT})
-    return current
-
-
-def clean_space(value: str) -> str:
-    return re.sub(r"\s+", " ", value or "").strip(" |-\n\t")
-
-
-def fetch_text(http: requests.Session, url: str) -> str:
-    response = http.get(url, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    response.encoding = response.apparent_encoding or response.encoding
-    return response.text
-
-
-def fetch_bytes(http: requests.Session, url: str) -> bytes:
-    response = http.get(url, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    return response.content
-
-
-def parse_spanish_date(text: str) -> date:
-    match = re.search(
-        r"(\d{1,2})\s+de\s+([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)\s+de\s+(\d{4})",
-        text,
-        flags=re.IGNORECASE,
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Reprocesa la edición aunque exista un manifiesto completado.",
     )
-    if not match:
-        raise AutomationError(
-            "No fue posible reconocer la fecha de la edición del Diario Oficial."
-        )
-
-    day = int(match.group(1))
-    month_name = (
-        match.group(2)
-        .lower()
-        .replace("á", "a")
-        .replace("é", "e")
-        .replace("í", "i")
-        .replace("ó", "o")
-        .replace("ú", "u")
-        .replace("ü", "u")
+    parser.add_argument(
+        "--threshold",
+        type=int,
+        default=4,
+        help="Puntaje mínimo del prefiltro por reglas. Valor recomendado: 4.",
     )
-    month = MONTHS.get(month_name)
-    if not month:
-        raise AutomationError(f"Mes no reconocido: {match.group(2)}")
-
-    return date(int(match.group(3)), month, day)
-
-
-def extract_edition(html: str) -> tuple[str, date]:
-    soup = BeautifulSoup(html, "html.parser")
-    page_text = clean_space(soup.get_text(" ", strip=True))
-
-    edition_match = re.search(
-        r"Edici[oó]n\s+N[uú]m\.?\s*([0-9.]+)",
-        page_text,
-        flags=re.IGNORECASE,
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Descarga y analiza, pero no actualiza SQLite ni data/reportes.js.",
     )
-    if not edition_match:
-        raise AutomationError("No fue posible reconocer el número de edición.")
-
-    edition_number = edition_match.group(1)
-    edition_date = parse_spanish_date(page_text)
-    return edition_number, edition_date
+    return parser.parse_args()
 
 
-def nearby_context(link: Any) -> str:
-    pieces: list[str] = []
-
-    parent = link.parent
-    if parent:
-        parent_text = clean_space(parent.get_text(" ", strip=True))
-        if parent_text:
-            pieces.append(parent_text)
-
-    previous = link.find_previous(string=True)
-    attempts = 0
-    while previous and attempts < 6:
-        text = clean_space(str(previous))
-        if text and "Ver PDF" not in text:
-            pieces.append(text)
-        previous = previous.find_previous(string=True)
-        attempts += 1
-
-    combined = clean_space(" | ".join(dict.fromkeys(reversed(pieces))))
-    combined = re.sub(
-        r"\|\s*Ver PDF\s*\(CVE-[^)]+\)",
-        "",
-        combined,
-        flags=re.IGNORECASE,
-    )
-    return combined[-1200:]
-
-
-def extract_publications(html: str) -> list[Publication]:
-    soup = BeautifulSoup(html, "html.parser")
-    publications: list[Publication] = []
-    seen_urls: set[str] = set()
-
-    for link in soup.find_all("a", href=True):
-        label = clean_space(link.get_text(" ", strip=True))
-        href = str(link.get("href", "")).strip()
-
-        is_pdf = ".pdf" in href.lower()
-        is_publication = "ver pdf" in label.lower() or is_pdf
-        if not is_publication:
-            continue
-
-        pdf_url = urljoin(INDEX_URL, href)
-        if pdf_url in seen_urls:
-            continue
-        seen_urls.add(pdf_url)
-
-        context = nearby_context(link)
-        title = context
-
-        # Reduce encabezados muy largos conservando la parte más cercana al enlace.
-        if " | " in title:
-            parts = [clean_space(part) for part in title.split(" | ") if clean_space(part)]
-            if parts:
-                title = parts[-1]
-
-        title = re.sub(
-            r"Ver PDF\s*\(CVE-[^)]+\)",
-            "",
-            title,
-            flags=re.IGNORECASE,
-        )
-        title = clean_space(title) or f"Publicación CVE {label}"
-
-        cve_match = re.search(r"CVE[-\s]?(\d+)", f"{label} {href}", flags=re.IGNORECASE)
-        cve = cve_match.group(1) if cve_match else ""
-
-        publications.append(
-            Publication(
-                index=len(publications),
-                title=title,
-                context=context,
-                pdf_url=pdf_url,
-                cve=cve,
-            )
-        )
-
-    if not publications:
-        raise AutomationError(
-            "La edición fue encontrada, pero no se detectaron publicaciones PDF."
-        )
-
-    return publications
-
-
-def extract_json_object(raw: str) -> dict[str, Any]:
-    text = raw.strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s*```$", "", text)
-
+def relative(path: Path, root: Path) -> str:
     try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError:
-        start = text.find("{")
-        end = text.rfind("}")
-        if start < 0 or end <= start:
-            raise AutomationError("La respuesta de IA no contiene JSON válido.")
-        try:
-            parsed = json.loads(text[start : end + 1])
-        except json.JSONDecodeError as exc:
-            raise AutomationError(
-                f"No fue posible interpretar la respuesta JSON de IA: {exc}"
-            ) from exc
-
-    if not isinstance(parsed, dict):
-        raise AutomationError("La respuesta estructurada debe ser un objeto JSON.")
-    return parsed
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
-def openai_client() -> OpenAI:
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise AutomationError(
-            "Falta el secreto OPENAI_API_KEY en el repositorio de GitHub."
-        )
-    return OpenAI()
+def edition_inbox(paths: ProjectPaths, edition_date: date) -> Path:
+    return paths.inbox_dir / "diario_oficial" / edition_date.isoformat()
 
 
-def classify_publications(
-    client: OpenAI,
-    publications: list[Publication],
-) -> list[int]:
-    compact = [
-        {
-            "index": item.index,
-            "titulo": item.title,
-            "contexto": item.context,
-            "cve": item.cve,
-        }
-        for item in publications
-    ]
-
-    prompt = f"""
-Eres un analista normativo del Departamento de Estudios Inmobiliarios de
-Transsa. Revisa el sumario oficial del Diario Oficial de Chile y selecciona
-las publicaciones que deben analizarse para el Observatorio Normativo Urbano.
-
-CRITERIOS:
-{RELEVANCE_CRITERIA}
-
-PUBLICACIONES:
-{json.dumps(compact, ensure_ascii=False, indent=2)}
-
-Devuelve exclusivamente JSON válido con esta estructura:
-{{
-  "relevant_indices": [0, 2, 5]
-}}
-
-No inventes índices. Si no hay publicaciones pertinentes, devuelve una lista
-vacía.
-""".strip()
-
-    response = client.responses.create(
-        model=MODEL,
-        input=prompt,
-        store=False,
+def documents_dir(paths: ProjectPaths, edition_date: date) -> Path:
+    return (
+        paths.root
+        / "documentos"
+        / "diario_oficial"
+        / f"{edition_date.year:04d}"
+        / f"{edition_date.month:02d}"
+        / edition_date.isoformat()
     )
-    result = extract_json_object(response.output_text)
-    indices = result.get("relevant_indices", [])
 
-    if not isinstance(indices, list):
-        raise AutomationError("relevant_indices no es una lista.")
 
-    valid = sorted(
-        {
-            int(index)
-            for index in indices
-            if isinstance(index, (int, float, str))
-            and str(index).strip().isdigit()
-            and 0 <= int(index) < len(publications)
-        }
+def report_path(paths: ProjectPaths, report_date: date) -> Path:
+    return (
+        paths.root
+        / "documentos"
+        / "reportes"
+        / f"{report_date.year:04d}"
+        / f"{report_date.month:02d}"
+        / f"Reporte_TUI_Diario_Oficial_{report_date.isoformat()}.docx"
     )
-    return valid
 
 
-def pdf_to_text(pdf_bytes: bytes) -> str:
-    reader = PdfReader(io.BytesIO(pdf_bytes))
-    pages: list[str] = []
-
-    for page in reader.pages:
-        try:
-            text = page.extract_text() or ""
-        except Exception:
-            text = ""
-        if text:
-            pages.append(text)
-
-    output = clean_space("\n".join(pages))
-    return output[:MAX_PDF_CHARS]
+def manifest_path(paths: ProjectPaths, edition_date: date) -> Path:
+    return edition_inbox(paths, edition_date) / "manifest.json"
 
 
-def analyze_documents(
-    client: OpenAI,
-    documents: list[dict[str, Any]],
-    edition_number: str,
-    edition_date: date,
-) -> list[dict[str, Any]]:
-    source_material = [
-        {
-            "document_index": document["document_index"],
-            "titulo_sumario": document["title"],
-            "contexto_sumario": document["context"],
-            "cve": document["cve"],
-            "texto_pdf_oficial": document["text"],
-        }
-        for document in documents
-    ]
-
-    prompt = f"""
-Actúa como analista normativo del Departamento de Estudios Inmobiliarios de
-Transsa. Analiza únicamente los documentos oficiales entregados, publicados
-en la edición N.º {edition_number} del Diario Oficial de Chile, de fecha
-{edition_date.isoformat()}.
-
-OBJETIVO:
-Preparar registros breves, precisos y útiles para un portal interno de
-seguimiento sobre planificación urbana, urbanismo, construcción, arquitectura,
-vivienda, patrimonio y evaluación ambiental con incidencia territorial.
-
-REGLAS:
-- No inventes antecedentes.
-- Distingue correctamente alcance Nacional, Regional o Comunal.
-- La implicancia debe explicar qué cambia o qué etapa se abre en la práctica.
-- Aclara cuando una publicación no modifica directamente un instrumento de
-  planificación ni una norma urbanística.
-- Si un documento finalmente no es pertinente, no lo incluyas.
-- Usa nombres oficiales de organismos, regiones y comunas.
-- Un mismo documento puede originar solo un registro, salvo que contenga dos
-  modificaciones completamente independientes.
-
-DOCUMENTOS:
-{json.dumps(source_material, ensure_ascii=False, indent=2)}
-
-Devuelve exclusivamente JSON válido con esta estructura:
-{{
-  "items": [
-    {{
-      "document_index": 0,
-      "titulo": "Título ejecutivo y específico",
-      "escala": "Nacional | Regional | Comunal",
-      "categoria": "Planificación urbana",
-      "region": "Nombre de la región o Chile",
-      "comuna": "Nombre de la comuna o cadena vacía",
-      "organismo": "Organismo emisor",
-      "tipo_norma": "Ley, decreto, resolución, extracto de EIA, etc.",
-      "numero": "Número o identificación del acto",
-      "resumen": "Qué se publicó, en lenguaje claro.",
-      "implicancia": "Consecuencia práctica y límites de la publicación.",
-      "impactados": "Actores que podrían verse afectados."
-    }}
-  ]
-}}
-""".strip()
-
-    response = client.responses.create(
-        model=MODEL,
-        input=prompt,
-        store=False,
-    )
-    result = extract_json_object(response.output_text)
-    items = result.get("items", [])
-
-    if not isinstance(items, list):
-        raise AutomationError("El campo items no es una lista.")
-
-    documents_by_index = {
-        int(document["document_index"]): document for document in documents
-    }
-    records: list[dict[str, Any]] = []
-
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-
-        try:
-            document_index = int(item.get("document_index"))
-        except (TypeError, ValueError):
-            continue
-
-        source = documents_by_index.get(document_index)
-        if not source:
-            continue
-
-        scale = clean_space(str(item.get("escala", "")))
-        if scale not in {"Nacional", "Regional", "Comunal"}:
-            scale = "Regional"
-
-        record = {
-            "fecha": edition_date.isoformat(),
-            "titulo": clean_space(str(item.get("titulo", "")))
-            or source["title"],
-            "estado": "Con novedades",
-            "escala": scale,
-            "categoria": clean_space(str(item.get("categoria", "")))
-            or "Normativa urbana",
-            "region": clean_space(str(item.get("region", ""))) or "Chile",
-            "comuna": clean_space(str(item.get("comuna", ""))),
-            "organismo": clean_space(str(item.get("organismo", "")))
-            or "Organismo no identificado",
-            "tipo_norma": clean_space(str(item.get("tipo_norma", "")))
-            or "Publicación oficial",
-            "numero": clean_space(str(item.get("numero", ""))),
-            "resumen": clean_space(str(item.get("resumen", ""))),
-            "implicancia": clean_space(str(item.get("implicancia", ""))),
-            "impactados": clean_space(str(item.get("impactados", ""))),
-            "destacado": False,
-            "source_url": source["pdf_url"],
-            "cve": source["cve"],
-            "edicion": edition_number,
-        }
-
-        if not record["resumen"]:
-            continue
-        records.append(record)
-
-    return records
+def load_manifest(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
-def load_reports() -> list[dict[str, Any]]:
-    raw = DATA_FILE.read_text(encoding="utf-8").strip()
-    prefix = "window.REPORTES = "
-
-    if not raw.startswith(prefix) or not raw.endswith(";"):
-        raise AutomationError(
-            "data/reportes.js no tiene el formato esperado."
-        )
-
-    reports = json.loads(raw[len(prefix) : -1])
-    if not isinstance(reports, list):
-        raise AutomationError("La base de reportes no es una lista.")
-    return reports
-
-
-def save_reports(reports: list[dict[str, Any]]) -> None:
-    reports.sort(
-        key=lambda item: (
-            str(item.get("fecha", "")),
-            str(item.get("titulo", "")),
-        ),
-        reverse=True,
-    )
-    DATA_FILE.write_text(
-        "window.REPORTES = "
-        + json.dumps(reports, ensure_ascii=False, indent=2)
-        + ";\n",
+def save_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
 
-def has_date(reports: list[dict[str, Any]], target: date) -> bool:
-    value = target.isoformat()
-    return any(str(item.get("fecha", "")) == value for item in reports)
-
-
-def no_news_record(
-    report_date: date,
-    edition_number: str,
-    edition_date: date,
-    reason: str,
-) -> dict[str, Any]:
-    return {
-        "fecha": report_date.isoformat(),
-        "titulo": "Sin cambios normativos relevantes",
-        "estado": "Sin novedades",
-        "escala": "Nacional",
-        "categoria": "Sin novedades",
-        "region": "Chile",
-        "comuna": "",
-        "organismo": "Diario Oficial de la República de Chile",
-        "tipo_norma": "Revisión diaria",
-        "numero": "",
-        "resumen": reason,
-        "implicancia": (
-            "No corresponde actualizar matrices normativas ni bases de "
-            "instrumentos de planificación territorial por esta revisión."
-        ),
-        "impactados": "Sin impacto normativo nuevo identificado.",
-        "destacado": False,
-        "source_url": INDEX_URL,
-        "cve": "",
-        "edicion": edition_number,
-        "edicion_fecha": edition_date.isoformat(),
-    }
-
-
-def add_hyperlink_text(paragraph: Any, label: str, url: str) -> None:
-    run = paragraph.add_run(f"{label}: {url}")
-    run.font.name = "Outfit"
-    run.font.size = Pt(9)
-
-
-def generate_docx(report_date: date, records: list[dict[str, Any]]) -> Path:
-    output_dir = (
-        DOCUMENTS_DIR
-        / f"{report_date.year:04d}"
-        / f"{report_date.month:02d}"
-    )
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output = output_dir / (
-        f"Reporte_normativo_urbano_{report_date.isoformat()}.docx"
-    )
-
-    document = Document()
-    section = document.sections[0]
-    section.top_margin = Cm(2)
-    section.bottom_margin = Cm(2)
-    section.left_margin = Cm(2.2)
-    section.right_margin = Cm(2.2)
-
-    styles = document.styles
-    styles["Normal"].font.name = "Outfit"
-    styles["Normal"].font.size = Pt(10.5)
-    styles["Title"].font.name = "Outfit"
-    styles["Title"].font.size = Pt(23)
-    styles["Title"].font.bold = True
-    styles["Heading 1"].font.name = "Outfit"
-    styles["Heading 1"].font.size = Pt(15)
-    styles["Heading 1"].font.bold = True
-    styles["Heading 2"].font.name = "Outfit"
-    styles["Heading 2"].font.size = Pt(12)
-    styles["Heading 2"].font.bold = True
-
-    title = document.add_paragraph(style="Title")
-    title.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    title.add_run("Reporte normativo urbano")
-
-    subtitle = document.add_paragraph()
-    subtitle.add_run(
-        f"Departamento de Estudios Inmobiliarios · Transsa\n"
-        f"{report_date.strftime('%d-%m-%Y')}"
-    ).bold = True
-
-    document.add_heading("Resumen ejecutivo", level=1)
-    with_changes = [r for r in records if r.get("estado") == "Con novedades"]
-
-    if with_changes:
-        document.add_paragraph(
-            f"Se identificaron {len(with_changes)} publicaciones relevantes "
-            "para planificación urbana, construcción, arquitectura o análisis "
-            "territorial."
-        )
-    else:
-        document.add_paragraph(
-            records[0]["resumen"]
-            if records
-            else "No se identificaron novedades relevantes."
-        )
-
-    for scale in ("Nacional", "Regional", "Comunal"):
-        scale_records = [r for r in records if r.get("escala") == scale]
-        if not scale_records:
-            continue
-
-        document.add_heading(f"Alcance {scale.lower()}", level=1)
-
-        for record in scale_records:
-            document.add_heading(record["titulo"], level=2)
-            details = [
-                ("Publicación", record.get("tipo_norma", "")),
-                ("Número", record.get("numero", "")),
-                ("Organismo", record.get("organismo", "")),
-                ("Región", record.get("region", "")),
-                ("Comuna", record.get("comuna", "")),
-            ]
-
-            for label, value in details:
-                if value:
-                    paragraph = document.add_paragraph()
-                    paragraph.add_run(f"{label}: ").bold = True
-                    paragraph.add_run(str(value))
-
-            paragraph = document.add_paragraph()
-            paragraph.add_run("Qué se publicó: ").bold = True
-            paragraph.add_run(record.get("resumen", ""))
-
-            paragraph = document.add_paragraph()
-            paragraph.add_run("Implicancia práctica: ").bold = True
-            paragraph.add_run(record.get("implicancia", ""))
-
-            paragraph = document.add_paragraph()
-            paragraph.add_run("Actores impactados: ").bold = True
-            paragraph.add_run(record.get("impactados", ""))
-
-            source_url = record.get("source_url", "")
-            if source_url:
-                add_hyperlink_text(
-                    document.add_paragraph(),
-                    "Fuente oficial",
-                    source_url,
-                )
-
-    document.add_paragraph()
-    footer = document.add_paragraph(
-        "Documento generado automáticamente para uso interno. "
-        "La fuente oficial y jurídicamente válida es el Diario Oficial "
-        "de la República de Chile."
-    )
-    footer.runs[0].italic = True
-    footer.runs[0].font.size = Pt(8.5)
-
-    document.save(output)
-    return output
-
-
-def attach_word_url(
-    records: list[dict[str, Any]],
-    docx_path: Path,
-) -> None:
-    relative = docx_path.relative_to(ROOT).as_posix()
-    for record in records:
-        record["word_url"] = relative
-
-
-def append_unique(
-    existing: list[dict[str, Any]],
+def append_unique_legacy(
+    reports: list[dict[str, Any]],
     incoming: list[dict[str, Any]],
 ) -> int:
-    keys = {
+    event_ids = {
+        str(item.get("event_id") or "").strip()
+        for item in reports
+        if str(item.get("event_id") or "").strip()
+    }
+    date_titles = {
         (
             str(item.get("fecha", "")),
-            clean_space(str(item.get("titulo", ""))).lower(),
+            str(item.get("titulo") or "").strip().lower(),
         )
-        for item in existing
+        for item in reports
+    }
+    date_cves = {
+        (str(item.get("fecha", "")), str(item.get("cve") or "").strip())
+        for item in reports
+        if str(item.get("cve") or "").strip()
+    }
+    no_news_dates = {
+        str(item.get("fecha", ""))
+        for item in reports
+        if str(item.get("estado", "")).strip().lower() == "sin novedades"
     }
 
     added = 0
     for item in incoming:
-        key = (
+        event_id = str(item.get("event_id") or "").strip()
+        date_title = (
             str(item.get("fecha", "")),
-            clean_space(str(item.get("titulo", ""))).lower(),
+            str(item.get("titulo") or "").strip().lower(),
         )
-        if key in keys:
+        cve = str(item.get("cve") or "").strip()
+        date_cve = (str(item.get("fecha", "")), cve)
+        is_no_news = str(item.get("estado", "")).strip().lower() == "sin novedades"
+
+        if event_id and event_id in event_ids:
             continue
-        existing.append(item)
-        keys.add(key)
+        if date_title in date_titles:
+            continue
+        if cve and date_cve in date_cves:
+            continue
+        if is_no_news and str(item.get("fecha", "")) in no_news_dates:
+            continue
+
+        reports.append(item)
+        if event_id:
+            event_ids.add(event_id)
+        date_titles.add(date_title)
+        if cve:
+            date_cves.add(date_cve)
+        if is_no_news:
+            no_news_dates.add(str(item.get("fecha", "")))
         added += 1
 
+    reports.sort(
+        key=lambda item: (str(item.get("fecha", "")), str(item.get("titulo", ""))),
+        reverse=True,
+    )
     return added
 
 
-def main() -> int:
-    today = datetime.now(TIMEZONE).date()
-    http = session()
-    reports = load_reports()
+def build_daily_review_event(
+    review_date: date,
+    edition_number: str,
+    edition_date: date,
+    reason: str,
+):
+    payload = {
+        "event_type": "daily_review",
+        "title": "Revisión diaria del Diario Oficial sin novedades relevantes",
+        "event_date": review_date.isoformat(),
+        "published_at": review_date.isoformat(),
+        "summary": reason,
+        "why_it_matters": "Mantiene trazabilidad de la revisión diaria de fuentes públicas.",
+        "practical_implications": "No se genera una acción automática para el equipo.",
+        "impacted_parties": "Equipo de Transsa Urban Intelligence.",
+        "recommended_action": "Sin acción requerida.",
+        "recommended_action_code": "no_action",
+        "relevance_level": "low",
+        "impact_level": "low",
+        "confidence": 1.0,
+        "review_status": "preliminary",
+        "is_featured": False,
+        "category": "revision_diaria",
+        "topics": ["revision_diaria"],
+        "market_segments": ["no_aplica"],
+        "actors": [],
+        "projects": [],
+        "tags": ["diario_oficial", "sin_novedades", "local_pipeline"],
+        "territory": {"scale": "national", "country": "Chile"},
+        "source": {
+            "source_name": "Diario Oficial de la República de Chile",
+            "source_type": "official",
+            "reliability_level": "primary",
+            "collection_method": "local_pipeline",
+            "url": INDEX_URL,
+            "edition": edition_number,
+            "published_at": edition_date.isoformat(),
+            "document_type": "Revisión diaria",
+        },
+        "legacy_payload": {
+            "edition_date": edition_date.isoformat(),
+            "pipeline": PIPELINE_NAME,
+        },
+    }
+    return build_events([payload], strict=True)[0]
 
-    print(f"Fecha de ejecución en Chile: {today.isoformat()}")
-    print("Descargando sumario oficial...")
-    html = fetch_text(http, INDEX_URL)
 
-    edition_number, edition_date = extract_edition(html)
-    print(
-        f"Última edición detectada: N.º {edition_number}, "
-        f"{edition_date.isoformat()}"
-    )
-
-    # En domingos, festivos o antes de una nueva publicación, el sitio puede
-    # mantener como última edición una fecha anterior.
-    if edition_date < today:
-        if has_date(reports, today):
-            print("La revisión de hoy ya existe. No se realizan cambios.")
-            return 0
-
-        record = no_news_record(
-            report_date=today,
-            edition_number=edition_number,
-            edition_date=edition_date,
-            reason=(
-                "Al momento de la revisión no se encontraba publicada una "
-                "nueva edición del Diario Oficial para esta fecha. La edición "
-                f"más reciente disponible correspondía al {edition_date.isoformat()}."
+def record_pipeline_run(
+    paths: ProjectPaths,
+    run_id: str,
+    started_at: str,
+    status: str,
+    discovered: int,
+    created: int,
+    updated: int,
+    errors: int,
+    model_name: str,
+    details: dict[str, Any],
+) -> None:
+    initialize_database(paths.database)
+    with connect(paths.database) as conn:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO pipeline_runs(
+              run_id, pipeline_name, started_at, finished_at, status,
+              documents_discovered, events_created, events_updated,
+              errors_count, rules_version, model_name, details_json
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                run_id,
+                PIPELINE_NAME,
+                started_at,
+                datetime.now(TIMEZONE).isoformat(timespec="seconds"),
+                status,
+                discovered,
+                created,
+                updated,
+                errors,
+                RULES_VERSION,
+                model_name,
+                json.dumps(details, ensure_ascii=False),
             ),
         )
-        records = [record]
-        docx = generate_docx(today, records)
-        attach_word_url(records, docx)
-        append_unique(reports, records)
-        save_reports(reports)
-        print(f"Registro sin nueva edición agregado: {today.isoformat()}")
-        return 0
 
-    if edition_date > today:
-        raise AutomationError(
-            "La fecha detectada en el Diario Oficial es posterior a la fecha "
-            "actual en Chile. Se detiene para evitar registros incorrectos."
+
+def process_publication(
+    paths: ProjectPaths,
+    client: OllamaClient,
+    edition_number: str,
+    edition_date: date,
+    publication: Publication,
+    http: requests.Session,
+) -> tuple[dict[str, Any], Any | None]:
+    print(
+        f"  - CVE {publication.cve or publication.index}: "
+        f"puntaje {publication.relevance_score}"
+    )
+    pdf_bytes = fetch_bytes(http, publication.pdf_url)
+    text = pdf_to_text(pdf_bytes)
+    if not text:
+        return (
+            {
+                "publication": publication.to_dict(),
+                "status": "error",
+                "error": "No fue posible extraer texto del PDF.",
+            },
+            None,
         )
 
-    if has_date(reports, edition_date):
-        print("La edición de hoy ya fue procesada. No se realizan cambios.")
+    pdf_path, text_path = save_publication_files(
+        documents_dir(paths, edition_date), publication, pdf_bytes, text
+    )
+    metadata = {
+        "title": publication.title,
+        "event_date": edition_date.isoformat(),
+        "published_at": edition_date.isoformat(),
+        "source": {
+            "source_name": "Diario Oficial de la República de Chile",
+            "source_type": "official",
+            "reliability_level": "primary",
+            "collection_method": "local_pipeline",
+            "url": publication.pdf_url,
+            "external_id": publication.cve,
+            "edition": edition_number,
+            "document_type": "Publicación oficial",
+            "local_path": relative(pdf_path, paths.root),
+            "raw_text_path": relative(text_path, paths.root),
+            "mime_type": "application/pdf",
+            "base_url": "https://www.diariooficial.interior.gob.cl/",
+        },
+        "prefilter": {
+            "score": publication.relevance_score,
+            "matched_terms": list(publication.matched_terms),
+            "context": publication.context,
+        },
+    }
+
+    analysis, event = analyze_document(client, metadata, text)
+    result = {
+        "publication": publication.to_dict(),
+        "status": "relevant" if analysis["es_relevante"] else "discarded",
+        "analysis": analysis,
+        "event": event.to_dict(),
+        "pdf_path": relative(pdf_path, paths.root),
+        "text_path": relative(text_path, paths.root),
+    }
+    return result, event if analysis["es_relevante"] else None
+
+
+def export_web_events(paths: ProjectPaths) -> int:
+    from core.database import fetch_web_events
+
+    events = fetch_web_events(paths.database)
+    payload = "window.TUI_EVENTS = " + json.dumps(events, ensure_ascii=False, indent=2) + ";\n"
+    paths.web_events_js.write_text(payload, encoding="utf-8")
+    return len(events)
+
+
+def main() -> int:
+    args = parse_args()
+    paths = ProjectPaths.discover(ROOT)
+    paths.ensure_runtime_directories()
+    config = load_ollama_config(paths.root / "config" / "ollama.json")
+    client = OllamaClient(config)
+    started_at = datetime.now(TIMEZONE).isoformat(timespec="seconds")
+    run_id = "RUN-DO-" + datetime.now(TIMEZONE).strftime("%Y%m%d-%H%M%S")
+    today = datetime.now(TIMEZONE).date()
+    discovered = created = updated = errors = 0
+    details: dict[str, Any] = {"dry_run": args.dry_run, "force": args.force}
+
+    print("TRANS​SA URBAN INTELLIGENCE · DIARIO OFICIAL LOCAL")
+    print(f"Fecha en Chile: {today.isoformat()}")
+    print(f"Ollama: {config.model} · {config.base_url}")
+
+    if not client.model_is_available():
+        raise PipelineError(
+            f"El modelo {config.model} no está disponible. Ejecuta: ollama pull {config.model}"
+        )
+
+    http = create_session()
+    html = fetch_text(http, INDEX_URL)
+    edition = extract_edition(html)
+    print(f"Edición detectada: N.º {edition.number} · {edition.publication_date}")
+
+    manifest_file = manifest_path(paths, edition.publication_date)
+    old_manifest = load_manifest(manifest_file)
+    if old_manifest.get("status") == "completed" and not args.force:
+        print("La edición ya fue procesada correctamente. Usa --force para reprocesar.")
         return 0
 
-    publications = extract_publications(html)
-    print(f"Publicaciones PDF detectadas: {len(publications)}")
+    report_date = today if edition.publication_date < today else edition.publication_date
+    events: list[Any] = []
+    analysis_results: list[dict[str, Any]] = []
+    no_news_reason = ""
 
-    client = openai_client()
-    relevant_indices = classify_publications(client, publications)
-    print(f"Publicaciones preseleccionadas: {len(relevant_indices)}")
-
-    records: list[dict[str, Any]]
-
-    if relevant_indices:
-        documents: list[dict[str, Any]] = []
-
-        for index in relevant_indices:
-            publication = publications[index]
-            print(f"Descargando CVE {publication.cve or 'sin CVE'}...")
-            pdf_bytes = fetch_bytes(http, publication.pdf_url)
-            pdf_text = pdf_to_text(pdf_bytes)
-
-            if not pdf_text:
-                print(
-                    f"Advertencia: no se pudo extraer texto del PDF "
-                    f"{publication.pdf_url}",
-                    file=sys.stderr,
-                )
-                continue
-
-            documents.append(
-                {
-                    "document_index": publication.index,
-                    "title": publication.title,
-                    "context": publication.context,
-                    "pdf_url": publication.pdf_url,
-                    "cve": publication.cve,
-                    "text": pdf_text,
-                }
-            )
-
-        records = (
-            analyze_documents(
-                client=client,
-                documents=documents,
-                edition_number=edition_number,
-                edition_date=edition_date,
-            )
-            if documents
-            else []
+    if edition.publication_date < today:
+        no_news_reason = (
+            "Al momento de la revisión no había una nueva edición publicada para hoy. "
+            f"La edición más reciente correspondía al {edition.publication_date.isoformat()}."
         )
+    elif edition.publication_date > today:
+        raise PipelineError("La fecha publicada es posterior a la fecha actual en Chile.")
     else:
-        records = []
+        publications = extract_publications(html)
+        discovered = len(publications)
+        candidates = select_candidates(publications, threshold=args.threshold)
+        print(f"Publicaciones detectadas: {len(publications)}")
+        print(f"Candidatas por reglas: {len(candidates)}")
 
-    if not records:
-        records = [
-            no_news_record(
-                report_date=edition_date,
-                edition_number=edition_number,
-                edition_date=edition_date,
-                reason=(
-                    "Se revisó la edición más reciente del Diario Oficial y "
-                    "no se identificaron cambios normativos relevantes para "
-                    "planificación urbana, construcción, arquitectura, "
-                    "vivienda, patrimonio o evaluación ambiental territorial."
-                ),
+        inbox = edition_inbox(paths, edition.publication_date)
+        save_json(inbox / "publicaciones_detectadas.json", [item.to_dict() for item in publications])
+        save_json(inbox / "publicaciones_candidatas.json", [item.to_dict() for item in candidates])
+
+        for publication in candidates:
+            try:
+                result, event = process_publication(
+                    paths, client, edition.number, edition.publication_date, publication, http
+                )
+                analysis_results.append(result)
+                if event is not None:
+                    events.append(event)
+            except Exception as exc:  # Se preserva el resto de la edición.
+                errors += 1
+                analysis_results.append(
+                    {
+                        "publication": publication.to_dict(),
+                        "status": "error",
+                        "error": f"{type(exc).__name__}: {exc}",
+                    }
+                )
+                print(f"    ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
+
+        save_json(inbox / "analisis_ollama.json", analysis_results)
+        if not events:
+            no_news_reason = (
+                "Se revisó la edición más reciente del Diario Oficial y no se "
+                "identificaron eventos relevantes después del prefiltro y el análisis local."
+            )
+
+    word = report_path(paths, report_date)
+    generate_daily_docx(
+        report_date=report_date,
+        edition_number=edition.number,
+        events=events,
+        output_path=word,
+        no_news_reason=no_news_reason,
+    )
+
+    legacy_incoming: list[dict[str, Any]] = []
+    if events:
+        legacy_incoming = [
+            event_to_legacy_report(event, word_path=word, root=paths.root)
+            for event in events
+        ]
+    else:
+        legacy_incoming = [
+            no_news_legacy_report(
+                report_date=report_date,
+                edition_number=edition.number,
+                edition_date=edition.publication_date,
+                reason=no_news_reason,
+                word_path=word,
+                root=paths.root,
             )
         ]
 
-    docx = generate_docx(edition_date, records)
-    attach_word_url(records, docx)
+    if not args.dry_run:
+        initialize_database(paths.database)
+        db_events = events or [
+            build_daily_review_event(
+                review_date=report_date,
+                edition_number=edition.number,
+                edition_date=edition.publication_date,
+                reason=no_news_reason,
+            )
+        ]
+        created, updated = upsert_events(paths.database, db_events)
+        for event in db_events:
+            write_event_json(paths.events_dir, event)
 
-    added = append_unique(reports, records)
-    if added:
-        save_reports(reports)
+        reports = read_legacy_reports(paths.legacy_reports_js)
+        legacy_added = append_unique_legacy(reports, legacy_incoming)
+        if legacy_added:
+            write_legacy_reports(paths.legacy_reports_js, reports)
+        web_count = export_web_events(paths)
+    else:
+        legacy_added = 0
+        web_count = 0
 
-    print(f"Registros agregados: {added}")
-    print(f"Word diario: {docx.relative_to(ROOT).as_posix()}")
-    return 0
+    manifest = {
+        "status": "completed" if errors == 0 else "completed_with_errors",
+        "run_id": run_id,
+        "processed_at": datetime.now(TIMEZONE).isoformat(timespec="seconds"),
+        "edition": edition.to_dict(),
+        "documents_discovered": discovered,
+        "events_relevant": len(events),
+        "events_created": created,
+        "events_updated": updated,
+        "errors": errors,
+        "legacy_records_added": legacy_added,
+        "web_events_exported": web_count,
+        "word_path": relative(word, paths.root),
+        "model": config.model,
+        "rules_version": RULES_VERSION,
+        "dry_run": args.dry_run,
+    }
+    save_json(manifest_file, manifest)
+
+    if not args.dry_run:
+        record_pipeline_run(
+            paths,
+            run_id,
+            started_at,
+            manifest["status"],
+            discovered,
+            created,
+            updated,
+            errors,
+            config.model,
+            manifest,
+        )
+
+    print("\nPROCESO COMPLETADO")
+    print(f"- Eventos relevantes: {len(events)}")
+    print(f"- Eventos creados: {created}")
+    print(f"- Eventos actualizados: {updated}")
+    print(f"- Errores parciales: {errors}")
+    print(f"- Word: {relative(word, paths.root)}")
+    print(f"- Manifiesto: {relative(manifest_file, paths.root)}")
+    return 0 if errors == 0 else 4
 
 
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except requests.RequestException as exc:
-        print(f"Error de conexión: {exc}", file=sys.stderr)
+    except (requests.RequestException, DiarioOficialError, OllamaError, PipelineError) as exc:
+        print(f"ERROR CONTROLADO: {exc}", file=sys.stderr)
         raise SystemExit(2)
-    except AutomationError as exc:
-        print(f"Error controlado: {exc}", file=sys.stderr)
-        raise SystemExit(3)
     except Exception as exc:
-        print(f"Error inesperado: {type(exc).__name__}: {exc}", file=sys.stderr)
-        raise
+        print(f"ERROR INESPERADO: {type(exc).__name__}: {exc}", file=sys.stderr)
+        traceback.print_exc()
+        raise SystemExit(3)

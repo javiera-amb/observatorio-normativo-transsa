@@ -1,23 +1,27 @@
-name: Actualizar Diario Oficial
+name: Validar módulo Diario Oficial local
 
+# El análisis con Ollama se ejecuta en el computador local de Transsa.
+# Este workflow queda disponible para validar el repositorio sin usar APIs pagadas.
 on:
-  schedule:
-    - cron: "30 8 * * *"
-      timezone: "America/Santiago"
   workflow_dispatch:
+  push:
+    paths:
+      - "automation/actualizar_desde_diario.py"
+      - "automation/sources/**"
+      - "automation/reports/**"
+      - "automation/ollama/**"
+      - "core/**"
+      - "tests/**"
+      - ".github/workflows/actualizar-diario.yml"
 
 permissions:
-  contents: write
-
-concurrency:
-  group: actualizar-diario-oficial
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  actualizar:
-    name: Revisar y publicar
+  validar:
+    name: Validar código y portal
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - name: Descargar repositorio
@@ -33,24 +37,13 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r automation/requirements.txt
 
-      - name: Revisar Diario Oficial y actualizar portal
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
-        run: python automation/actualizar_desde_diario.py
+      - name: Ejecutar pruebas automáticas
+        run: python -m unittest discover -s tests -v
 
-      - name: Validar archivos
+      - name: Validar portal
         run: python automation/validar_sitio.py
 
-      - name: Guardar cambios
+      - name: Confirmar modalidad local
         run: |
-          if git diff --quiet; then
-            echo "No hay cambios nuevos."
-            exit 0
-          fi
-
-          git config user.name "Observatorio Normativo Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/reportes.js documentos/
-          git commit -m "Actualización normativa $(date +'%Y-%m-%d')"
-          git push
+          echo "Validación correcta."
+          echo "La descarga y el análisis del Diario Oficial se ejecutan localmente con ejecutar_diario_local.bat."
