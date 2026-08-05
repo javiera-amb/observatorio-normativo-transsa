@@ -1,0 +1,20 @@
+TRANSSA URBAN INTELLIGENCE - CORRECCION V0.5.3.1
+
+Problema corregido
+------------------
+GitHub Actions no contiene data/db/tui.sqlite3 porque esa base es local y esta
+correctamente excluida por .gitignore. Una prueba intentaba leerla directamente,
+por lo que fallaba con: sqlite3.OperationalError: no such table: events.
+
+Solucion
+--------
+La prueba ahora reconstruye una base SQLite temporal desde data/reportes.js,
+valida todos los eventos del portal y elimina la base temporal al finalizar.
+La base local no se publica ni se modifica.
+
+Instalacion
+-----------
+1. Descomprimir en la raiz del repositorio.
+2. Reemplazar tests/test_repository_migration.py.
+3. Ejecutar instalar_correccion_v0_5_3_1.bat.
+4. Si termina correctamente, hacer commit y push.
