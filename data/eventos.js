@@ -1,5 +1,299 @@
 window.TUI_EVENTS = [
   {
+    "event_id": "EVT-20260806-ENVIRONMENTA-03B84E15A3",
+    "event_type": "environmental_assessment",
+    "title": "Decreto alcaldicio exento número 2.308, de 2026.- Aprueba la Enmienda Nº 1 del Plan Regulador Comunal de Pelluhue",
+    "event_date": "2026-08-06",
+    "published_at": "2026-08-06",
+    "summary": "Municipalidad de Pelluhue abrió un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Enmienda Nº 1 del Plan Regulador Comunal de Pelluhue”, cuyo titular o proponente es Municipalidad de Pelluhue.",
+    "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla ajuste del ancho normativo y clasificación funcional de vías existentes en la comuna de Pelluhue, adaptándose a su situación actual.",
+    "practical_implications": "El proceso de participación ciudadana quedó abierto. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+    "impacted_parties": "Municipalidad de Pelluhue, Secretaría Regional Ministerial de Vivienda y Urbanismo de la Región del Maule, Consejo Comunal de Organizaciones de la Sociedad Civil de Pelluhue, y los propietarios y usuarios de las vías afectadas.",
+    "recommended_action": "Monitorear las observaciones ciudadanas, la evolución de la evaluación ambiental y las eventuales medidas o condiciones que puedan incidir en la ejecución del proyecto.",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "Falta confirmar en la fuente: plazo de participación ciudadana.",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.95,
+    "review_status": "requires_review",
+    "is_featured": false,
+    "category": "otros",
+    "version": 1,
+    "source_name": "Municipalidad de Pelluhue",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/06/44518/01/2847296.pdf",
+    "document_type": "Decreto Alcaldicio exento",
+    "document_number": "2.308",
+    "territories": [
+      {
+        "territory_type": "commune",
+        "name": "Pelluhue",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "modificaciones_normativas",
+      "otros",
+      "plan_regulador",
+      "urbanismo"
+    ],
+    "market_segments": [
+      "infraestructura",
+      "multifamily",
+      "residencial"
+    ],
+    "actors": [
+      "Consejo Comunal de Organizaciones de la Sociedad Civil de Pelluhue",
+      "Municipalidad de Pelluhue",
+      "Secretaría Regional Ministerial de Vivienda y Urbanismo de la Región del Maule"
+    ],
+    "projects": [],
+    "tags": [
+      "enmienda",
+      "hybrid_classification",
+      "ollama_preliminary",
+      "plan_regulador",
+      "urbanismo",
+      "vias"
+    ]
+  },
+  {
+    "event_id": "EVT-20260806-ENVIRONMENTA-BE2646C375",
+    "event_type": "environmental_assessment",
+    "title": "Extracto de resolución exenta número 20260900127, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto Extracción de Áridos Río Blanco",
+    "event_date": "2026-08-06",
+    "published_at": "2026-08-06",
+    "summary": "Servicio de Evaluación Ambiental de la Región de la Araucanía abrió por 20 días hábiles un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Extracción de Áridos Río Blanco”, cuyo titular o proponente es Áridos El Chono 3 SpA. La Declaración de Impacto Ambiental del proyecto consiste en la extracción y procesamiento de áridos provenientes del cauce del río Blanco, mediante ocho polígonos de extracción con una superficie aproximada de 6,441 hectáreas y un volumen total de extracción de 790.320 m³ durante una vida útil de 15 años.",
+    "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla la extracción y procesamiento de áridos provenientes del cauce del río Blanco, mediante ocho polígonos de extracción con una superficie aproximada de 6,441 hectáreas y un volumen total de extracción de 790.320 m³ durante una vida útil de 15 años. El proyecto considera un área de proceso de aproximadamente 1,2493 hectáreas destinada a clasificación, chancado, acopio e instalaciones de apoyo. Se emplaza en el sector Cañón del Blanco, Predio San Andrés, comuna de Curacautín, provincia de Malleco, Región de La Araucanía. Por lo anterior, cualquier persona natural o jurídica interesada podrá realizar observaciones al proyecto según lo dispuesto en el Art. 95 del DS Nº 40/2012 y para ello tendrá un plazo legal de 20 días hábiles contados desde el día hábil siguiente a la fecha de la presente publicación para efectuarlas de acuerdo con lo establecido en el artículo 30 bis de la ley Nº 19.300, sobre Bases Generales del Medio Ambiente. Las observaciones ciudadanas deberán ser ingresadas al SEA a través de la oficina de partes del SEA Araucanía, ubicada en calle España 460, piso 11 (Edificio Centro Plaza), en Temuco, o bien por internet, a través del vínculo https://www.sea.gob.cl/oficina-de-partes-virtual o a través del Portal de Participación Ciudadana en línea, al cual se accede a través del sitio web: https://www.sea.gob.cl/participacion-ciudadana-y-consulta-indigena. Se hace presente que.",
+    "practical_implications": "El proceso de participación ciudadana quedó abierto por 20 días hábiles, computados contado desde el día hábil siguiente a la fecha de publicación. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+    "impacted_parties": "Comunidades locales, autoridades ambientales, organizaciones ambientalistas, y actores económicos interesados en el desarrollo de la zona.",
+    "recommended_action": "Monitorear las observaciones ciudadanas, la evolución de la evaluación ambiental y las eventuales medidas o condiciones que puedan incidir en la ejecución del proyecto.",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.95,
+    "review_status": "preliminary",
+    "is_featured": false,
+    "category": "environmental_assessment",
+    "version": 1,
+    "source_name": "Servicio de Evaluación Ambiental de la Región de la Araucanía",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/06/44518/01/2850004.pdf",
+    "document_type": "Resolución exenta",
+    "document_number": "20260900127",
+    "territories": [
+      {
+        "territory_type": "locality",
+        "name": "Sector Cañón del Blanco, Predio San Andrés",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "environmental_assessment",
+      "extraccion_de_aridos",
+      "impacto_ambiental",
+      "participacion_ciudadana"
+    ],
+    "market_segments": [
+      "industrial",
+      "infraestructura"
+    ],
+    "actors": [
+      "Servicio de Evaluación Ambiental (SEA)",
+      "Áridos El Chono 3 SpA"
+    ],
+    "projects": [
+      "Extracción de Áridos Río Blanco"
+    ],
+    "tags": [
+      "extraccion_de_aridos",
+      "hybrid_classification",
+      "impacto_ambiental",
+      "ollama_preliminary",
+      "participacion_ciudadana",
+      "region_de_la_araucania"
+    ]
+  },
+  {
+    "event_id": "EVT-20260806-ENVIRONMENTA-D9FFDC4EA6",
+    "event_type": "environmental_assessment",
+    "title": "Extracto de resolución exenta número 20261400129, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto Cierre Operacional Pozo Lastrero de Áridos Columo, comuna de La Unión, Región de Los Ríos",
+    "event_date": "2026-08-06",
+    "published_at": "2026-08-06",
+    "summary": "Servicio de Evaluación Ambiental de la Región de Los Ríos abrió por 20 días hábiles un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “CIERRE OPERACIONAL POZO LASTRERO DE ÁRIDOS COLUMO, COMUNA DE LA UNIÓN, REGIÓN DE LOS RÍOS”, cuyo titular o proponente es Inversiones, Constructora y Gestión Inmobiliaria Río Bueno SpA, emplazado en el \"Fundo Columo\" a la altura del kilómetro 20 de la Ruta T-759 (ruta a Puerto Nuevo), medidos desde el cruce con la Ruta 5 Sur, comuna de La Unión, Provincia de Ranco, Región de Los Ríos.",
+    "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla cerrar el pozo de extracción de áridos denominado Pozo Columo, para ejecutar el Programa de Cumplimiento aprobado y comprometido a la Superintendencia del Medio Ambiente, buscando restaurar el área intervenida por la extracción y procesamiento irregular de áridos, lo cual comprende la restauración de la vegetación y suelo, sumando la estabilización de los taludes del área intervenida. Por tal razón, le corresponde ingresar al Sistema de Evaluación de Impacto Ambiental (“SEIA”), de acuerdo con lo indicado en el artículo 3 letra i.5.1) del RSEIA, relativo a la extracción de áridos. Adicionalmente, el proyecto genera cargas ambientales, de acuerdo con lo indicado en el artículo 94 del RSEIA, pues i) genera beneficios sociales y ii) produce externalidades ambientales negativas, susceptibles de afectar a las comunidades próximas a su emplazamiento. La Declaración de Impacto Ambiental del Proyecto, se encuentra a disposición de los interesados para su consulta y/o para su reproducción, en la página web del Servicio de Evaluación Ambiental ( www.sea.gob.cl); en la oficina del Servicio de Evaluación Ambiental de la Región de Los Ríos, ubicada en calle Baquedano Nº 625, Valdivia, en horario de atención de lunes a viernes de 09:00 a 12:30 horas; en las oficinas del Gobierno Regional, ubicadas en O’Higgins Nº 543, Valdivia, y en la Ilustre Municipalidad de La Unión ubicada en Arturo Prat 662, La Unión. Según lo dispuesto en el artículo 95 del RSEIA, cualquier persona natural o jurídica podrá formular sus observaciones, debidamente fundamentadas y por escrito, haciendo expresa referencia al proyecto y señalando su nombre, RUT y domicilio o correo electrónico, según corresponda. En el caso de las personas jurídicas, éstas deberán acreditar su respectiva personería jurídica y representación vigente. Dichas observaciones deberán ser remitidas al Servicio de Evaluación Ambiental de la Región de Los Ríos, en formato electrónico a través del sitio web www.sea.gob.cl, seleccionando en el Portal de Participación Ciudadana “Realizar Observaciones DIARIO OFICIAL DE LA REPUBLICA DE CHILE Núm. 44.518 Jueves 6 de Agosto de 2026 Página 2 de 2 CVE 2849485 | Director: Giovanni Calderón Bassi Sitio Web: www.diarioficial.cl | Mesa Central: 600 712 0001 Email: consultas@diarioficial.cl Dirección: Dr. Torres Boonen N°511, Providencia, Santiago, Chile. Este documento ha sido firmado electrónicamente de acuerdo con la ley N°19.799 e incluye sellado de tiempo y firma electrónica avanzada. Para verificar la autenticidad de una representación impresa del mismo, ingrese este código en el sitio web www.diarioficial.cl Ciudadanas en Proyectos con PAC en Proceso” o a través del banner de la Oficina de Partes Virtual en opv.sea.gob.cl, o bien en formato papel por la Oficina de Partes del SEA, ubicada calle Baquedano Nº 625, Valdivia. Para ello dispondrán de un plazo de 20 días hábiles contados desde el día hábil siguiente a la publicación del presente extracto en el Diario Oficial y en un diario o periódico de la capital regional.- Guillermo Ready Salamé, Director (S), Servicio de Evaluación Ambiental Región de Los Ríos.",
+    "practical_implications": "El proceso de participación ciudadana quedó abierto por 20 días hábiles, computados 20 días hábiles contados desde el día hábil siguiente a la publicación del presente extracto en el Diario Oficial. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+    "impacted_parties": "Comunidades locales de la comuna de La Unión, autoridades regionales, organismos ambientales y el titular del proyecto, Inversiones, Constructora y Gestión Inmobiliaria Río Bueno SpA.",
+    "recommended_action": "Monitorear la evaluación ambiental, los plazos del proyecto y las eventuales condiciones aplicables a los dragados y adecuaciones portuarias; seguir sus efectos sobre la actividad logística, el transporte y la demanda de infraestructura en el territorio afectado.",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.95,
+    "review_status": "preliminary",
+    "is_featured": false,
+    "category": "environmental_assessment",
+    "version": 1,
+    "source_name": "Servicio de Evaluación Ambiental de la Región de Los Ríos",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/06/44518/01/2849485.pdf",
+    "document_type": "Resolución exenta",
+    "document_number": "20261400129",
+    "territories": [
+      {
+        "territory_type": "locality",
+        "name": "Fundo Columo",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "environmental_assessment",
+      "extraccion_de_aridos",
+      "impacto_ambiental",
+      "participacion_ciudadana"
+    ],
+    "market_segments": [
+      "equipamiento",
+      "infraestructura"
+    ],
+    "actors": [
+      "Inversiones, Constructora y Gestión Inmobiliaria Río Bueno SpA",
+      "Servicio de Evaluación Ambiental Región de Los Ríos"
+    ],
+    "projects": [
+      "Cierre Operacional Pozo Lastrero de Áridos Columo"
+    ],
+    "tags": [
+      "extraccion_de_aridos",
+      "hybrid_classification",
+      "impacto_ambiental",
+      "ollama_preliminary",
+      "participacion_ciudadana",
+      "restauracion_ambiental"
+    ]
+  },
+  {
+    "event_id": "EVT-20260806-ENVIRONMENTA-7B9C75F7B9",
+    "event_type": "environmental_assessment",
+    "title": "Extracto de resolución exenta número 20261600135, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto Construcción Puente Cerro Negro, comunas de Quillón y Bulnes, Región de Ñuble",
+    "event_date": "2026-08-06",
+    "published_at": "2026-08-06",
+    "summary": "Servicio de Evaluación Ambiental de la Región de Ñuble abrió por 20 días hábiles un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Construcción Puente Cerro Negro, comunas de Quillón y Bulnes, Región del Ñuble”, cuyo titular o proponente es Joaquín Dagá Kunze, en representación de Ministerio de Obras Públicas.",
+    "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla la construcción y operación de una obra de infraestructura vial destinada a dar continuidad a la Ruta N-884, mediante la construcción de un puente de aproximadamente 160 metros de longitud sobre el río Itata y sus respectivos accesos viales, con el objeto de establecer una conectividad permanente y segura entre las comunas de Quillón y Bulnes, reemplazando el actual sistema de cruce mediante la Balsa Cerro Negro. Asimismo, el proyecto contempla la ejecución de obras complementarias, entre ellas la habilitación de la Plaza Balsa Cerro Negro, obras de drenaje y saneamiento, defensas fluviales, obras de seguridad vial e instalación de faenas, entre otras. El Proyecto emplazará sus obras en las comunas de Quillón y Bulnes, provincia de Diguillín, Región del Ñuble.",
+    "practical_implications": "El proceso de participación ciudadana quedó abierto por 20 días hábiles, computados desde el día hábil siguiente a la publicación en el Diario Oficial. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+    "impacted_parties": "Comunidades de Quillón y Bulnes, Ministerio de Obras Públicas, Servicio de Evaluación Ambiental, y cualquier persona natural o jurídica interesada.",
+    "recommended_action": "Monitorear las observaciones ciudadanas, la evolución de la evaluación ambiental y las eventuales medidas o condiciones que puedan incidir en la ejecución del proyecto.",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.95,
+    "review_status": "preliminary",
+    "is_featured": false,
+    "category": "environmental_assessment",
+    "version": 1,
+    "source_name": "Servicio de Evaluación Ambiental de la Región de Ñuble",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/06/44518/01/2849941.pdf",
+    "document_type": "Resolución exenta",
+    "document_number": "20261600135",
+    "territories": [
+      {
+        "territory_type": "commune",
+        "name": "Bulnes",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "environmental_assessment",
+      "impacto_ambiental",
+      "infraestructura_vial",
+      "participacion_ciudadana"
+    ],
+    "market_segments": [
+      "infraestructura",
+      "logistica"
+    ],
+    "actors": [
+      "Ministerio de Obras Públicas",
+      "Ministerio del Medio Ambiente",
+      "Servicio de Evaluación Ambiental"
+    ],
+    "projects": [
+      "Construcción Puente Cerro Negro"
+    ],
+    "tags": [
+      "hybrid_classification",
+      "impacto_ambiental",
+      "infraestructura_vial",
+      "ollama_preliminary",
+      "participacion_ciudadana"
+    ]
+  },
+  {
+    "event_id": "EVT-20260806-NEWS-309848D5D9",
+    "event_type": "news",
+    "title": "Resolución exenta número 381, de 2026.- Dispone recabar opinión de propietarios, en el marco de la elaboración del expediente técnico de la solicitud de declaratoria de Monumento Nacional, en categoría de Monumento Histórico, de la sección del Canal El Carmen ubicada en las comunas de Huechuraba y Quilicura, Región Metropolitana de Santiago",
+    "event_date": "2026-08-06",
+    "published_at": "2026-08-06",
+    "summary": "Consejo de Monumentos Nacionales abrió por 15 días hábiles un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Declaratoria de Monumento Nacional en categoría de Monumento Histórico de la sección del Canal El Carmen”, cuyo titular o proponente es Juan Carlos Arellano.",
+    "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla solicitud de declaratoria de Monumento Nacional, en categoría de Monumento Histórico, de la sección del Canal El Carmen ubicada en las comunas de Huechuraba y Quilicura, Región Metropolitana de Santiago.",
+    "practical_implications": "El proceso de participación ciudadana quedó abierto por 15 días hábiles, computados contados a partir de la publicación de esta resolución en el Diario Oficial. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+    "impacted_parties": "Propietarios de los terrenos incluidos en el polígono de protección del Canal El Carmen, autoridades locales, y el Consejo de Monumentos Nacionales.",
+    "recommended_action": "Monitorear las observaciones ciudadanas, la evolución de la evaluación ambiental y las eventuales medidas o condiciones que puedan incidir en la ejecución del proyecto.",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.95,
+    "review_status": "preliminary",
+    "is_featured": false,
+    "category": "normative_update",
+    "version": 1,
+    "source_name": "Consejo de Monumentos Nacionales",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/06/44518/01/2849084.pdf",
+    "document_type": "Resolución exenta",
+    "document_number": "1.312",
+    "territories": [
+      {
+        "territory_type": "commune",
+        "name": "Quilicura",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "evaluacion_ambiental",
+      "normative_update",
+      "patrimonio_cultural",
+      "proteccion_historica"
+    ],
+    "market_segments": [
+      "equipamiento",
+      "infraestructura",
+      "residencial"
+    ],
+    "actors": [
+      "Consejo de Monumentos Nacionales",
+      "Servicio Nacional del Patrimonio Cultural",
+      "propietarios de terrenos"
+    ],
+    "projects": [],
+    "tags": [
+      "hybrid_classification",
+      "monumento_historico",
+      "ollama_preliminary",
+      "participacion_ciudadana",
+      "proteccion_cultural"
+    ]
+  },
+  {
     "event_id": "EVT-20260805-ENVIRONMENTA-0FB410C39A",
     "event_type": "environmental_assessment",
     "title": "Extracto de resolución exenta número 20260800181, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto: Modificación de Puerto de Coronel y de su Centro Logístico, Mediante Adecuaciones Operacionales, Dragado en Muelles Norte y Sur, y Ampliación Zona para Mercancías Clasificadas IMO",

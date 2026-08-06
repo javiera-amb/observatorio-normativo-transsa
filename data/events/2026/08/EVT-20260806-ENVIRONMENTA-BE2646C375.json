@@ -1,0 +1,111 @@
+{
+  "event_id": "EVT-20260806-ENVIRONMENTA-BE2646C375",
+  "event_type": "environmental_assessment",
+  "title": "Extracto de resolución exenta número 20260900127, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto Extracción de Áridos Río Blanco",
+  "event_date": "2026-08-06",
+  "published_at": "2026-08-06",
+  "summary": "Servicio de Evaluación Ambiental de la Región de la Araucanía abrió por 20 días hábiles un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Extracción de Áridos Río Blanco”, cuyo titular o proponente es Áridos El Chono 3 SpA. La Declaración de Impacto Ambiental del proyecto consiste en la extracción y procesamiento de áridos provenientes del cauce del río Blanco, mediante ocho polígonos de extracción con una superficie aproximada de 6,441 hectáreas y un volumen total de extracción de 790.320 m³ durante una vida útil de 15 años.",
+  "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla la extracción y procesamiento de áridos provenientes del cauce del río Blanco, mediante ocho polígonos de extracción con una superficie aproximada de 6,441 hectáreas y un volumen total de extracción de 790.320 m³ durante una vida útil de 15 años. El proyecto considera un área de proceso de aproximadamente 1,2493 hectáreas destinada a clasificación, chancado, acopio e instalaciones de apoyo. Se emplaza en el sector Cañón del Blanco, Predio San Andrés, comuna de Curacautín, provincia de Malleco, Región de La Araucanía. Por lo anterior, cualquier persona natural o jurídica interesada podrá realizar observaciones al proyecto según lo dispuesto en el Art. 95 del DS Nº 40/2012 y para ello tendrá un plazo legal de 20 días hábiles contados desde el día hábil siguiente a la fecha de la presente publicación para efectuarlas de acuerdo con lo establecido en el artículo 30 bis de la ley Nº 19.300, sobre Bases Generales del Medio Ambiente. Las observaciones ciudadanas deberán ser ingresadas al SEA a través de la oficina de partes del SEA Araucanía, ubicada en calle España 460, piso 11 (Edificio Centro Plaza), en Temuco, o bien por internet, a través del vínculo https://www.sea.gob.cl/oficina-de-partes-virtual o a través del Portal de Participación Ciudadana en línea, al cual se accede a través del sitio web: https://www.sea.gob.cl/participacion-ciudadana-y-consulta-indigena. Se hace presente que.",
+  "practical_implications": "El proceso de participación ciudadana quedó abierto por 20 días hábiles, computados contado desde el día hábil siguiente a la fecha de publicación. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+  "impacted_parties": "Comunidades locales, autoridades ambientales, organizaciones ambientalistas, y actores económicos interesados en el desarrollo de la zona.",
+  "recommended_action": "Monitorear las observaciones ciudadanas, la evolución de la evaluación ambiental y las eventuales medidas o condiciones que puedan incidir en la ejecución del proyecto.",
+  "relevance_level": "medium",
+  "impact_level": "unknown",
+  "confidence": 0.95,
+  "review_status": "preliminary",
+  "is_featured": false,
+  "category": "environmental_assessment",
+  "territory": {
+    "scale": "communal",
+    "country": "Chile",
+    "region": "Región de la Araucanía",
+    "commune": "Curacautín",
+    "province": "Malleco",
+    "locality": "Sector Cañón del Blanco, Predio San Andrés",
+    "codigo_ine": "",
+    "codigo_sii": "",
+    "relationship_type": "direct",
+    "is_primary": true
+  },
+  "source": {
+    "document_id": "DOC-DIARIO-OFICIAL-DE--1F9A53C879",
+    "source_id": "SRC-OFFICIAL-03D3483A",
+    "source_name": "Servicio de Evaluación Ambiental de la Región de la Araucanía",
+    "title": "Extracto de resolución exenta número 20260900127, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto Extracción de Áridos Río Blanco",
+    "published_at": "2026-08-06",
+    "url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/06/44518/01/2850004.pdf",
+    "external_id": "2850004",
+    "edition": "44.518.",
+    "document_type": "Resolución exenta",
+    "document_number": "20260900127",
+    "source_type": "official",
+    "reliability_level": "primary",
+    "collection_method": "local_pipeline",
+    "base_url": "https://www.diariooficial.interior.gob.cl/",
+    "local_path": "documentos/diario_oficial/2026/08/2026-08-06/CVE-2850004.pdf",
+    "mime_type": "application/pdf",
+    "raw_text_path": "documentos/diario_oficial/2026/08/2026-08-06/CVE-2850004.txt",
+    "captured_at": "2026-08-06T14:00:17+00:00"
+  },
+  "additional_territories": [],
+  "topics": [
+    "environmental_assessment",
+    "participacion_ciudadana",
+    "impacto_ambiental",
+    "extraccion_de_aridos"
+  ],
+  "topic_families": {},
+  "market_segments": [
+    "infraestructura",
+    "industrial"
+  ],
+  "actors": [
+    "Áridos El Chono 3 SpA",
+    "Servicio de Evaluación Ambiental (SEA)"
+  ],
+  "projects": [
+    "Extracción de Áridos Río Blanco"
+  ],
+  "tags": [
+    "participacion_ciudadana",
+    "impacto_ambiental",
+    "extraccion_de_aridos",
+    "region_de_la_araucania",
+    "ollama_preliminary",
+    "hybrid_classification"
+  ],
+  "related_event_ids": [],
+  "recommended_action_code": "monitor",
+  "requires_review_reason": "",
+  "version": 1,
+  "created_at": "2026-08-06T14:00:17+00:00",
+  "updated_at": "2026-08-06T14:00:17+00:00",
+  "validated_at": null,
+  "validated_by": null,
+  "legacy_payload": {
+    "ai_provider": "ollama",
+    "ai_model": "qwen3:8b",
+    "es_relevante": true,
+    "classification_reason": "Regla de alta precisión: evaluación ambiental explícita.",
+    "ai_event_type_raw": "news",
+    "official_act": {
+      "official_issuer": "Servicio de Evaluación Ambiental de la Región de la Araucanía",
+      "publication_source": "Diario Oficial de la República de Chile",
+      "act_type": "Resolución exenta",
+      "act_number": "20260900127",
+      "act_date": "2026-07-27",
+      "procedure_stage": "Apertura de participación ciudadana dentro de una evaluación ambiental en curso",
+      "participation_days": 20,
+      "participation_start_rule": "Contado desde el día hábil siguiente a la fecha de publicación",
+      "legal_basis": "Artículo 30 bis de la Ley N.º 19.300; Artículo 94 del DS N.º 40/2012 (Reglamento del SEIA)",
+      "project_name": "Extracción de Áridos Río Blanco",
+      "project_holder": "Áridos El Chono 3 SpA. La Declaración de Impacto Ambiental del proyecto consiste en la extracción y procesamiento de áridos provenientes del cauce del río Blanco, mediante ocho polígonos de extracción con una superficie aproximada de 6,441 hectáreas y un volumen total de extracción de 790.320 m³ durante una vida útil de 15 años",
+      "project_description": "la extracción y procesamiento de áridos provenientes del cauce del río Blanco, mediante ocho polígonos de extracción con una superficie aproximada de 6,441 hectáreas y un volumen total de extracción de 790.320 m³ durante una vida útil de 15 años. El proyecto considera un área de proceso de aproximadamente 1,2493 hectáreas destinada a clasificación, chancado, acopio e instalaciones de apoyo. Se emplaza en el sector Cañón del Blanco, Predio San Andrés, comuna de Curacautín, provincia de Malleco, Región de La Araucanía. Por lo anterior, cualquier persona natural o jurídica interesada podrá realizar observaciones al proyecto según lo dispuesto en el Art. 95 del DS Nº 40/2012 y para ello tendrá un plazo legal de 20 días hábiles contados desde el día hábil siguiente a la fecha de la presente publicación para efectuarlas de acuerdo con lo establecido en el artículo 30 bis de la ley Nº 19.300, sobre Bases Generales del Medio Ambiente. Las observaciones ciudadanas deberán ser ingresadas al SEA a través de la oficina de partes del SEA Araucanía, ubicada en calle España 460, piso 11 (Edificio Centro Plaza), en Temuco, o bien por internet, a través del vínculo https://www.sea.gob.cl/oficina-de-partes-virtual o a través del Portal de Participación Ciudadana en línea, al cual se accede a través del sitio web: https://www.sea.gob.cl/participacion-ciudadana-y-consulta-indigena. Se hace presente que.",
+      "location_detail": "Sector Cañón del Blanco, Predio San Andrés, comuna de Curacautín, provincia de Malleco, Región de La Araucanía",
+      "region": "Región de la Araucanía",
+      "commune": "Curacautín",
+      "province": "Malleco"
+    },
+    "publication_source": "Diario Oficial de la República de Chile"
+  }
+}
