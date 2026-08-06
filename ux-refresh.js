@@ -133,6 +133,11 @@
 
     const candidates = [
       {
+        css: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+        js: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+        key: "unpkg"
+      },
+      {
         css: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css",
         js: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
         key: "jsdelivr"
@@ -157,6 +162,19 @@
     return false;
   }
 
+  function showMapLoadError() {
+    const container = document.getElementById("territorialMap");
+    if (!container || container.querySelector(".map-load-error")) return;
+    container.innerHTML = `
+      <div class="map-load-error" style="display:grid;place-items:center;height:100%;min-height:420px;padding:28px;text-align:center;background:#f7f8fb;color:#555d70;border:1px solid #dfe3eb;border-radius:16px;">
+        <div>
+          <strong style="display:block;color:#0f0f69;margin-bottom:8px;">No se pudo cargar la librería del mapa</strong>
+          <span>La red bloqueó los proveedores externos de Leaflet. La información territorial sigue disponible en el listado inferior.</span>
+        </div>
+      </div>
+    `;
+  }
+
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
 
@@ -174,10 +192,10 @@
     }
 
     if (leafletReady && typeof window.renderTerritorialMap === "function") {
-      // No vaciar #territorialMap: al hacerlo se eliminaba el DOM interno de
-      // una instancia Leaflet ya inicializada y el mapa quedaba en blanco.
       setTimeout(() => window.renderTerritorialMap(), 80);
       setTimeout(() => window.renderTerritorialMap(), 350);
+    } else if (!leafletReady) {
+      showMapLoadError();
     }
   }
 
