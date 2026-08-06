@@ -1,8 +1,6 @@
 (() => {
   "use strict";
 
-  if (typeof window.L !== "undefined") return;
-
   const CENTERS = {
     "Arica y Parinacota": [-18.47, -70.31],
     "Tarapacá": [-20.22, -70.14],
@@ -192,6 +190,10 @@
   } catch (error) {
     console.warn("No se pudo reemplazar el render del mapa:", error);
   }
+
+  document.querySelectorAll('[data-module="mapa"], [data-module-jump="mapa"]').forEach(button => {
+    button.addEventListener("click", () => setTimeout(renderOfflineTerritorialMap, 40));
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", renderOfflineTerritorialMap, { once: true });
