@@ -121,6 +121,7 @@
         resolve();
         return;
       }
+
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = href;
@@ -132,6 +133,15 @@
       };
       document.head.appendChild(link);
     });
+  }
+
+  function withTimeout(promise, milliseconds, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(`Tiempo agotado al cargar ${label}`)), milliseconds);
+      })
+    ]);
   }
 
   async function ensureLeaflet() {
@@ -157,8 +167,14 @@
 
     for (const candidate of candidates) {
       try {
-        await loadStylesheet(candidate.css, `leaflet-${candidate.key}`);
-        await loadScript(candidate.js, `leaflet-${candidate.key}`);
+        await withTimeout(
+          Promise.all([
+            loadStylesheet(candidate.css, `leaflet-${candidate.key}`),
+            loadScript(candidate.js, `leaflet-${candidate.key}`)
+          ]),
+          3000,
+          candidate.key
+        );
         if (typeof window.L !== "undefined") return true;
       } catch (error) {
         console.warn(error.message);
@@ -168,21 +184,68 @@
     return false;
   }
 
-  function showMapLoadError() {
+  async function waitForVigenciaData(timeout = 8000) {
+    const started = Date.now();
+    while (Date.now() - started < timeout) {
+      const data = window.VIGENCIA_CARTOGRAFICA;
+      if (data && Array.isArray(data.instrumentos) && data.instrumentos.length) {
+        return data;
+      }
+      await new Promise(resolve => setTimeout(resolve, 60));
+    }
+    return null;
+  }
+
+  function resetSelectOptions(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    while (select.options.length > 1) select.remove(1);
+  }
+
+  async function hydrateVigenciaData() {
+    const actual = await waitForVigenciaData();
+    if (!actual) {
+      console.error("La base comunal de IPT no terminó de cargarse.");
+      return false;
+    }
+
+    try {
+      if (typeof vigenciaData !== "undefined" && vigenciaData) {
+        Object.keys(vigenciaData).forEach(key => delete vigenciaData[key]);
+        Object.assign(vigenciaData, actual);
+      }
+
+      resetSelectOptions("vigenciaRegionFilter");
+      resetSelectOptions("vigenciaTypeFilter");
+
+      if (typeof populateVigenciaFilters === "function") populateVigenciaFilters();
+      if (typeof renderVigencia === "function") renderVigencia();
+      return true;
+    } catch (error) {
+      console.error("No se pudo actualizar la vista comunal:", error);
+      return false;
+    }
+  }
+
+  function showMapFallback() {
     const container = document.getElementById("territorialMap");
-    if (!container || container.querySelector(".map-load-error")) return;
+    if (!container || container.querySelector("iframe")) return;
+
     container.innerHTML = `
-      <div class="map-load-error" style="display:grid;place-items:center;height:100%;min-height:420px;padding:28px;text-align:center;background:#f7f8fb;color:#555d70;border:1px solid #dfe3eb;border-radius:16px;">
-        <div>
-          <strong style="display:block;color:#0f0f69;margin-bottom:8px;">No se pudo cargar la librería del mapa</strong>
-          <span>La red bloqueó los proveedores externos de Leaflet. La información territorial sigue disponible en el listado inferior.</span>
-        </div>
-      </div>
+      <iframe
+        title="Mapa interactivo de Chile"
+        src="https://www.openstreetmap.org/export/embed.html?bbox=-76.2%2C-56.2%2C-66.0%2C-17.2&amp;layer=mapnik"
+        style="width:100%;height:100%;min-height:520px;border:0;border-radius:16px;"
+        loading="lazy"
+      ></iframe>
     `;
   }
 
   async function loadContentExtensions() {
-    const leafletReady = await ensureLeaflet();
+    const [leafletReady, vigenciaReady] = await Promise.all([
+      ensureLeaflet(),
+      hydrateVigenciaData()
+    ]);
 
     try {
       await loadScript("data/noticias.js", "data-noticias");
@@ -193,15 +256,21 @@
 
     try {
       await loadScript("vigencia-comunal.js", "vigencia-comunal");
+      if (vigenciaReady && typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
       console.error("No se pudo cargar la vista comunal de IPT:", error);
     }
 
-    if (leafletReady && typeof window.renderTerritorialMap === "function") {
-      setTimeout(() => window.renderTerritorialMap(), 80);
-      setTimeout(() => window.renderTerritorialMap(), 350);
-    } else if (!leafletReady) {
-      showMapLoadError();
+    const renderMap = typeof window.renderTerritorialMap === "function"
+      ? window.renderTerritorialMap
+      : (typeof renderTerritorialMap === "function" ? renderTerritorialMap : null);
+
+    if (leafletReady && renderMap) {
+      setTimeout(() => renderMap(), 80);
+      setTimeout(() => renderMap(), 350);
+      setTimeout(() => renderMap(), 900);
+    } else {
+      showMapFallback();
     }
   }
 
