@@ -1,6 +1,12 @@
 (() => {
   "use strict";
 
+  if (window.location.protocol === "file:") {
+    const hash = window.location.hash || "";
+    window.location.replace(`http://127.0.0.1:8000/${hash}`);
+    return;
+  }
+
   function setModule(moduleName) {
     if (typeof window.switchModule === "function") {
       window.switchModule(moduleName);
