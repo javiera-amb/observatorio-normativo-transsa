@@ -42,6 +42,31 @@ class NewsRelevanceTests(unittest.TestCase):
         self.assertFalse(result.is_candidate)
         self.assertEqual(result.level, "discard")
 
+    def test_metro_does_not_match_metropolitana(self) -> None:
+        result = score_relevance(
+            "Estudio aborda el área metropolitana",
+            "Se analizaron condiciones generales de la conurbación.",
+        )
+        self.assertNotIn("metro", result.matched_terms)
+
+    def test_puerto_does_not_match_aeropuerto(self) -> None:
+        result = score_relevance(
+            "Inversión en aeropuerto internacional",
+            "La terminal aérea ampliará su capacidad.",
+        )
+        self.assertIn("aeropuerto", result.matched_terms)
+        self.assertNotIn("puerto", result.matched_terms)
+
+    def test_plan_regulator_has_normative_category(self) -> None:
+        result = score_relevance(
+            "Evalúan modificación de planes reguladores en la conurbación",
+            "La iniciativa revisará suelo urbanizable y riesgos.",
+            source_priority=80,
+        )
+        self.assertTrue(result.is_candidate)
+        self.assertIn("planificacion_y_normativa", result.categories)
+        self.assertIn("planes reguladores", result.matched_terms)
+
 
 class NewsDeduplicationTests(unittest.TestCase):
     def _item(self, title: str, url: str, excerpt: str = "") -> NewsItem:
