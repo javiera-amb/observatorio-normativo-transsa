@@ -1,0 +1,47 @@
+name: Sincronizar Portal IPT diario
+
+on:
+  schedule:
+    - cron: "45 12 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sincronizar-portal-ipt
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar navegador de sincronización
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Descargar y procesar Portal IPT
+        run: python scripts/sincronizar_portal_ipt.py
+
+      - name: Publicar cambios detectados
+        run: |
+          if git diff --quiet -- data/actos_ipt.js data/actos_ipt_*.js data/actos_ipt_sync.json; then
+            echo "No hay cambios en el Portal IPT."
+            exit 0
+          fi
+          git config user.name "tui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/actos_ipt.js data/actos_ipt_*.js data/actos_ipt_sync.json
+          git commit -m "data: sincronizar modificaciones Portal IPT"
+          git push
