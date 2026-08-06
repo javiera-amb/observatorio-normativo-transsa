@@ -125,11 +125,36 @@
     });
   }
 
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[data-tui-extension="${src}"]`)) {
+        resolve();
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = src;
+      script.dataset.tuiExtension = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+      document.body.appendChild(script);
+    });
+  }
+
+  async function loadContentExtensions() {
+    try {
+      await loadScript("data/noticias.js");
+      await loadScript("tui-content.js");
+    } catch (error) {
+      console.error("No se pudo cargar la extensión de noticias y mapa:", error);
+    }
+  }
+
   function init() {
     initHomeSearch();
     makeDailyMetricInteractive();
     makeVigenciaMetricInteractive();
     improveEmptyStates();
+    loadContentExtensions();
   }
 
   if (document.readyState === "loading") {
