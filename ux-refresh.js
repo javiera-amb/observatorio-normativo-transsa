@@ -45,23 +45,24 @@
     });
   }
 
-  function makeDailyMetricInteractive() {
-    const card = document.getElementById("metricChanges")?.closest(".metric-card");
+  function makeMetricInteractive(metricId, moduleName, selectId, filterValue, targetSelector) {
+    const card = document.getElementById(metricId)?.closest(".metric-card, .ipt-kpi");
     if (!card) return;
-    card.dataset.filterAction = "daily-changes";
+
+    card.dataset.filterAction = filterValue;
     card.tabIndex = 0;
     card.setAttribute("role", "button");
-    card.setAttribute("aria-label", "Filtrar reportes con novedades");
+    card.setAttribute("aria-label", `Filtrar por ${filterValue}`);
 
     const activate = () => {
-      setModule("diario");
-      const select = document.getElementById("statusFilter");
+      setModule(moduleName);
+      const select = document.getElementById(selectId);
       if (!select) return;
-      const active = select.value === "Con novedades";
-      select.value = active ? "" : "Con novedades";
+      const active = select.value === filterValue;
+      select.value = active ? "" : filterValue;
       select.dispatchEvent(new Event("change", { bubbles: true }));
       card.classList.toggle("filter-active", !active);
-      document.getElementById("reportes")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.querySelector(targetSelector)?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
     card.addEventListener("click", activate);
@@ -70,42 +71,6 @@
         event.preventDefault();
         activate();
       }
-    });
-  }
-
-  function makeVigenciaMetricInteractive() {
-    const pairs = [
-      ["vigenciaMetricReview", "Revisión necesaria"],
-      ["vigenciaMetricAlert", "Desactualizado"]
-    ];
-
-    pairs.forEach(([metricId, status]) => {
-      const card = document.getElementById(metricId)?.closest(".ipt-kpi");
-      if (!card) return;
-      card.dataset.filterAction = status;
-      card.tabIndex = 0;
-      card.setAttribute("role", "button");
-      card.setAttribute("aria-label", `Filtrar instrumentos: ${status}`);
-
-      const activate = () => {
-        setModule("vigencia");
-        const select = document.getElementById("vigenciaStatusFilter");
-        if (!select) return;
-        const active = select.value === status;
-        select.value = active ? "" : status;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-        document.querySelectorAll(".vigencia-summary .ipt-kpi").forEach(item => item.classList.remove("filter-active"));
-        card.classList.toggle("filter-active", !active);
-        document.querySelector(".vigencia-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      };
-
-      card.addEventListener("click", activate);
-      card.addEventListener("keydown", event => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          activate();
-        }
-      });
     });
   }
 
@@ -125,25 +90,50 @@
     });
   }
 
-  function loadScript(src) {
+  function loadScript(src, key = src) {
     return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[data-tui-extension="${src}"]`)) {
+      if (document.querySelector(`script[data-tui-extension="${key}"]`)) {
         resolve();
         return;
       }
+
       const script = document.createElement("script");
       script.src = src;
-      script.dataset.tuiExtension = src;
+      script.dataset.tuiExtension = key;
       script.onload = resolve;
-      script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+      script.onerror = () => {
+        script.remove();
+        reject(new Error(`No se pudo cargar ${src}`));
+      };
       document.body.appendChild(script);
     });
   }
 
+  async function ensureLeaflet() {
+    if (typeof window.L !== "undefined") return true;
+
+    const candidates = [
+      "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"
+    ];
+
+    for (const [index, source] of candidates.entries()) {
+      try {
+        await loadScript(source, `leaflet-fallback-${index}`);
+        if (typeof window.L !== "undefined") return true;
+      } catch (error) {
+        console.warn(error.message);
+      }
+    }
+
+    return false;
+  }
+
   async function loadContentExtensions() {
     try {
-      await loadScript("data/noticias.js");
-      await loadScript("tui-content.js");
+      await ensureLeaflet();
+      await loadScript("data/noticias.js", "data-noticias");
+      await loadScript("tui-content.js", "tui-content");
     } catch (error) {
       console.error("No se pudo cargar la extensión de noticias y mapa:", error);
     }
@@ -151,8 +141,9 @@
 
   function init() {
     initHomeSearch();
-    makeDailyMetricInteractive();
-    makeVigenciaMetricInteractive();
+    makeMetricInteractive("metricChanges", "diario", "statusFilter", "Con novedades", "#reportes");
+    makeMetricInteractive("vigenciaMetricReview", "vigencia", "vigenciaStatusFilter", "Revisión necesaria", ".vigencia-workspace");
+    makeMetricInteractive("vigenciaMetricAlert", "vigencia", "vigenciaStatusFilter", "Desactualizado", ".vigencia-workspace");
     improveEmptyStates();
     loadContentExtensions();
   }
