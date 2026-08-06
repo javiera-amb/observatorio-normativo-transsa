@@ -174,9 +174,10 @@
     }
 
     if (leafletReady && typeof window.renderTerritorialMap === "function") {
-      const container = document.getElementById("territorialMap");
-      if (container) container.innerHTML = "";
+      // No vaciar #territorialMap: al hacerlo se eliminaba el DOM interno de
+      // una instancia Leaflet ya inicializada y el mapa quedaba en blanco.
       setTimeout(() => window.renderTerritorialMap(), 80);
+      setTimeout(() => window.renderTerritorialMap(), 350);
     }
   }
 
