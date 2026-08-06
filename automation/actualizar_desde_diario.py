@@ -371,7 +371,7 @@ def main() -> int:
     discovered = created = updated = errors = 0
     details: dict[str, Any] = {"dry_run": args.dry_run, "force": args.force}
 
-    print("TRANS​SA URBAN INTELLIGENCE · DIARIO OFICIAL LOCAL")
+    print("TRANSSA URBAN INTELLIGENCE · DIARIO OFICIAL LOCAL")
     print(f"Fecha en Chile: {today.isoformat()}")
     print(f"Ollama: {config.model} · {config.base_url}")
 

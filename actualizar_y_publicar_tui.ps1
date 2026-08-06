@@ -3,6 +3,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[Console]::InputEncoding = $utf8NoBom
+[Console]::OutputEncoding = $utf8NoBom
+$OutputEncoding = $utf8NoBom
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
 Set-Location -LiteralPath $RepoPath
 
 $logDir = Join-Path $RepoPath "_local\logs"
