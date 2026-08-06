@@ -8,6 +8,7 @@ from automation.news.normalization import canonicalize_url, normalize_title
 from automation.news.relevance import score_relevance
 from automation.news.rss import parse_feed
 from automation.news.sources import load_sources, source_summary
+from automation.news.verification import load_verifications
 
 
 class NewsNormalizationTests(unittest.TestCase):
@@ -134,8 +135,16 @@ class NewsSourceConfigTests(unittest.TestCase):
         summary = source_summary()
         self.assertGreaterEqual(len(sources), 12)
         self.assertGreaterEqual(summary["enabled"], 2)
+        self.assertGreaterEqual(summary["verified"], 3)
         self.assertGreaterEqual(summary["tier_a"], 5)
         self.assertTrue(all(not source.validate() for source in sources))
+
+    def test_verification_registry_matches_sources(self) -> None:
+        verifications = load_verifications()
+        sources = {source.source_id: source for source in load_sources()}
+        self.assertEqual(set(verifications), {"diario_el_dia_economia", "diario_el_dia_region", "inmobiliare"})
+        self.assertTrue(all(source_id in sources for source_id in verifications))
+        self.assertEqual(sources["inmobiliare"].verification_status, "verified_public_feed")
 
 
 if __name__ == "__main__":
