@@ -34,14 +34,16 @@ function Ejecutar-Python {
 
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {
-        & py -3 @Argumentos
-        return $LASTEXITCODE
+        & py -3 @Argumentos | Out-Host
+        $codigoSalida = $LASTEXITCODE
+        return [int]$codigoSalida
     }
 
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($python) {
-        & python @Argumentos
-        return $LASTEXITCODE
+        & python @Argumentos | Out-Host
+        $codigoSalida = $LASTEXITCODE
+        return [int]$codigoSalida
     }
 
     throw "No se encontró Python en PATH."
