@@ -109,29 +109,8 @@
     });
   }
 
-  async function ensureLeaflet() {
-    if (typeof window.L !== "undefined") return true;
-
-    const candidates = [
-      "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
-      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"
-    ];
-
-    for (const [index, source] of candidates.entries()) {
-      try {
-        await loadScript(source, `leaflet-fallback-${index}`);
-        if (typeof window.L !== "undefined") return true;
-      } catch (error) {
-        console.warn(error.message);
-      }
-    }
-
-    return false;
-  }
-
   async function loadContentExtensions() {
     try {
-      await ensureLeaflet();
       await loadScript("data/noticias.js", "data-noticias");
       await loadScript("tui-content.js", "tui-content");
       await loadScript("map-offline.js", "map-offline");
