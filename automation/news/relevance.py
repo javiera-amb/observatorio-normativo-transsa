@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from .normalization import normalize_text
@@ -53,6 +54,20 @@ WEIGHTED_TERMS: dict[str, dict[str, int]] = {
         "permisos de edificacion": 9,
         "permiso de edificacion": 9,
     },
+    "planificacion_y_normativa": {
+        "plan regulador": 10,
+        "planes reguladores": 10,
+        "modificacion de plan regulador": 12,
+        "modificacion de planes reguladores": 12,
+        "instrumento de planificacion territorial": 10,
+        "instrumentos de planificacion territorial": 10,
+        "limite urbano": 9,
+        "uso de suelo": 8,
+        "zonificacion": 8,
+        "normativa urbana": 9,
+        "ordenanza local": 8,
+        "plan seccional": 9,
+    },
     "desarrollo_urbano": {
         "desarrollo urbano": 9,
         "renovacion urbana": 8,
@@ -63,9 +78,6 @@ WEIGHTED_TERMS: dict[str, dict[str, int]] = {
         "barrio": 3,
         "espacio publico": 6,
         "equipamiento urbano": 7,
-        "uso de suelo": 8,
-        "plan regulador": 10,
-        "limite urbano": 9,
         "urbanizacion": 7,
     },
     "infraestructura": {
@@ -82,6 +94,7 @@ WEIGHTED_TERMS: dict[str, dict[str, int]] = {
         "hospital": 4,
         "embalse": 5,
         "planta desaladora": 7,
+        "desaladora": 6,
         "transporte publico": 6,
         "movilidad urbana": 8,
     },
@@ -128,6 +141,7 @@ NEGATIVE_TERMS: dict[str, int] = {
 
 HIGH_SIGNAL_TERMS = {
     "plan regulador",
+    "planes reguladores",
     "permiso de edificacion",
     "permisos de edificacion",
     "proyecto inmobiliario",
@@ -135,7 +149,23 @@ HIGH_SIGNAL_TERMS = {
     "mercado inmobiliario",
     "deficit habitacional",
     "uso de suelo",
+    "instrumento de planificacion territorial",
 }
+
+
+def contains_term(text: str, term: str) -> bool:
+    """Busca términos completos y evita coincidencias internas.
+
+    Ejemplos: ``metro`` no coincide con ``metropolitana`` y ``puerto``
+    no coincide con ``aeropuerto``.
+    """
+    normalized_term = normalize_text(term)
+    if not normalized_term:
+        return False
+    pattern = r"(?<![a-z0-9])" + r"\s+".join(
+        re.escape(token) for token in normalized_term.split()
+    ) + r"(?![a-z0-9])"
+    return re.search(pattern, text) is not None
 
 
 def _level(score: int) -> str:
@@ -157,8 +187,7 @@ def score_relevance(title: str, excerpt: str = "", *, source_priority: int = 50)
     for category, terms in WEIGHTED_TERMS.items():
         category_score = 0
         for term, weight in terms.items():
-            normalized_term = normalize_text(term)
-            if normalized_term and normalized_term in text:
+            if contains_term(text, term):
                 category_score += weight
                 matched.append(term)
         if category_score:
@@ -167,13 +196,13 @@ def score_relevance(title: str, excerpt: str = "", *, source_priority: int = 50)
 
     negative: list[str] = []
     for term, penalty in NEGATIVE_TERMS.items():
-        if normalize_text(term) in text:
+        if contains_term(text, term):
             score += penalty
             negative.append(term)
 
     score = max(0, score)
     level = _level(score)
-    high_signal = any(normalize_text(term) in text for term in HIGH_SIGNAL_TERMS)
+    high_signal = any(contains_term(text, term) for term in HIGH_SIGNAL_TERMS)
     is_candidate = score >= 8 or high_signal
     requires_review = is_candidate and level == "low"
 
