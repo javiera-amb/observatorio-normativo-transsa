@@ -172,7 +172,7 @@
             loadStylesheet(candidate.css, `leaflet-${candidate.key}`),
             loadScript(candidate.js, `leaflet-${candidate.key}`)
           ]),
-          3000,
+          5000,
           candidate.key
         );
         if (typeof window.L !== "undefined") return true;
@@ -184,68 +184,76 @@
     return false;
   }
 
-  async function waitForVigenciaData(timeout = 8000) {
-    const started = Date.now();
-    while (Date.now() - started < timeout) {
-      const data = window.VIGENCIA_CARTOGRAFICA;
-      if (data && Array.isArray(data.instrumentos) && data.instrumentos.length) {
-        return data;
-      }
-      await new Promise(resolve => setTimeout(resolve, 60));
-    }
-    return null;
-  }
+  async function reloadVigenciaData() {
+    const stamp = Date.now();
+    window.VIGENCIA_IPT_ROWS = [];
+    window.ACTOS_IPT_ROWS = [];
 
-  function resetSelectOptions(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    while (select.options.length > 1) select.remove(1);
-  }
+    const files = [
+      "data/ipt_vigentes_01.js",
+      "data/ipt_vigentes_02.js",
+      "data/ipt_vigentes_03.js",
+      "data/ipt_vigentes_04.js",
+      "data/ipt_vigentes_05.js",
+      "data/revision_sig_ipt.js",
+      "data/actos_ipt_finalizar.js",
+      "data/vigencia_finalizar.js"
+    ];
 
-  async function hydrateVigenciaData() {
-    const actual = await waitForVigenciaData();
-    if (!actual) {
-      console.error("La base comunal de IPT no terminó de cargarse.");
-      return false;
+    for (const file of files) {
+      await loadScript(`${file}?v=${stamp}`, `reload-${file}-${stamp}`);
     }
 
-    try {
-      if (typeof vigenciaData !== "undefined" && vigenciaData) {
-        Object.keys(vigenciaData).forEach(key => delete vigenciaData[key]);
-        Object.assign(vigenciaData, actual);
-      }
-
-      resetSelectOptions("vigenciaRegionFilter");
-      resetSelectOptions("vigenciaTypeFilter");
-
-      if (typeof populateVigenciaFilters === "function") populateVigenciaFilters();
-      if (typeof renderVigencia === "function") renderVigencia();
-      return true;
-    } catch (error) {
-      console.error("No se pudo actualizar la vista comunal:", error);
-      return false;
+    const actual = window.VIGENCIA_CARTOGRAFICA;
+    if (!actual || !Array.isArray(actual.instrumentos) || !actual.instrumentos.length) {
+      throw new Error("La base comunal terminó sin instrumentos.");
     }
+
+    if (typeof vigenciaData !== "undefined" && vigenciaData) {
+      Object.keys(vigenciaData).forEach(key => delete vigenciaData[key]);
+      Object.assign(vigenciaData, actual);
+    }
+
+    if (typeof window.vigenciaInstruments === "function") {
+      window.vigenciaInstruments = () => Array.isArray(window.VIGENCIA_CARTOGRAFICA?.instrumentos)
+        ? [...window.VIGENCIA_CARTOGRAFICA.instrumentos]
+        : [];
+    }
+
+    const regionSelect = document.getElementById("vigenciaRegionFilter");
+    const typeSelect = document.getElementById("vigenciaTypeFilter");
+    if (regionSelect) regionSelect.innerHTML = '<option value="">Todas</option>';
+    if (typeSelect) typeSelect.innerHTML = '<option value="">Todos</option>';
+
+    if (typeof populateVigenciaFilters === "function") populateVigenciaFilters();
+    if (typeof renderVigencia === "function") renderVigencia();
+
+    return true;
   }
 
   function showMapFallback() {
     const container = document.getElementById("territorialMap");
-    if (!container || container.querySelector("iframe")) return;
+    if (!container) return;
 
     container.innerHTML = `
       <iframe
         title="Mapa interactivo de Chile"
         src="https://www.openstreetmap.org/export/embed.html?bbox=-76.2%2C-56.2%2C-66.0%2C-17.2&amp;layer=mapnik"
         style="width:100%;height:100%;min-height:520px;border:0;border-radius:16px;"
-        loading="lazy"
+        loading="eager"
       ></iframe>
     `;
   }
 
   async function loadContentExtensions() {
-    const [leafletReady, vigenciaReady] = await Promise.all([
-      ensureLeaflet(),
-      hydrateVigenciaData()
-    ]);
+    let vigenciaReady = false;
+    try {
+      vigenciaReady = await reloadVigenciaData();
+    } catch (error) {
+      console.error("No se pudo reconstruir la base comunal:", error);
+    }
+
+    const leafletReady = await ensureLeaflet();
 
     try {
       await loadScript("data/noticias.js", "data-noticias");
@@ -266,9 +274,12 @@
       : (typeof renderTerritorialMap === "function" ? renderTerritorialMap : null);
 
     if (leafletReady && renderMap) {
+      const container = document.getElementById("territorialMap");
+      const fallback = container?.querySelector("iframe");
+      if (fallback) container.innerHTML = "";
       setTimeout(() => renderMap(), 80);
-      setTimeout(() => renderMap(), 350);
-      setTimeout(() => renderMap(), 900);
+      setTimeout(() => renderMap(), 450);
+      setTimeout(() => renderMap(), 1200);
     } else {
       showMapFallback();
     }
