@@ -13,60 +13,11 @@
     "'": "&#039;"
   }[character]));
 
-  function normalizedRegion(value = "") {
-    let region = String(value).trim();
-    if (!region) return "Chile";
-
-    const directAliases = {
-      "RM": "Metropolitana de Santiago",
-      "Metropolitana": "Metropolitana de Santiago",
-      "Región Metropolitana": "Metropolitana de Santiago",
-      "Región Metropolitana de Santiago": "Metropolitana de Santiago",
-      "Metropolitana de Santiago": "Metropolitana de Santiago",
-      "Libertador Bernardo O'Higgins": "O'Higgins",
-      "Libertador General Bernardo O'Higgins": "O'Higgins",
-      "Libertador General Bernardo O’Higgins": "O'Higgins",
-      "Región del Libertador General Bernardo O'Higgins": "O'Higgins",
-      "Región del Libertador General Bernardo O’Higgins": "O'Higgins",
-      "Aysén del General Carlos Ibáñez del Campo": "Aysén",
-      "Región de Aysén del General Carlos Ibáñez del Campo": "Aysén",
-      "Región de Magallanes y de la Antártica Chilena": "Magallanes y de la Antártica Chilena"
-    };
-    if (directAliases[region]) return directAliases[region];
-
-    region = region
-      .replace(/^Región\s+de\s+la\s+/i, "")
-      .replace(/^Región\s+de\s+los\s+/i, "Los ")
-      .replace(/^Región\s+del\s+/i, "")
-      .replace(/^Región\s+de\s+/i, "")
-      .replace(/^Región\s+/i, "")
-      .trim();
-
-    const aliases = {
-      "la Araucanía": "La Araucanía",
-      "Araucanía": "La Araucanía",
-      "Maule": "Maule",
-      "Ñuble": "Ñuble",
-      "Biobío": "Biobío",
-      "Los Ríos": "Los Ríos",
-      "Los Lagos": "Los Lagos",
-      "Coquimbo": "Coquimbo",
-      "Valparaíso": "Valparaíso",
-      "Antofagasta": "Antofagasta",
-      "Atacama": "Atacama",
-      "Tarapacá": "Tarapacá",
-      "Arica y Parinacota": "Arica y Parinacota",
-      "Magallanes y de la Antártica Chilena": "Magallanes y de la Antártica Chilena"
-    };
-    return aliases[region] || region;
-  }
-
   function injectStyles() {
+    if (document.getElementById("newsModuleStyles")) return;
     const style = document.createElement("style");
+    style.id = "newsModuleStyles";
     style.textContent = `
-      .territorial-map { display:block !important; min-height:560px !important; background:#eef0f7; }
-      .map-loading, .map-fallback { min-height:560px; display:grid; place-items:center; padding:32px; text-align:center; color:var(--muted); background:linear-gradient(160deg,#f8f8ff,#eef0f7); }
-      .map-fallback strong { display:block; margin-bottom:8px; color:var(--transsa-navy); font-size:1.1rem; }
       .news-toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px; margin-bottom:22px; }
       .news-tabs { display:flex; flex-wrap:wrap; gap:8px; }
       .news-tab { min-height:40px; padding:0 14px; border:1px solid var(--line); border-radius:999px; color:var(--muted); background:#fff; }
@@ -84,7 +35,7 @@
       .news-meta span { padding:5px 8px; border-radius:8px; color:var(--muted); background:var(--surface-soft); font-size:.72rem; }
       .news-review-note { margin-top:14px; padding:12px 13px; border-left:4px solid #d0922f; border-radius:0 10px 10px 0; background:#fff7e8; color:#76511c !important; font-size:.78rem !important; }
       .news-card a { margin-top:15px; color:var(--transsa-blue); font-weight:500; font-size:.82rem; }
-      @media (max-width:760px){ .news-grid{grid-template-columns:1fr;} .territorial-map,.map-loading,.map-fallback{min-height:440px !important;} }
+      @media (max-width:760px){ .news-grid{grid-template-columns:1fr;} }
     `;
     document.head.appendChild(style);
   }
@@ -109,7 +60,7 @@
         <div>
           <p class="eyebrow">INTELIGENCIA TERRITORIAL</p>
           <h2>Noticias consolidadas</h2>
-          <p>Contexto de mercado, infraestructura y planificación. Las noticias no reemplazan el acto oficial ni determinan vigencia normativa.</p>
+          <p>Noticias vinculadas directamente con desarrollo inmobiliario, mercado de suelo, normativa urbana, vivienda y desarrollo urbano. No reemplazan el acto oficial.</p>
         </div>
       </div>
       <section class="search-panel">
@@ -196,133 +147,10 @@
     document.getElementById("newsEmptyState").hidden = items.length !== 0;
   }
 
-  function patchMapData() {
-    if (typeof REGION_CENTERS === "undefined") return;
-
-    normalizeRegionName = normalizedRegion;
-
-    mapItems = function mapItemsPatched() {
-      const daily = reports.map(item => ({
-        source: "Diario Oficial",
-        period: item.fecha ? String(item.fecha).slice(0, 7) : "",
-        date: item.fecha || "",
-        region: normalizedRegion(item.region || "Chile"),
-        commune: item.comuna || "",
-        title: item.titulo || "",
-        summary: item.resumen || "",
-        category: item.categoria || "",
-        status: item.estado || "",
-        sourceUrl: item.source_url || "",
-        itemType: "daily"
-      }));
-
-      const ipt = iptReports.flatMap(report =>
-        (Array.isArray(report.cambios) ? report.cambios : []).map(item => ({
-          source: "IPT",
-          period: report.periodo || "",
-          date: item.fecha_publicacion || "",
-          region: normalizedRegion(item.region || "Chile"),
-          commune: item.comuna || "",
-          title: [item.tipo_ipt, item.acto].filter(Boolean).join(" · "),
-          summary: item.resumen || "",
-          category: item.tipo_ipt || "",
-          status: item.estado || "",
-          sourceUrl: item.fuente || "",
-          itemType: "ipt"
-        }))
-      );
-
-      const historic = annualReports.flatMap(report =>
-        (Array.isArray(report.items) ? report.items : []).map(item => ({
-          source: "Histórico",
-          period: item.periodo || "",
-          date: item.fecha || "",
-          region: normalizedRegion(item.region || "Chile"),
-          commune: item.comuna || "",
-          title: item.titulo || "",
-          summary: item.resumen || "",
-          category: item.categoria || item.tipo_norma || "",
-          status: item.estado || "",
-          sourceUrl: item.fuente || "",
-          itemType: "historic"
-        }))
-      );
-
-      const news = newsItems
-        .filter(item => item.alcance === "Chile")
-        .map(item => ({
-          source: "Noticias",
-          period: item.fecha ? String(item.fecha).slice(0, 7) : "",
-          date: item.fecha || "",
-          region: normalizedRegion(item.region || "Chile"),
-          commune: (item.comunas || []).join(", "),
-          title: item.titulo || "",
-          summary: item.resumen || "",
-          category: item.categoria || "",
-          status: item.estado_revision || "preliminary",
-          sourceUrl: item.fuente_url || "",
-          itemType: "news"
-        }));
-
-      return [...daily, ...ipt, ...historic, ...news]
-        .filter(item => item.region && REGION_CENTERS[item.region]);
-    };
-
-    const originalInit = initTerritorialMap;
-    initTerritorialMap = function initTerritorialMapPatched() {
-      const container = document.getElementById("territorialMap");
-      if (!container) return;
-      container.style.display = "block";
-      container.style.minHeight = "560px";
-
-      if (typeof L === "undefined") {
-        container.innerHTML = `
-          <div class="map-fallback">
-            <div><strong>No se pudo cargar la librería del mapa.</strong><span>Revisa la conexión a internet y vuelve a abrir esta sección. Los registros territoriales siguen disponibles en el listado inferior.</span></div>
-          </div>
-        `;
-        renderMapResults();
-        return;
-      }
-
-      container.innerHTML = "";
-      originalInit();
-    };
-
-    const originalRender = renderTerritorialMap;
-    renderTerritorialMap = function renderTerritorialMapPatched() {
-      const container = document.getElementById("territorialMap");
-      if (container) {
-        container.style.display = "block";
-        container.style.visibility = "visible";
-        container.style.minHeight = "560px";
-      }
-      originalRender();
-      setTimeout(() => territorialMap?.invalidateSize({ pan: false }), 80);
-      setTimeout(() => territorialMap?.invalidateSize({ pan: false }), 420);
-      setTimeout(() => territorialMap?.invalidateSize({ pan: false }), 900);
-    };
-
-    populateMapFilters();
-    if (location.hash === "#mapa" || document.getElementById("module-mapa")?.classList.contains("active")) {
-      renderTerritorialMap();
-    }
-  }
-
-  function bindMapTabAgain() {
-    document.querySelectorAll('[data-module="mapa"], [data-module-jump="mapa"]').forEach(button => {
-      button.addEventListener("click", () => {
-        setTimeout(() => renderTerritorialMap(), 60);
-      });
-    });
-  }
-
   function init() {
     injectStyles();
     insertNewsModule();
     renderNews();
-    patchMapData();
-    bindMapTabAgain();
   }
 
   if (document.readyState === "loading") {
