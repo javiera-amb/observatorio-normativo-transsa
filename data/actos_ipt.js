@@ -1,11 +1,3 @@
 window.ACTOS_IPT_ROWS=[];
 document.write('<script src="data/revision_sig_ipt.js"><\/script>');
-document.write('<script src="data/actos_ipt_01.js"><\/script>');
-document.write('<script src="data/actos_ipt_02.js"><\/script>');
-document.write('<script src="data/actos_ipt_03.js"><\/script>');
-document.write('<script src="data/actos_ipt_04.js"><\/script>');
-document.write('<script src="data/actos_ipt_05.js"><\/script>');
-document.write('<script src="data/actos_ipt_06.js"><\/script>');
-document.write('<script src="data/actos_ipt_07.js"><\/script>');
-document.write('<script src="data/actos_ipt_08.js"><\/script>');
 document.write('<script src="data/actos_ipt_finalizar.js"><\/script>');
