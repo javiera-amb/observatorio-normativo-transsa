@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from .models import NewsSource
+from .verification import DEFAULT_VERIFICATION_PATH, load_verifications
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "fuentes_noticias.json"
 
@@ -12,7 +13,12 @@ class SourceConfigError(ValueError):
     pass
 
 
-def load_sources(path: str | Path = DEFAULT_CONFIG_PATH, *, enabled_only: bool = False) -> list[NewsSource]:
+def load_sources(
+    path: str | Path = DEFAULT_CONFIG_PATH,
+    *,
+    enabled_only: bool = False,
+    verification_path: str | Path = DEFAULT_VERIFICATION_PATH,
+) -> list[NewsSource]:
     config_path = Path(path)
     if not config_path.exists():
         raise SourceConfigError(f"No existe la configuración de fuentes: {config_path}")
@@ -26,6 +32,7 @@ def load_sources(path: str | Path = DEFAULT_CONFIG_PATH, *, enabled_only: bool =
     if not isinstance(raw_sources, list):
         raise SourceConfigError("La configuración debe contener una lista 'sources'.")
 
+    verifications = load_verifications(verification_path)
     sources: list[NewsSource] = []
     seen_ids: set[str] = set()
     issues: list[str] = []
@@ -36,6 +43,16 @@ def load_sources(path: str | Path = DEFAULT_CONFIG_PATH, *, enabled_only: bool =
             continue
 
         source = NewsSource.from_dict(raw)
+        verification = verifications.get(source.source_id)
+        if verification:
+            source.verification_status = verification.status
+            if verification.feed_url:
+                if source.feed_url and source.feed_url != verification.feed_url:
+                    issues.append(
+                        f"{source.source_id}: feed_url no coincide con el registro de verificación"
+                    )
+                source.feed_url = verification.feed_url
+
         if source.source_id in seen_ids:
             issues.append(f"id duplicado: {source.source_id}")
         seen_ids.add(source.source_id)
@@ -45,6 +62,10 @@ def load_sources(path: str | Path = DEFAULT_CONFIG_PATH, *, enabled_only: bool =
 
         if not enabled_only or source.enabled:
             sources.append(source)
+
+    unknown_verifications = sorted(set(verifications) - seen_ids)
+    for source_id in unknown_verifications:
+        issues.append(f"verificación sin fuente registrada: {source_id}")
 
     if issues:
         raise SourceConfigError("; ".join(issues))
@@ -58,6 +79,7 @@ def source_summary(path: str | Path = DEFAULT_CONFIG_PATH) -> dict[str, int]:
         "total": len(sources),
         "enabled": sum(1 for item in sources if item.enabled),
         "rss_enabled": sum(1 for item in sources if item.enabled and item.access_mode in {"rss", "atom"}),
+        "verified": sum(1 for item in sources if item.verification_status == "verified_public_feed"),
         "tier_a": sum(1 for item in sources if item.confidence_tier == "A"),
         "tier_b": sum(1 for item in sources if item.confidence_tier == "B"),
         "commercial": sum(1 for item in sources if item.commercial_interest),
