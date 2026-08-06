@@ -135,15 +135,6 @@
     });
   }
 
-  function withTimeout(promise, milliseconds, label) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => {
-        setTimeout(() => reject(new Error(`Tiempo agotado al cargar ${label}`)), milliseconds);
-      })
-    ]);
-  }
-
   async function ensureLeaflet() {
     if (typeof window.L !== "undefined") return true;
 
@@ -167,14 +158,10 @@
 
     for (const candidate of candidates) {
       try {
-        await withTimeout(
-          Promise.all([
-            loadStylesheet(candidate.css, `leaflet-${candidate.key}`),
-            loadScript(candidate.js, `leaflet-${candidate.key}`)
-          ]),
-          5000,
-          candidate.key
-        );
+        await Promise.all([
+          loadStylesheet(candidate.css, `leaflet-${candidate.key}`),
+          loadScript(candidate.js, `leaflet-${candidate.key}`)
+        ]);
         if (typeof window.L !== "undefined") return true;
       } catch (error) {
         console.warn(error.message);
@@ -184,57 +171,9 @@
     return false;
   }
 
-  async function reloadVigenciaData() {
-    const stamp = Date.now();
-    window.VIGENCIA_IPT_ROWS = [];
-    window.ACTOS_IPT_ROWS = [];
-
-    const files = [
-      "data/ipt_vigentes_01.js",
-      "data/ipt_vigentes_02.js",
-      "data/ipt_vigentes_03.js",
-      "data/ipt_vigentes_04.js",
-      "data/ipt_vigentes_05.js",
-      "data/revision_sig_ipt.js",
-      "data/actos_ipt_finalizar.js",
-      "data/vigencia_finalizar.js"
-    ];
-
-    for (const file of files) {
-      await loadScript(`${file}?v=${stamp}`, `reload-${file}-${stamp}`);
-    }
-
-    const actual = window.VIGENCIA_CARTOGRAFICA;
-    if (!actual || !Array.isArray(actual.instrumentos) || !actual.instrumentos.length) {
-      throw new Error("La base comunal terminó sin instrumentos.");
-    }
-
-    if (typeof vigenciaData !== "undefined" && vigenciaData) {
-      Object.keys(vigenciaData).forEach(key => delete vigenciaData[key]);
-      Object.assign(vigenciaData, actual);
-    }
-
-    if (typeof window.vigenciaInstruments === "function") {
-      window.vigenciaInstruments = () => Array.isArray(window.VIGENCIA_CARTOGRAFICA?.instrumentos)
-        ? [...window.VIGENCIA_CARTOGRAFICA.instrumentos]
-        : [];
-    }
-
-    const regionSelect = document.getElementById("vigenciaRegionFilter");
-    const typeSelect = document.getElementById("vigenciaTypeFilter");
-    if (regionSelect) regionSelect.innerHTML = '<option value="">Todas</option>';
-    if (typeSelect) typeSelect.innerHTML = '<option value="">Todos</option>';
-
-    if (typeof populateVigenciaFilters === "function") populateVigenciaFilters();
-    if (typeof renderVigencia === "function") renderVigencia();
-
-    return true;
-  }
-
   function showMapFallback() {
     const container = document.getElementById("territorialMap");
-    if (!container) return;
-
+    if (!container || container.querySelector("iframe")) return;
     container.innerHTML = `
       <iframe
         title="Mapa interactivo de Chile"
@@ -246,13 +185,6 @@
   }
 
   async function loadContentExtensions() {
-    let vigenciaReady = false;
-    try {
-      vigenciaReady = await reloadVigenciaData();
-    } catch (error) {
-      console.error("No se pudo reconstruir la base comunal:", error);
-    }
-
     const leafletReady = await ensureLeaflet();
 
     try {
@@ -264,7 +196,7 @@
 
     try {
       await loadScript("vigencia-comunal.js", "vigencia-comunal");
-      if (vigenciaReady && typeof renderVigencia === "function") renderVigencia();
+      if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
       console.error("No se pudo cargar la vista comunal de IPT:", error);
     }
@@ -274,12 +206,8 @@
       : (typeof renderTerritorialMap === "function" ? renderTerritorialMap : null);
 
     if (leafletReady && renderMap) {
-      const container = document.getElementById("territorialMap");
-      const fallback = container?.querySelector("iframe");
-      if (fallback) container.innerHTML = "";
-      setTimeout(() => renderMap(), 80);
-      setTimeout(() => renderMap(), 450);
-      setTimeout(() => renderMap(), 1200);
+      setTimeout(() => renderMap(), 120);
+      setTimeout(() => renderMap(), 500);
     } else {
       showMapFallback();
     }
