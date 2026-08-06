@@ -78,6 +78,10 @@ class NewsItem:
     relevance_score: int = 0
     relevance_level: str = "low"
     relevance_reasons: list[str] = field(default_factory=list)
+    geographic_scope: str = "undetermined"
+    country: str = ""
+    geographic_reasons: list[str] = field(default_factory=list)
+    geographic_confidence: float = 0.0
     requires_review: bool = False
 
     def to_dict(self) -> dict[str, Any]:
