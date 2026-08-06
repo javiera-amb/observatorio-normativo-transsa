@@ -15,6 +15,18 @@ PORTAL_URL = "https://portalipt.minvu.cl/instrumentos"
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 
+REQUIRED_COLUMNS = {
+    "Región",
+    "Comunas",
+    "Nivel de planificación",
+    "Tipo de planificación",
+    "Clasificación",
+    "Denominación",
+    "Estado",
+    "Fecha de inicio de vigencia",
+    "Códigos de instrumentos de origen que afecta",
+}
+
 
 def deaccent(value: object) -> str:
     return "".join(
@@ -30,6 +42,7 @@ def normalize_region(value: object) -> str:
         "Metropolitana De Santiago": "Metropolitana de Santiago",
         "Libertador General Bernardo O'Higgins": "Libertador General Bernardo O'Higgins",
         "Aysén Del General Carlos Ibáñez Del Campo": "Aysén del General Carlos Ibáñez del Campo",
+        "Magallanes Y De La Antártica Chilena": "Magallanes y de la Antártica Chilena",
         "Magallanes Y Antártica Chilena": "Magallanes y de la Antártica Chilena",
         "Arica Y Parinacota": "Arica y Parinacota",
         "La Araucanía": "La Araucanía",
@@ -86,6 +99,7 @@ def download_report(destination: Path) -> Path:
         browser = playwright.chromium.launch(headless=True)
         page = browser.new_page(accept_downloads=True)
         page.goto(PORTAL_URL, wait_until="networkidle", timeout=120_000)
+        page.wait_for_timeout(2_000)
 
         candidates = [
             page.get_by_role("button", name=re.compile(r"descargar listado seleccionado", re.I)),
@@ -105,12 +119,27 @@ def download_report(destination: Path) -> Path:
     return destination
 
 
-def read_csv(path: Path) -> list[dict[str, str]]:
+def detect_delimiter(path: Path) -> str:
     with path.open("r", encoding="utf-8-sig", newline="") as file:
-        sample = file.read(4096)
-        file.seek(0)
-        delimiter = ";" if sample.count(";") >= sample.count(",") else ","
-        return list(csv.DictReader(file, delimiter=delimiter))
+        header = file.readline()
+    if header.count(";") >= 5:
+        return ";"
+    if header.count("\t") >= 5:
+        return "\t"
+    return ","
+
+
+def read_csv(path: Path) -> list[dict[str, str]]:
+    delimiter = detect_delimiter(path)
+    with path.open("r", encoding="utf-8-sig", newline="") as file:
+        reader = csv.DictReader(file, delimiter=delimiter)
+        headers = set(reader.fieldnames or [])
+        missing = sorted(REQUIRED_COLUMNS - headers)
+        if missing:
+            raise RuntimeError(
+                "El CSV del Portal IPT no contiene las columnas esperadas: " + ", ".join(missing)
+            )
+        return list(reader)
 
 
 def act_signature(row: dict[str, str]) -> str:
@@ -216,6 +245,7 @@ def write_outputs(rows: list[list[object]], chunk_size: int = 250) -> None:
         "en_desarrollo": states.get("En Desarrollo", 0),
         "enmiendas_inferidas": types.get("Enmienda", 0),
         "rectificaciones_inferidas": types.get("Rectificación", 0),
+        "modificaciones_seccionales_inferidas": types.get("Modificación mediante seccional", 0),
         "vinculados_por_codigo_origen": sum(bool(row[10]) for row in rows),
         "pendientes_vinculacion": sum(not row[10] for row in rows),
         "fecha_maxima_vigencia": dates[-1] if dates else "",
