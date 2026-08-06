@@ -109,13 +109,68 @@
     });
   }
 
+  function loadStylesheet(href, key) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`link[data-tui-style="${key}"]`)) {
+        resolve();
+        return;
+      }
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      link.dataset.tuiStyle = key;
+      link.onload = resolve;
+      link.onerror = () => {
+        link.remove();
+        reject(new Error(`No se pudo cargar ${href}`));
+      };
+      document.head.appendChild(link);
+    });
+  }
+
+  async function ensureLeaflet() {
+    if (typeof window.L !== "undefined") return true;
+
+    const candidates = [
+      {
+        css: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css",
+        js: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
+        key: "jsdelivr"
+      },
+      {
+        css: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css",
+        js: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
+        key: "cdnjs"
+      }
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        await loadStylesheet(candidate.css, `leaflet-${candidate.key}`);
+        await loadScript(candidate.js, `leaflet-${candidate.key}`);
+        if (typeof window.L !== "undefined") return true;
+      } catch (error) {
+        console.warn(error.message);
+      }
+    }
+
+    return false;
+  }
+
   async function loadContentExtensions() {
+    const leafletReady = await ensureLeaflet();
+
     try {
       await loadScript("data/noticias.js", "data-noticias");
       await loadScript("tui-content.js", "tui-content");
-      await loadScript("map-offline.js", "map-offline");
     } catch (error) {
-      console.error("No se pudo cargar la extensión de noticias y mapa:", error);
+      console.error("No se pudo cargar el módulo de noticias:", error);
+    }
+
+    if (leafletReady && typeof window.renderTerritorialMap === "function") {
+      const container = document.getElementById("territorialMap");
+      if (container) container.innerHTML = "";
+      setTimeout(() => window.renderTerritorialMap(), 80);
     }
   }
 
