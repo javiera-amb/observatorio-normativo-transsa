@@ -1,17 +1,26 @@
-name: Validar módulo Diario Oficial local
+name: Validar módulos locales TUI
 
-# El análisis con Ollama se ejecuta en el computador local de Transsa.
-# Este workflow queda disponible para validar el repositorio sin usar APIs pagadas.
+# Ollama y la recolección real se ejecutan en el computador local de Transsa.
+# GitHub Actions valida código, configuración, pruebas y compatibilidad del portal.
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "automation/**"
+      - "config/**"
+      - "core/**"
+      - "scripts/**"
+      - "tests/**"
+      - "docs/**"
+      - ".github/workflows/actualizar-diario.yml"
   push:
     paths:
-      - "automation/actualizar_desde_diario.py"
-      - "automation/sources/**"
-      - "automation/reports/**"
-      - "automation/ollama/**"
+      - "automation/**"
+      - "config/**"
       - "core/**"
+      - "scripts/**"
       - "tests/**"
+      - "docs/**"
       - ".github/workflows/actualizar-diario.yml"
 
 permissions:
@@ -19,7 +28,7 @@ permissions:
 
 jobs:
   validar:
-    name: Validar código y portal
+    name: Validar código, fuentes y portal
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -37,6 +46,9 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r automation/requirements.txt
 
+      - name: Validar registro de fuentes de noticias
+        run: python scripts/validate_news_sources.py
+
       - name: Ejecutar pruebas automáticas
         run: python -m unittest discover -s tests -v
 
@@ -46,4 +58,4 @@ jobs:
       - name: Confirmar modalidad local
         run: |
           echo "Validación correcta."
-          echo "La descarga y el análisis del Diario Oficial se ejecutan localmente con ejecutar_diario_local.bat."
+          echo "La recolección real, Ollama y la publicación diaria continúan ejecutándose localmente."
