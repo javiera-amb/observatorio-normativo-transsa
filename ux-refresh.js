@@ -196,6 +196,7 @@
 
     try {
       await loadScript("vigencia-comunal.js", "vigencia-comunal");
+      await loadScript("vigencia-estrategica.js", "vigencia-estrategica");
       if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
       console.error("No se pudo cargar la vista comunal de IPT:", error);
