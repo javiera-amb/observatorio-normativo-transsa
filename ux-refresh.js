@@ -134,6 +134,7 @@
       await ensureLeaflet();
       await loadScript("data/noticias.js", "data-noticias");
       await loadScript("tui-content.js", "tui-content");
+      await loadScript("map-offline.js", "map-offline");
     } catch (error) {
       console.error("No se pudo cargar la extensión de noticias y mapa:", error);
     }
