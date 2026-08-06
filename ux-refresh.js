@@ -78,7 +78,7 @@
     const replacements = [
       ["iptEmptyState", "Los reportes mensuales aparecerán aquí cuando existan registros disponibles."],
       ["annualEmptyState", "El archivo histórico se mostrará aquí cuando termine su carga y validación."],
-      ["vigenciaEmptyState", "Los instrumentos aparecerán aquí cuando exista información normativa y cartográfica para evaluar."]
+      ["vigenciaEmptyState", "Las comunas aparecerán aquí cuando exista información normativa y cartográfica para evaluar."]
     ];
 
     replacements.forEach(([id, message]) => {
@@ -165,6 +165,12 @@
       await loadScript("tui-content.js", "tui-content");
     } catch (error) {
       console.error("No se pudo cargar el módulo de noticias:", error);
+    }
+
+    try {
+      await loadScript("vigencia-comunal.js", "vigencia-comunal");
+    } catch (error) {
+      console.error("No se pudo cargar la vista comunal de IPT:", error);
     }
 
     if (leafletReady && typeof window.renderTerritorialMap === "function") {
