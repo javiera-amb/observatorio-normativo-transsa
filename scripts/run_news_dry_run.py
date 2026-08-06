@@ -39,8 +39,14 @@ def main() -> int:
         "source_counts": result.source_counts,
         "collected_count": len(result.collected),
         "candidate_count": len(result.candidates),
+        "chile_candidate_count": len(result.chile_candidates),
+        "international_candidate_count": len(result.international_candidates),
+        "undetermined_candidate_count": len(result.undetermined_candidates),
         "discarded_count": len(result.discarded),
         "errors": result.errors,
+        "chile_candidates": [item.to_dict() for item in result.chile_candidates],
+        "international_candidates": [item.to_dict() for item in result.international_candidates],
+        "undetermined_candidates": [item.to_dict() for item in result.undetermined_candidates],
         "candidates": [item.to_dict() for item in result.candidates],
     }
 
