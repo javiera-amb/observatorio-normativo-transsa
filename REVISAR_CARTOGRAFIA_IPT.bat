@@ -25,6 +25,9 @@ echo %CARPETA_SIG%
 echo.
 echo Este proceso SOLO LEE la cartografia. No modifica GPKG ni SHP.
 echo.
+echo Version 2: interpreta IPT_Region / tipo IPT / comuna / archivo,
+echo separa planes seccionales y excluye predios/RGC de referencia.
+echo.
 
 if not exist "%REPO%\index.html" (
     echo ERROR: este archivo no esta dentro del repositorio esperado.
@@ -34,8 +37,8 @@ if not exist "%REPO%\index.html" (
     exit /b 3
 )
 
-if not exist "%REPO%\scripts\inspector_sig_ipt.py" (
-    echo ERROR: falta scripts\inspector_sig_ipt.py en el repositorio.
+if not exist "%REPO%\scripts\inspector_sig_ipt_v2.py" (
+    echo ERROR: falta scripts\inspector_sig_ipt_v2.py en el repositorio.
     echo Haz Fetch origin y Pull origin en GitHub Desktop y vuelve a intentar.
     echo.
     pause
@@ -56,14 +59,14 @@ set "RESULTADO=10"
 
 where py >nul 2>nul
 if not errorlevel 1 (
-    py -3 "%REPO%\scripts\inspector_sig_ipt.py" --root "%CARPETA_SIG%" --repo "%REPO%"
+    py -3 "%REPO%\scripts\inspector_sig_ipt_v2.py" --root "%CARPETA_SIG%" --repo "%REPO%"
     set "RESULTADO=!errorlevel!"
     goto :FIN
 )
 
 where python >nul 2>nul
 if not errorlevel 1 (
-    python "%REPO%\scripts\inspector_sig_ipt.py" --root "%CARPETA_SIG%" --repo "%REPO%"
+    python "%REPO%\scripts\inspector_sig_ipt_v2.py" --root "%CARPETA_SIG%" --repo "%REPO%"
     set "RESULTADO=!errorlevel!"
     goto :FIN
 )
