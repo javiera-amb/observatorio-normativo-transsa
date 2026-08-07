@@ -3,12 +3,17 @@
 
   const catalog = window.VIGENCIA_CARTOGRAFICA;
   const comparisons = window.COMPARACIONES_IPT || { versiones: {}, actos_por_comuna: {} };
+  const nationalActs = Array.isArray(window.ACTOS_IPT_NACIONALES?.actos)
+    ? window.ACTOS_IPT_NACIONALES.actos
+    : [];
   if (!catalog || !Array.isArray(catalog.instrumentos)) return;
 
   const normalize = value => String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/\bregion\b/g, " ")
+    .replace(/\bdel\b|\bde\b|\bla\b|\blas\b|\blos\b/g, " ")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "");
 
@@ -49,6 +54,10 @@
     const currentName = normalize(current.nombre);
     if (previousName && previousName === currentName) return true;
 
+    // Los planes seccionales y límites urbanos con nombres distintos son
+    // instrumentos territoriales distintos, no versiones sucesivas.
+    if (type === "PS" || type === "LU") return false;
+
     const previousTokens = significantNameTokens(previous, item);
     const currentTokens = significantNameTokens(current, item);
     const similarity = overlapCoefficient(previousTokens, currentTokens);
@@ -57,9 +66,7 @@
       PRC: 0.55,
       PRI: 0.65,
       PRM: 0.65,
-      PRDU: 0.65,
-      PS: 0.75,
-      LU: 0.75
+      PRDU: 0.65
     };
 
     return similarity >= (thresholds[type] ?? 0.7);
@@ -128,22 +135,82 @@
     return pairs;
   }
 
+  function nationalActsForItem(item) {
+    const planCodes = new Set(
+      (item.instrumentos || [])
+        .map(plan => Number(plan.registro))
+        .filter(Number.isFinite)
+    );
+    const commune = normalize(item.comuna);
+    const region = normalize(item.region);
+
+    return nationalActs
+      .filter(act => {
+        const linkedByCode = (act.codigos_origen_afectados || [])
+          .some(code => planCodes.has(Number(code)));
+        if (linkedByCode) return true;
+
+        const sameRegion = !act.region || !item.region || normalize(act.region) === region;
+        const sameCommune = (act.comunas || []).some(value => normalize(value) === commune);
+        return sameRegion && sameCommune;
+      })
+      .map(act => {
+        const linkedByCode = (act.codigos_origen_afectados || [])
+          .some(code => planCodes.has(Number(code)));
+        return {
+          ...act,
+          vinculacion_ficha: linkedByCode ? "codigo_origen" : "comuna_region",
+          confianza_vinculacion: linkedByCode ? "alta" : "media"
+        };
+      });
+  }
+
+  function combinedActsForItem(item) {
+    const communeKey = `${normalize(item.region)}__${normalize(item.comuna)}`;
+    const manualActs = Array.isArray(comparisons.actos_por_comuna?.[communeKey])
+      ? comparisons.actos_por_comuna[communeKey]
+      : [];
+    const merged = new Map();
+
+    nationalActsForItem(item).forEach(act => merged.set(act.id, act));
+    manualActs.forEach(act => merged.set(act.id, {
+      ...merged.get(act.id),
+      ...act,
+      origen_revision: "piloto_manual"
+    }));
+
+    return [...merged.values()].sort((left, right) =>
+      dateValue(left.fecha).localeCompare(dateValue(right.fecha))
+      || String(left.titulo || "").localeCompare(String(right.titulo || ""), "es")
+    );
+  }
+
   function timelineFromAct(act) {
     return {
       id: act.id,
       fecha: act.fecha || "Sin fecha",
       tipo: act.tipo_acto || "Modificación",
-      numero: act.evidencia || "",
+      numero: act.evidencia || (act.codigos_origen_afectados?.length
+        ? `Origen ${act.codigos_origen_afectados.join(", ")}`
+        : "Acto Portal IPT"),
       estado: act.estado || "",
       titulo: act.titulo || "Acto normativo",
       resumen: [act.fundamento_revision, act.impacto_urbano].filter(Boolean).join(" "),
       incorporacion: act.incorporacion_sig || "pendiente_revision",
       fuente: act.fuente_oficial || "",
-      zonas_afectadas: act.zonas_afectadas || []
+      zonas_afectadas: act.zonas_afectadas || [],
+      clase_evento: "acto_posterior",
+      confianza_vinculacion: act.confianza_vinculacion || ""
     };
   }
 
-  function buildConsolidatedPrc(item) {
+  function isCommunalAct(act) {
+    const level = normalize(act.nivel_planificacion);
+    const type = String(act.tipo_ipt || "").toUpperCase();
+    return level === "comunal" || ["PRC", "PS", "LU"].includes(type);
+  }
+
+  function buildConsolidatedPrc(item, acts) {
     const plans = Array.isArray(item.instrumentos) ? item.instrumentos : [];
     const prcPlans = plans
       .filter(plan => plan.tipo_ipt === "PRC")
@@ -161,6 +228,7 @@
     const urbanLimits = plans
       .filter(plan => plan.tipo_ipt === "LU")
       .sort((left, right) => dateValue(right.fecha).localeCompare(dateValue(left.fecha)));
+    const communalActs = acts.filter(isCommunalAct);
 
     const prcBase = prcPlans[0] || null;
     const state = prcBase
@@ -173,11 +241,13 @@
       versiones_prc: prcPlans,
       seccionales: sectionals,
       limites_urbanos: urbanLimits,
+      modificaciones_enmiendas: communalActs,
       cantidad_seccionales: sectionals.length,
-      criterio_aplicacion: "El PRC constituye la base comunal. Cada plan seccional se mantiene como instrumento independiente y sustituye la normativa del PRC únicamente dentro de su polígono de aplicación.",
-      estado_integracion_sig: sectionals.length ? "pendiente_revision" : "no_aplica",
+      cantidad_actos_comunales: communalActs.length,
+      criterio_aplicacion: "El PRC constituye la base comunal. Cada plan seccional se mantiene como instrumento independiente y sustituye la normativa del PRC únicamente dentro de su polígono de aplicación. Las modificaciones y enmiendas alteran el marco consolidado según su acto y ámbito.",
+      estado_integracion_sig: (sectionals.length || communalActs.length) ? "pendiente_revision" : "no_aplica",
       resumen: prcBase
-        ? `${prcBase.nombre} funciona como instrumento base comunal${sectionals.length ? ` y debe leerse junto con ${sectionals.length} ${sectionals.length === 1 ? "plan seccional" : "planes seccionales"} que reemplazan su normativa en sectores específicos` : ""}.`
+        ? `${prcBase.nombre} funciona como instrumento base comunal${sectionals.length ? ` y debe leerse junto con ${sectionals.length} ${sectionals.length === 1 ? "plan seccional" : "planes seccionales"} que reemplazan su normativa en sectores específicos` : ""}${communalActs.length ? `, además de ${communalActs.length} ${communalActs.length === 1 ? "acto posterior comunal" : "actos posteriores comunales"}` : ""}.`
         : sectionals.length
           ? `Se registran ${sectionals.length} planes seccionales, pero todavía no se ha identificado un PRC base vigente para construir la lectura consolidada.`
           : "No se ha identificado un PRC base ni planes seccionales vigentes en la base cargada."
@@ -185,26 +255,32 @@
   }
 
   catalog.instrumentos.forEach(item => {
-    const communeKey = `${normalize(item.region)}__${normalize(item.comuna)}`;
-    const acts = Array.isArray(comparisons.actos_por_comuna?.[communeKey])
-      ? comparisons.actos_por_comuna[communeKey]
-      : [];
+    const acts = combinedActsForItem(item);
     const versionComparisons = comparisonPairs(item);
-    const consolidatedPrc = buildConsolidatedPrc(item);
+    const consolidatedPrc = buildConsolidatedPrc(item, acts);
 
     item.actos_normativos = acts;
     item.cantidad_actos = acts.length;
     item.comparaciones_versiones = versionComparisons;
     item.marco_comunal_consolidado = consolidatedPrc;
+    item.cobertura_actos = {
+      total: acts.length,
+      vinculados_por_codigo: acts.filter(act => act.vinculacion_ficha === "codigo_origen").length,
+      vinculados_por_comuna_region: acts.filter(act => act.vinculacion_ficha === "comuna_region").length,
+      vigentes: acts.filter(act => act.estado === "Vigente").length,
+      en_desarrollo: acts.filter(act => act.estado === "En Desarrollo").length,
+      derogados: acts.filter(act => act.estado === "Derogado").length
+    };
     item.actos_posteriores_pendientes = acts.filter(act =>
       act.incorporacion_sig === "pendiente_revision" ||
       act.vinculacion_origen === "pendiente" ||
-      act.vinculacion_origen === "discrepancia_por_resolver"
+      act.vinculacion_origen === "discrepancia_por_resolver" ||
+      act.vinculacion_ficha === "comuna_region"
     ).length;
 
     const baseTimeline = Array.isArray(item.linea_tiempo) ? item.linea_tiempo : [];
     const actIds = new Set(acts.map(act => act.id));
-    const cleanBase = baseTimeline.filter(event => !actIds.has(event.id));
+    const cleanBase = baseTimeline.filter(event => !actIds.has(event.id) && event.clase_evento !== "acto_posterior");
     item.linea_tiempo = [...cleanBase, ...acts.map(timelineFromAct)]
       .sort((left, right) => dateValue(left.fecha).localeCompare(dateValue(right.fecha)));
 
@@ -226,14 +302,19 @@
         + versionComparisons.filter(comparison => comparison.estado_sig === "pendiente_revision").length
         + consolidatedPrc.seccionales.filter(plan => plan.estado_integracion_sig === "pendiente_revision").length,
       resumen: strategicSource?.resumen_estrategico
-        || `${consolidatedPrc.resumen} Los planes distintos se mantienen como instrumentos independientes; solo se comparan versiones que pertenecen a la misma línea normativa.`,
-      advertencia: "La consolidación es analítica y cartográfica: no elimina la identidad jurídica de los planes seccionales. Cada uno debe conservar su fuente, vigencia, polígono y normas propias."
+        || `${consolidatedPrc.resumen} Se asociaron ${acts.length} actos históricos del Portal IPT. Los planes distintos se mantienen como instrumentos independientes; solo se comparan versiones que pertenecen a la misma línea normativa.`,
+      advertencia: "La consolidación es analítica y cartográfica: no elimina la identidad jurídica de los planes seccionales. Los vínculos por comuna y región son preliminares hasta confirmar el código de origen o revisar el expediente oficial."
     };
+
+    item.resumen_alerta = `La ficha reúne ${item.cantidad_instrumentos || 0} instrumentos vigentes, ${versionComparisons.length} comparaciones de versiones y ${acts.length} actos históricos asociados. Falta validar vínculos documentales y comprobar su incorporación en SIG.`;
   });
 
   const all = catalog.instrumentos;
   catalog.resumen.instrumentos = all.length;
   catalog.resumen.comunas = all.length;
+  catalog.resumen.actos_asociados = all.reduce((sum, item) => sum + Number(item.cantidad_actos || 0), 0);
+  catalog.resumen.actos_fuente_nacional = nationalActs.length;
+  catalog.resumen.comparaciones_versiones = all.reduce((sum, item) => sum + Number(item.comparaciones_versiones?.length || 0), 0);
   catalog.resumen.revision_necesaria = all.filter(item => item.estado_alerta === "Revisión necesaria").length;
   catalog.resumen.actualizados = all.filter(item => item.estado_alerta === "Actualizado").length;
   catalog.resumen.probablemente_actualizados = all.filter(item => item.estado_alerta === "Probablemente actualizado").length;
