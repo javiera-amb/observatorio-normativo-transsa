@@ -2,6 +2,15 @@
   "use strict";
 
   const PORTAL = "https://portalipt.minvu.cl/instrumentos";
+  const STANDARD_PART_LENGTH = 10179;
+  const FINAL_PART_LENGTH = 10173;
+  const REPAIR_FILES = [
+    "data/actos_ipt_nacional_09a.js",
+    "data/actos_ipt_nacional_09b.js",
+    "data/actos_ipt_nacional_09c.js",
+    "data/actos_ipt_nacional_09d.js",
+    "data/actos_ipt_nacional_09e.js"
+  ];
 
   function decodeBase64(value) {
     const binary = atob(value || "");
@@ -12,16 +21,54 @@
     return bytes;
   }
 
+  function extractFragment(text, source) {
+    const matches = [...String(text || "").matchAll(
+      /window\.ACTOS_IPT_GZ=\(window\.ACTOS_IPT_GZ\|\|""\)\+("(?:[^"\\]|\\.)*");/g
+    )];
+    if (!matches.length) {
+      throw new Error(`Formato inválido en ${source}`);
+    }
+    return matches.map(match => JSON.parse(match[1])).join("");
+  }
+
+  async function repairNinthPart(payload) {
+    const fragments = await Promise.all(
+      REPAIR_FILES.map(async source => {
+        const response = await fetch(source, { cache: "no-store" });
+        if (!response.ok) throw new Error(`No se pudo cargar ${source}: HTTP ${response.status}`);
+        return extractFragment(await response.text(), source);
+      })
+    );
+
+    const correctNinthPart = fragments.join("");
+    if (correctNinthPart.length !== STANDARD_PART_LENGTH) {
+      throw new Error(`El bloque 9 reconstruido tiene ${correctNinthPart.length} caracteres; se esperaban ${STANDARD_PART_LENGTH}.`);
+    }
+
+    const prefix = payload.slice(0, STANDARD_PART_LENGTH * 8);
+    const suffix = payload.slice(-FINAL_PART_LENGTH);
+    const repaired = `${prefix}${correctNinthPart}${suffix}`;
+    if (repaired.length !== STANDARD_PART_LENGTH * 9 + FINAL_PART_LENGTH) {
+      throw new Error("La base nacional reconstruida tiene un largo inesperado.");
+    }
+    return repaired;
+  }
+
   async function decompressRows() {
     if (!window.ACTOS_IPT_GZ) return [];
     if (typeof DecompressionStream === "undefined") {
       throw new Error("El navegador no permite descomprimir la base nacional de actos IPT.");
     }
 
-    const bytes = decodeBase64(window.ACTOS_IPT_GZ);
+    const repairedPayload = await repairNinthPart(window.ACTOS_IPT_GZ);
+    const bytes = decodeBase64(repairedPayload);
     const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
     const text = await new Response(stream).text();
-    return JSON.parse(text);
+    const rows = JSON.parse(text);
+    if (!Array.isArray(rows) || rows.length !== 1784) {
+      throw new Error(`La base nacional contiene ${Array.isArray(rows) ? rows.length : 0} actos; se esperaban 1.784.`);
+    }
+    return rows;
   }
 
   function buildAct(row) {
