@@ -184,6 +184,25 @@
     `;
   }
 
+  async function loadNationalIptActs() {
+    window.ACTOS_IPT_GZ = "";
+    const files = [
+      "data/actos_ipt_gz_01.js",
+      "data/actos_ipt_gz_02.js",
+      "data/actos_ipt_gz_03.js",
+      "data/actos_ipt_gz_04.js",
+      "data/actos_ipt_gz_05.js"
+    ];
+
+    for (let index = 0; index < files.length; index += 1) {
+      await loadScript(files[index], `actos-ipt-nacional-${index + 1}`);
+    }
+    await loadScript("data/actos_ipt_nacionales_finalizar.js", "actos-ipt-nacional-finalizar");
+    if (window.ACTOS_IPT_NACIONALES_READY) {
+      await window.ACTOS_IPT_NACIONALES_READY;
+    }
+  }
+
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
 
@@ -195,10 +214,18 @@
     }
 
     try {
+      await loadNationalIptActs();
+    } catch (error) {
+      console.error("No se pudo cargar el historial nacional de actos IPT:", error);
+      window.ACTOS_IPT_NACIONALES = { resumen: { total: 0 }, actos: [], error: error.message };
+    }
+
+    try {
       await loadScript("vigencia-comunal.js", "vigencia-comunal");
       await loadScript("data/comparaciones_ipt.js", "comparaciones-ipt");
       await loadScript("vigencia-pilotos.js", "vigencia-pilotos");
       await loadScript("vigencia-estrategica.js", "vigencia-estrategica");
+      await loadScript("vigencia-nacional-ui.js", "vigencia-nacional-ui");
       if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
       console.error("No se pudo cargar la vista comunal de IPT:", error);
