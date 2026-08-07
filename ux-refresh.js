@@ -220,9 +220,11 @@
     try {
       await loadScript("vigencia-comunal.js", "vigencia-comunal");
       await loadScript("data/comparaciones_ipt.js", "comparaciones-ipt");
+      await loadScript("data/comparacion_coquimbo_detallada.js", "comparacion-coquimbo-detallada");
       await loadScript("vigencia-pilotos.js", "vigencia-pilotos");
       await loadScript("vigencia-estrategica.js", "vigencia-estrategica");
       await loadScript("vigencia-nacional-ui.js", "vigencia-nacional-ui");
+      await loadScript("vigencia-comparacion-detallada.js", "vigencia-comparacion-detallada");
       if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
       console.error("No se pudo cargar la vista comunal de IPT:", error);
