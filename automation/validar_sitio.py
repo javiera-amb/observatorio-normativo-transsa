@@ -120,8 +120,8 @@ def load_vigencia_source_rows() -> list:
 
 def load_national_ipt_acts() -> list:
     encoded_parts: list[str] = []
-    for index in range(1, 6):
-        path = ROOT / "data" / f"actos_ipt_gz_{index:02d}.js"
+    for index in range(1, 11):
+        path = ROOT / "data" / f"actos_ipt_nacional_{index:02d}.js"
         validate_file(path, path.name)
         raw = path.read_text(encoding="utf-8").strip()
         match = re.fullmatch(
@@ -140,6 +140,8 @@ def load_national_ipt_acts() -> list:
 
     if not isinstance(acts, list) or not acts:
         raise ValueError("La base nacional IPT está vacía o no es una lista.")
+    if len(acts) != 1784:
+        raise ValueError(f"Se esperaban 1.784 actos IPT y se obtuvieron {len(acts)}.")
     for position, row in enumerate(acts):
         if not isinstance(row, list) or len(row) < 17:
             raise ValueError(f"Acto IPT nacional {position} inválido.")
@@ -149,7 +151,8 @@ def load_national_ipt_acts() -> list:
         "../vigencia-pilotos.js",
         "../vigencia-nacional-ui.js",
     ):
-        validate_file(ROOT / "data" / filename if not filename.startswith("../") else ROOT / filename[3:], filename)
+        path = ROOT / "data" / filename if not filename.startswith("../") else ROOT / filename[3:]
+        validate_file(path, filename)
 
     return acts
 
