@@ -17,7 +17,7 @@ from pathlib import Path
 PORTAL_URL = "https://portalipt.minvu.cl/instrumentos"
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
-GZIP_PARTS = 5
+GZIP_PARTS = 10
 
 REQUIRED_COLUMNS = {
     "Región",
@@ -216,7 +216,7 @@ def build_rows(records: list[dict[str, str]]) -> list[list[object]]:
 
 
 def write_gzip_parts(rows: list[list[object]]) -> None:
-    for stale in DATA_DIR.glob("actos_ipt_gz_*.js"):
+    for stale in DATA_DIR.glob("actos_ipt_nacional_*.js"):
         stale.unlink()
 
     payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -229,7 +229,7 @@ def write_gzip_parts(rows: list[list[object]]) -> None:
 
     for index, part in enumerate(parts, start=1):
         content = f'window.ACTOS_IPT_GZ=(window.ACTOS_IPT_GZ||"")+{json.dumps(part)};\n'
-        (DATA_DIR / f"actos_ipt_gz_{index:02d}.js").write_text(content, encoding="utf-8")
+        (DATA_DIR / f"actos_ipt_nacional_{index:02d}.js").write_text(content, encoding="utf-8")
 
 
 def write_outputs(rows: list[list[object]]) -> None:
@@ -237,7 +237,7 @@ def write_outputs(rows: list[list[object]]) -> None:
     write_gzip_parts(rows)
 
     (DATA_DIR / "actos_ipt.js").write_text(
-        "// Compatibilidad: la interfaz nacional carga actos_ipt_gz_01.js a actos_ipt_gz_05.js.\n",
+        "// Compatibilidad: la interfaz nacional carga actos_ipt_nacional_01.js a actos_ipt_nacional_10.js.\n",
         encoding="utf-8",
     )
 
