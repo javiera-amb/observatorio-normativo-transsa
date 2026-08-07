@@ -196,6 +196,8 @@
 
     try {
       await loadScript("vigencia-comunal.js", "vigencia-comunal");
+      await loadScript("data/comparaciones_ipt.js", "comparaciones-ipt");
+      await loadScript("vigencia-pilotos.js", "vigencia-pilotos");
       await loadScript("vigencia-estrategica.js", "vigencia-estrategica");
       if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
