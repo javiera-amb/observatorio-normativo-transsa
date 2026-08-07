@@ -186,13 +186,10 @@
 
   async function loadNationalIptActs() {
     window.ACTOS_IPT_GZ = "";
-    const files = [
-      "data/actos_ipt_gz_01.js",
-      "data/actos_ipt_gz_02.js",
-      "data/actos_ipt_gz_03.js",
-      "data/actos_ipt_gz_04.js",
-      "data/actos_ipt_gz_05.js"
-    ];
+    const files = Array.from(
+      { length: 10 },
+      (_value, index) => `data/actos_ipt_nacional_${String(index + 1).padStart(2, "0")}.js`
+    );
 
     for (let index = 0; index < files.length; index += 1) {
       await loadScript(files[index], `actos-ipt-nacional-${index + 1}`);
