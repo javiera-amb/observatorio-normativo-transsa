@@ -18,7 +18,7 @@
   const GENERIC_NAME_TOKENS = new Set([
     "plan", "plano", "regulador", "reguladora", "comunal", "intercomunal",
     "metropolitano", "regional", "desarrollo", "urbano", "seccional",
-    "limite", "urbano", "sector", "localidad", "localidades", "incluye",
+    "limite", "sector", "localidad", "localidades", "incluye",
     "actualizacion", "modificacion", "modificado", "nuevo", "nueva", "de",
     "del", "la", "las", "los", "el", "y"
   ]);
@@ -143,16 +143,59 @@
     };
   }
 
+  function buildConsolidatedPrc(item) {
+    const plans = Array.isArray(item.instrumentos) ? item.instrumentos : [];
+    const prcPlans = plans
+      .filter(plan => plan.tipo_ipt === "PRC")
+      .sort((left, right) => dateValue(right.fecha).localeCompare(dateValue(left.fecha)));
+    const sectionals = plans
+      .filter(plan => plan.tipo_ipt === "PS")
+      .sort((left, right) => dateValue(left.fecha).localeCompare(dateValue(right.fecha)))
+      .map(plan => ({
+        ...plan,
+        relacion_prc: "sustituye_normativa_sectorial",
+        descripcion_relacion: "Reemplaza la normativa del PRC dentro de su ámbito territorial de aplicación.",
+        estado_integracion_documental: "pendiente_revision",
+        estado_integracion_sig: "pendiente_revision"
+      }));
+    const urbanLimits = plans
+      .filter(plan => plan.tipo_ipt === "LU")
+      .sort((left, right) => dateValue(right.fecha).localeCompare(dateValue(left.fecha)));
+
+    const prcBase = prcPlans[0] || null;
+    const state = prcBase
+      ? (sectionals.length ? "prc_con_seccionales" : "prc_sin_seccionales")
+      : (sectionals.length ? "seccionales_sin_prc_base_identificado" : "sin_prc_identificado");
+
+    return {
+      estado: state,
+      prc_base: prcBase,
+      versiones_prc: prcPlans,
+      seccionales: sectionals,
+      limites_urbanos: urbanLimits,
+      cantidad_seccionales: sectionals.length,
+      criterio_aplicacion: "El PRC constituye la base comunal. Cada plan seccional se mantiene como instrumento independiente y sustituye la normativa del PRC únicamente dentro de su polígono de aplicación.",
+      estado_integracion_sig: sectionals.length ? "pendiente_revision" : "no_aplica",
+      resumen: prcBase
+        ? `${prcBase.nombre} funciona como instrumento base comunal${sectionals.length ? ` y debe leerse junto con ${sectionals.length} ${sectionals.length === 1 ? "plan seccional" : "planes seccionales"} que reemplazan su normativa en sectores específicos` : ""}.`
+        : sectionals.length
+          ? `Se registran ${sectionals.length} planes seccionales, pero todavía no se ha identificado un PRC base vigente para construir la lectura consolidada.`
+          : "No se ha identificado un PRC base ni planes seccionales vigentes en la base cargada."
+    };
+  }
+
   catalog.instrumentos.forEach(item => {
     const communeKey = `${normalize(item.region)}__${normalize(item.comuna)}`;
     const acts = Array.isArray(comparisons.actos_por_comuna?.[communeKey])
       ? comparisons.actos_por_comuna[communeKey]
       : [];
     const versionComparisons = comparisonPairs(item);
+    const consolidatedPrc = buildConsolidatedPrc(item);
 
     item.actos_normativos = acts;
     item.cantidad_actos = acts.length;
     item.comparaciones_versiones = versionComparisons;
+    item.marco_comunal_consolidado = consolidatedPrc;
     item.actos_posteriores_pendientes = acts.filter(act =>
       act.incorporacion_sig === "pendiente_revision" ||
       act.vinculacion_origen === "pendiente" ||
@@ -165,9 +208,6 @@
     item.linea_tiempo = [...cleanBase, ...acts.map(timelineFromAct)]
       .sort((left, right) => dateValue(left.fecha).localeCompare(dateValue(right.fecha)));
 
-    const communalPlans = (item.instrumentos || [])
-      .filter(plan => plan.tipo_ipt === "PRC" || plan.tipo_ipt === "PS" || plan.tipo_ipt === "LU")
-      .sort((left, right) => dateValue(right.fecha).localeCompare(dateValue(left.fecha)));
     const intercommunalPlans = (item.instrumentos || [])
       .filter(plan => plan.tipo_ipt === "PRI" || plan.tipo_ipt === "PRM")
       .sort((left, right) => dateValue(right.fecha).localeCompare(dateValue(left.fecha)));
@@ -177,15 +217,17 @@
     const strategicSource = validatedComparison || reviewedComparison || versionComparisons[0];
 
     item.lectura_estrategica = {
-      instrumento_comunal_principal: communalPlans[0] || null,
+      instrumento_comunal_principal: consolidatedPrc.prc_base || consolidatedPrc.limites_urbanos[0] || null,
       instrumento_intercomunal_principal: intercommunalPlans[0] || null,
       comparaciones_pendientes: versionComparisons.filter(comparison => comparison.estado_analisis !== "validado").length,
       modificaciones_vigentes: acts.filter(act => act.estado === "Vigente").length,
+      seccionales_integrados: consolidatedPrc.cantidad_seccionales,
       verificaciones_sig_pendientes: acts.filter(act => act.incorporacion_sig === "pendiente_revision").length
-        + versionComparisons.filter(comparison => comparison.estado_sig === "pendiente_revision").length,
+        + versionComparisons.filter(comparison => comparison.estado_sig === "pendiente_revision").length
+        + consolidatedPrc.seccionales.filter(plan => plan.estado_integracion_sig === "pendiente_revision").length,
       resumen: strategicSource?.resumen_estrategico
-        || `En ${item.comuna} se registran ${item.cantidad_instrumentos || 0} instrumentos vigentes aplicables. Los planes distintos se mantienen como instrumentos independientes; solo se comparan versiones que pertenecen a la misma línea normativa.`,
-      advertencia: "La interpretación estratégica identifica oportunidades y restricciones normativas, pero cada conclusión debe respaldarse con ordenanza, planos oficiales y verificación SIG."
+        || `${consolidatedPrc.resumen} Los planes distintos se mantienen como instrumentos independientes; solo se comparan versiones que pertenecen a la misma línea normativa.`,
+      advertencia: "La consolidación es analítica y cartográfica: no elimina la identidad jurídica de los planes seccionales. Cada uno debe conservar su fuente, vigencia, polígono y normas propias."
     };
   });
 
