@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
+import gzip
 import hashlib
 import json
+import math
 import re
 import tempfile
 import unicodedata
@@ -14,6 +17,7 @@ from pathlib import Path
 PORTAL_URL = "https://portalipt.minvu.cl/instrumentos"
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
+GZIP_PARTS = 5
 
 REQUIRED_COLUMNS = {
     "Región",
@@ -144,9 +148,16 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 def act_signature(row: dict[str, str]) -> str:
     keys = [
-        "Región", "Comunas", "Nivel de planificación", "Tipo de planificación",
-        "Clasificación", "Denominación", "Estado", "Fecha de inicio de vigencia",
-        "Fecha de derogación", "Fecha de último hito cumplido",
+        "Región",
+        "Comunas",
+        "Nivel de planificación",
+        "Tipo de planificación",
+        "Clasificación",
+        "Denominación",
+        "Estado",
+        "Fecha de inicio de vigencia",
+        "Fecha de derogación",
+        "Fecha de último hito cumplido",
         "Códigos de instrumentos de origen que afecta",
     ]
     return "|".join(str(row.get(key) or "").strip() for key in keys)
@@ -154,7 +165,8 @@ def act_signature(row: dict[str, str]) -> str:
 
 def build_rows(records: list[dict[str, str]]) -> list[list[object]]:
     modifications = [
-        row for row in records
+        row
+        for row in records
         if str(row.get("Clasificación") or "").strip().lower() == "modificación"
     ]
 
@@ -203,37 +215,37 @@ def build_rows(records: list[dict[str, str]]) -> list[list[object]]:
     return rows
 
 
-def write_outputs(rows: list[list[object]], chunk_size: int = 250) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    for stale in DATA_DIR.glob("actos_ipt_[0-9][0-9].js"):
+def write_gzip_parts(rows: list[list[object]]) -> None:
+    for stale in DATA_DIR.glob("actos_ipt_gz_*.js"):
         stale.unlink()
 
-    chunks = [rows[index:index + chunk_size] for index in range(0, len(rows), chunk_size)]
-    for index, chunk in enumerate(chunks, start=1):
-        content = (
-            "window.ACTOS_IPT_ROWS=(window.ACTOS_IPT_ROWS||[]).concat("
-            + json.dumps(chunk, ensure_ascii=False, separators=(",", ":"))
-            + ");\n"
-        )
-        (DATA_DIR / f"actos_ipt_{index:02d}.js").write_text(content, encoding="utf-8")
+    payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    encoded = base64.b64encode(gzip.compress(payload, compresslevel=9)).decode("ascii")
+    part_size = max(1, math.ceil(len(encoded) / GZIP_PARTS))
+    parts = [encoded[index:index + part_size] for index in range(0, len(encoded), part_size)]
+    while len(parts) < GZIP_PARTS:
+        parts.append("")
+    parts = parts[:GZIP_PARTS]
 
-    loader_lines = [
-        "window.ACTOS_IPT_ROWS=[];",
-        "document.write('<script src=\"data/revision_sig_ipt.js\"><\\/script>');",
-    ]
-    loader_lines.extend(
-        f"document.write('<script src=\"data/actos_ipt_{index:02d}.js\"><\\/script>');"
-        for index in range(1, len(chunks) + 1)
+    for index, part in enumerate(parts, start=1):
+        content = f'window.ACTOS_IPT_GZ=(window.ACTOS_IPT_GZ||"")+{json.dumps(part)};\n'
+        (DATA_DIR / f"actos_ipt_gz_{index:02d}.js").write_text(content, encoding="utf-8")
+
+
+def write_outputs(rows: list[list[object]]) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    write_gzip_parts(rows)
+
+    (DATA_DIR / "actos_ipt.js").write_text(
+        "// Compatibilidad: la interfaz nacional carga actos_ipt_gz_01.js a actos_ipt_gz_05.js.\n",
+        encoding="utf-8",
     )
-    loader_lines.append(
-        "document.write('<script src=\"data/actos_ipt_finalizar.js\"><\\/script>');"
-    )
-    (DATA_DIR / "actos_ipt.js").write_text("\n".join(loader_lines) + "\n", encoding="utf-8")
 
     states = Counter(str(row[6]) for row in rows)
     types = Counter(str(row[11]) for row in rows)
     dates = sorted(
-        str(row[7]) for row in rows
+        str(row[7])
+        for row in rows
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(row[7]))
     )
     metadata = {
@@ -249,7 +261,8 @@ def write_outputs(rows: list[list[object]], chunk_size: int = 250) -> None:
         "vinculados_por_codigo_origen": sum(bool(row[10]) for row in rows),
         "pendientes_vinculacion": sum(not row[10] for row in rows),
         "fecha_maxima_vigencia": dates[-1] if dates else "",
-        "archivos_generados": len(chunks),
+        "archivos_comprimidos": GZIP_PARTS,
+        "formato_frontend": "gzip_base64",
     }
     (DATA_DIR / "actos_ipt_sync.json").write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
@@ -259,10 +272,9 @@ def write_outputs(rows: list[list[object]], chunk_size: int = 250) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Sincroniza las modificaciones del Portal IPT y genera los datos del portal."
+        description="Sincroniza las modificaciones del Portal IPT y genera la base nacional comprimida."
     )
     parser.add_argument("--input-csv", type=Path, help="CSV ya descargado. Omite la navegación web.")
-    parser.add_argument("--chunk-size", type=int, default=250)
     args = parser.parse_args()
 
     if args.input_csv:
@@ -275,8 +287,8 @@ def main() -> int:
     if not rows:
         raise RuntimeError("El reporte no contiene registros clasificados como Modificación.")
 
-    write_outputs(rows, chunk_size=args.chunk_size)
-    print(f"Sincronización completada: {len(rows)} modificaciones.")
+    write_outputs(rows)
+    print(f"Sincronización completada: {len(rows)} modificaciones en {GZIP_PARTS} bloques.")
     return 0
 
 
