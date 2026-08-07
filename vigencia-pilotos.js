@@ -15,6 +15,56 @@
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
   const dateValue = value => validDate(value) ? value : "9999-99-99";
 
+  const GENERIC_NAME_TOKENS = new Set([
+    "plan", "plano", "regulador", "reguladora", "comunal", "intercomunal",
+    "metropolitano", "regional", "desarrollo", "urbano", "seccional",
+    "limite", "urbano", "sector", "localidad", "localidades", "incluye",
+    "actualizacion", "modificacion", "modificado", "nuevo", "nueva", "de",
+    "del", "la", "las", "los", "el", "y"
+  ]);
+
+  function significantNameTokens(plan, item) {
+    const communeTokens = new Set(normalize(item.comuna).split("_").filter(Boolean));
+    return new Set(
+      normalize(plan.nombre)
+        .split("_")
+        .filter(token => token.length > 2)
+        .filter(token => !GENERIC_NAME_TOKENS.has(token))
+        .filter(token => !communeTokens.has(token))
+        .filter(token => !/^\d{4}$/.test(token))
+    );
+  }
+
+  function overlapCoefficient(left, right) {
+    if (!left.size || !right.size) return 0;
+    const intersection = [...left].filter(token => right.has(token)).length;
+    return intersection / Math.min(left.size, right.size);
+  }
+
+  function sameInstrumentLineage(previous, current, type, item) {
+    const explicitKey = `${previous.registro}__${current.registro}`;
+    if (comparisons.versiones?.[explicitKey]) return true;
+
+    const previousName = normalize(previous.nombre);
+    const currentName = normalize(current.nombre);
+    if (previousName && previousName === currentName) return true;
+
+    const previousTokens = significantNameTokens(previous, item);
+    const currentTokens = significantNameTokens(current, item);
+    const similarity = overlapCoefficient(previousTokens, currentTokens);
+
+    const thresholds = {
+      PRC: 0.55,
+      PRI: 0.65,
+      PRM: 0.65,
+      PRDU: 0.65,
+      PS: 0.75,
+      LU: 0.75
+    };
+
+    return similarity >= (thresholds[type] ?? 0.7);
+  }
+
   function comparisonPairs(item) {
     const plans = Array.isArray(item.instrumentos) ? item.instrumentos : [];
     const grouped = new Map();
@@ -26,17 +76,32 @@
     });
 
     const pairs = [];
+    const pairKeys = new Set();
+
     grouped.forEach((typePlans, type) => {
       const ordered = [...typePlans]
         .filter(plan => plan.registro !== undefined && plan.registro !== null)
         .sort((left, right) => dateValue(left.fecha).localeCompare(dateValue(right.fecha)));
 
-      for (let index = 1; index < ordered.length; index += 1) {
-        const previous = ordered[index - 1];
-        const current = ordered[index];
-        const key = `${previous.registro}__${current.registro}`;
-        const reviewed = comparisons.versiones?.[key];
+      for (let currentIndex = 1; currentIndex < ordered.length; currentIndex += 1) {
+        const current = ordered[currentIndex];
+        let previous = null;
 
+        for (let previousIndex = currentIndex - 1; previousIndex >= 0; previousIndex -= 1) {
+          const candidate = ordered[previousIndex];
+          if (sameInstrumentLineage(candidate, current, type, item)) {
+            previous = candidate;
+            break;
+          }
+        }
+
+        if (!previous) continue;
+
+        const key = `${previous.registro}__${current.registro}`;
+        if (pairKeys.has(key)) continue;
+        pairKeys.add(key);
+
+        const reviewed = comparisons.versiones?.[key];
         pairs.push(reviewed || {
           id: `comparison-${key}`,
           region: item.region,
@@ -46,7 +111,7 @@
           estado_sig: "pendiente_revision",
           instrumento_anterior: previous,
           instrumento_nuevo: current,
-          resumen_estrategico: `Se detectó una transición entre ${previous.nombre || type} (${previous.fecha || "sin fecha"}) y ${current.nombre || type} (${current.fecha || "sin fecha"}). Falta comparar ordenanza, memoria, planos y cartografía para identificar los cambios normativos efectivos y su impacto urbano.`,
+          resumen_estrategico: `Se detectó una nueva versión del mismo instrumento: ${previous.nombre || type} (${previous.fecha || "sin fecha"}) y ${current.nombre || type} (${current.fecha || "sin fecha"}). Falta comparar ordenanza, memoria, planos y cartografía para identificar los cambios normativos efectivos y su impacto urbano.`,
           materias_a_comparar: [
             "Límite urbano y extensión territorial",
             "Zonificación y usos de suelo",
@@ -119,7 +184,7 @@
       verificaciones_sig_pendientes: acts.filter(act => act.incorporacion_sig === "pendiente_revision").length
         + versionComparisons.filter(comparison => comparison.estado_sig === "pendiente_revision").length,
       resumen: strategicSource?.resumen_estrategico
-        || `En ${item.comuna} se registran ${item.cantidad_instrumentos || 0} instrumentos vigentes aplicables. La lectura estratégica debe distinguir el instrumento comunal, el marco intercomunal y los actos posteriores que alteran la capacidad de desarrollo.`,
+        || `En ${item.comuna} se registran ${item.cantidad_instrumentos || 0} instrumentos vigentes aplicables. Los planes distintos se mantienen como instrumentos independientes; solo se comparan versiones que pertenecen a la misma línea normativa.`,
       advertencia: "La interpretación estratégica identifica oportunidades y restricciones normativas, pero cada conclusión debe respaldarse con ordenanza, planos oficiales y verificación SIG."
     };
   });
