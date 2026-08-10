@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-06",
+  "records": [
+    {
+      "source_id": "diario_el_dia_economia",
+      "status": "verified_public_feed",
+      "verified_at": "2026-08-06",
+      "evidence_url": "https://www.diarioeldia.cl/rss",
+      "feed_url": "https://www.diarioeldia.cl/rss/economia/",
+      "notes": "El medio publica una página oficial de canales RSS y lista expresamente el canal Economía."
+    },
+    {
+      "source_id": "diario_el_dia_region",
+      "status": "verified_public_feed",
+      "verified_at": "2026-08-06",
+      "evidence_url": "https://www.diarioeldia.cl/rss",
+      "feed_url": "https://www.diarioeldia.cl/rss/region/",
+      "notes": "El medio publica una página oficial de canales RSS y lista expresamente el canal Región."
+    },
+    {
+      "source_id": "inmobiliare",
+      "status": "verified_public_feed",
+      "verified_at": "2026-08-06",
+      "evidence_url": "https://inmobiliare.com/mapa-del-sitio/",
+      "feed_url": "https://inmobiliare.com/feed/",
+      "notes": "El mapa del sitio oficial identifica un Feed RSS como recurso técnico abierto; la ejecución local aún debe confirmar respuesta XML estable."
+    }
+  ]
+}

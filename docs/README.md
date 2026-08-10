@@ -21,3 +21,4 @@
 - [Sprint 3: Ollama local](09_SPRINT_3_OLLAMA_LOCAL.md)
 - [Corrección 0.4.1: clasificación híbrida](10_CORRECCION_V0_4_1_CLASIFICACION_HIBRIDA.md)
 - [Sprint 4: Diario Oficial local](11_SPRINT_4_DIARIO_OFICIAL_LOCAL.md)
+- [Sprint 5: base de Noticias y Mercado](12_SPRINT_5_NOTICIAS_BASE.md)

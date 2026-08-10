@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Portal interno del Departamento de Estudios Inmobiliarios de Transsa para seguimiento normativo urbano e instrumentos de planificación territorial">
+  <meta name="description" content="Transsa Urban Intelligence: seguimiento normativo urbano, instrumentos de planificación territorial y vigencia cartográfica para Chile">
   <meta name="theme-color" content="#0f0f69">
-  <title>Observatorio Normativo | Transsa</title>
+  <title>Transsa Urban Intelligence</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,6 +18,7 @@
     crossorigin=""
   >
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="ux-refresh.css">
 </head>
 <body>
   <header class="topbar">
@@ -27,16 +28,16 @@
       </span>
       <span class="brand-copy">
         <strong>transsa</strong>
-        <small>Departamento de Estudios Inmobiliarios</small>
+        <small>Urban Intelligence · Estudios Inmobiliarios</small>
       </span>
     </a>
 
-    <nav class="module-nav" aria-label="Módulos del observatorio">
-      <button class="module-tab active" data-module="diario">Diario Oficial</button>
-      <button class="module-tab" data-module="ipt">Actualizaciones IPT</button>
-      <button class="module-tab" data-module="historico">Histórico anual</button>
-      <button class="module-tab" data-module="mapa">Mapa territorial</button>
-      <button class="module-tab" data-module="vigencia">Vigencia cartográfica</button>
+    <nav class="module-nav" aria-label="Módulos de Transsa Urban Intelligence">
+      <button class="module-tab active" data-module="diario">Cambios recientes</button>
+      <button class="module-tab" data-module="vigencia">IPT y vigencia</button>
+      <button class="module-tab" data-module="ipt">Reportes IPT</button>
+      <button class="module-tab" data-module="mapa">Mapa</button>
+      <button class="module-tab" data-module="historico">Archivo</button>
     </nav>
 
     <span class="private-badge">
@@ -48,62 +49,68 @@
   <main>
     <section class="intro">
       <div class="intro-copy">
-        <p class="eyebrow">OBSERVATORIO NORMATIVO</p>
-        <h1>Información territorial clara para mejores decisiones inmobiliarias.</h1>
+        <p class="eyebrow">TRANSSA URBAN INTELLIGENCE</p>
+        <h1>Qué cambió, dónde aplica y si el IPT está realmente actualizado.</h1>
         <p class="intro-text">
-          Seguimiento diario de normativa urbana y monitoreo mensual de cambios
-          en instrumentos de planificación territorial para Chile.
+          Consulta actos normativos, modificaciones, enmiendas, rectificaciones y
+          cartografía disponible para entender el estado regulatorio de cada territorio.
         </p>
 
-        <div class="intro-actions">
-          <button class="primary-button" data-module-jump="diario">Ver Diario Oficial</button>
-          <button class="secondary-button" data-module-jump="ipt">Ver actualizaciones IPT</button>
-          <button class="secondary-button" data-module-jump="historico">Ver histórico 2025</button>
-          <button class="secondary-button" data-module-jump="mapa">Ver mapa territorial</button>
-          <button class="secondary-button" data-module-jump="vigencia">Ver vigencia cartográfica</button>
+        <div class="intro-context" aria-label="Cobertura principal">
+          <span>Diario Oficial</span>
+          <span>PRC · PRI · PRM</span>
+          <span>Líneas de tiempo</span>
+          <span>Vigencia cartográfica</span>
+          <span>Chile completo</span>
+        </div>
+
+        <div class="home-search" role="search" aria-label="Buscar comuna, IPT o acto">
+          <input
+            id="homeSearchInput"
+            type="search"
+            placeholder="Buscar comuna, PRC, modificación, decreto o materia…"
+            aria-label="Buscar comuna, IPT o acto normativo"
+          >
+          <button id="homeSearchIpt" class="primary-button">Buscar en IPT</button>
+          <button id="homeSearchDaily" class="secondary-button">Buscar cambios</button>
         </div>
       </div>
 
-      <aside class="coverage-card">
-        <p class="eyebrow">CINCO LÍNEAS DE SEGUIMIENTO</p>
-        <div class="coverage-row">
-          <span class="coverage-number">01</span>
-          <div>
-            <strong>Reporte diario</strong>
-            <p>Urbanismo, construcción, arquitectura, vivienda, patrimonio y evaluación ambiental.</p>
-          </div>
-        </div>
-        <div class="coverage-row">
-          <span class="coverage-number">02</span>
-          <div>
-            <strong>Reporte IPT mensual</strong>
-            <p>PRC, PRI, PRM, seccionales, enmiendas, límites urbanos y otros actos territoriales.</p>
-          </div>
+      <aside class="priority-panel">
+        <p class="eyebrow">ACCESOS PRIORITARIOS</p>
+        <h2>Revisa primero lo que requiere decisión.</h2>
+        <p>
+          La plataforma prioriza alertas normativas y posibles diferencias entre
+          actos oficiales y cartografía disponible.
+        </p>
+
+        <div class="priority-grid">
+          <button class="priority-card" data-module-jump="vigencia">
+            <span class="priority-icon">01</span>
+            <span>
+              <strong>Estado de IPT</strong>
+              <small>Actualizados, pendientes, desactualizados o sin cartografía.</small>
+            </span>
+          </button>
+
+          <button class="priority-card" data-module-jump="diario">
+            <span class="priority-icon">02</span>
+            <span>
+              <strong>Cambios recientes</strong>
+              <small>Publicaciones oficiales y sus implicancias territoriales.</small>
+            </span>
+          </button>
+
+          <button class="priority-card" data-module-jump="mapa">
+            <span class="priority-icon">03</span>
+            <span>
+              <strong>Explorar territorios</strong>
+              <small>Mapa y resultados vinculados por región y comuna.</small>
+            </span>
+          </button>
         </div>
 
-        <div class="coverage-row">
-          <span class="coverage-number">03</span>
-          <div>
-            <strong>Histórico anual</strong>
-            <p>Consolidado de Diario Oficial e IPT, organizado por año, mes, región y comuna.</p>
-          </div>
-        </div>
-
-        <div class="coverage-row">
-          <span class="coverage-number">04</span>
-          <div>
-            <strong>Mapa territorial</strong>
-            <p>Visualización interactiva de cambios por región, comuna, módulo y período.</p>
-          </div>
-        </div>
-
-        <div class="coverage-row">
-          <span class="coverage-number">05</span>
-          <div>
-            <strong>Vigencia cartográfica</strong>
-            <p>Líneas de tiempo por PRC y alertas de actos posiblemente no incorporados en el shape.</p>
-          </div>
-        </div>
+        <p class="priority-note">Noticias e inteligencia de mercado se integrarán como contexto, separadas de la determinación normativa oficial.</p>
       </aside>
     </section>
 
@@ -111,8 +118,8 @@
       <div class="module-header">
         <div>
           <p class="eyebrow">ACTUALIZACIÓN DIARIA · 08:30</p>
-          <h2>Diario Oficial</h2>
-          <p>Publicaciones con incidencia en planificación, construcción y mercado inmobiliario.</p>
+          <h2>Cambios normativos recientes</h2>
+          <p>Publicaciones del Diario Oficial con incidencia en planificación, construcción, vivienda y mercado inmobiliario.</p>
         </div>
       </div>
 
@@ -147,9 +154,9 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">CONSULTA</p>
-            <h2>Buscador normativo</h2>
+            <h2>Buscar publicaciones</h2>
             <p class="section-description">
-              Filtra los reportes por territorio, escala, materia o estado.
+              Filtra por territorio, escala, materia o estado.
             </p>
           </div>
           <button id="clearFilters" class="text-button">Limpiar filtros</button>
@@ -204,7 +211,7 @@
       <div class="module-header">
         <div>
           <p class="eyebrow">ACTUALIZACIÓN MENSUAL · DÍA 1</p>
-          <h2>Actualizaciones de instrumentos de planificación territorial</h2>
+          <h2>Reportes de instrumentos de planificación territorial</h2>
           <p>
             Seguimiento nacional de modificaciones, enmiendas, aprobaciones,
             promulgaciones y procesos en tramitación de IPT.
@@ -237,7 +244,7 @@
             <p class="eyebrow">CONSULTA IPT</p>
             <h2>Historial mensual</h2>
             <p class="section-description">
-              Revisa el resumen mensual y accede al Word y al consolidado para Excel.
+              Revisa el resumen mensual y accede a los documentos consolidados.
             </p>
           </div>
           <button id="clearIptFilters" class="text-button">Limpiar filtros</button>
@@ -279,10 +286,7 @@
         <div id="iptEmptyState" class="empty-state">
           <div>IPT</div>
           <h3>Aún no hay reportes IPT sincronizados</h3>
-          <p>
-            El primer registro automático se incorporará cuando se ejecute el flujo
-            mensual desde GitHub.
-          </p>
+          <p>Los reportes mensuales aparecerán aquí cuando existan registros disponibles.</p>
         </div>
       </section>
     </section>
@@ -290,11 +294,11 @@
     <section id="module-historico" class="module-panel">
       <div class="module-header">
         <div>
-          <p class="eyebrow">CARGA HISTÓRICA</p>
-          <h2>Reporte anual 2025</h2>
+          <p class="eyebrow">ARCHIVO NORMATIVO</p>
+          <h2>Histórico anual</h2>
           <p>
             Consolidado de publicaciones del Diario Oficial y cambios en
-            instrumentos de planificación territorial durante el año 2025.
+            instrumentos de planificación territorial por año y territorio.
           </p>
         </div>
       </div>
@@ -322,7 +326,7 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">CONSULTA HISTÓRICA</p>
-            <h2>Buscar en el año</h2>
+            <h2>Buscar en el archivo</h2>
             <p class="section-description">
               Filtra por mes, módulo, región, comuna, materia o estado.
             </p>
@@ -368,15 +372,11 @@
         <div id="annualEmptyState" class="empty-state">
           <div>2025</div>
           <h3>El histórico aún no ha sido cargado</h3>
-          <p>
-            Ejecuta en GitHub la acción “Cargar histórico anual” para incorporar
-            Diario Oficial e IPT del año 2025.
-          </p>
+          <p>El archivo histórico se mostrará aquí cuando termine su carga y validación.</p>
         </div>
       </section>
     </section>
 
-  
     <section id="module-mapa" class="module-panel">
       <div class="module-header">
         <div>
@@ -479,9 +479,9 @@
       <div class="module-header">
         <div>
           <p class="eyebrow">CONTROL DE CONSISTENCIA IPT</p>
-          <h2>Vigencia cartográfica</h2>
+          <h2>IPT, líneas de tiempo y vigencia cartográfica</h2>
           <p>
-            Compara la línea normativa de cada instrumento con la versión
+            Compara la trayectoria normativa de cada instrumento con la versión
             cartográfica registrada y genera alertas cuando existen actos
             posteriores sin evidencia de incorporación.
           </p>
@@ -562,11 +562,8 @@
           <div id="vigenciaEmptyState" class="empty-state">
             <div>IPT</div>
             <h3>Aún no hay instrumentos evaluados</h3>
-            <p>
-              Ejecuta “Actualizar vigencia cartográfica” en GitHub. Los actos
-              IPT sin shape registrado aparecerán como “Sin cartografía”.
-            </p>
-            <a class="template-link" href="config/cartografia_ipt_ejemplo.json" download>
+            <p>Los instrumentos aparecerán aquí cuando exista información normativa y cartográfica para evaluar.</p>
+            <a class="template-link admin-only" href="config/cartografia_ipt_ejemplo.json" download>
               Descargar plantilla del catálogo
             </a>
           </div>
@@ -604,9 +601,9 @@
   <footer>
     <div class="footer-brand">
       <strong>transsa</strong>
-      <span>Departamento de Estudios Inmobiliarios</span>
+      <span>Urban Intelligence · Departamento de Estudios Inmobiliarios</span>
     </div>
-    <p>Herramienta interna de seguimiento normativo y territorial.</p>
+    <p>Seguimiento normativo y territorial para decisiones inmobiliarias.</p>
   </footer>
 
   <dialog id="reportDialog">
@@ -629,9 +626,10 @@
   <script src="data/vigencia_cartografica.js"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
   <script src="app.js"></script>
+  <script src="ux-refresh.js"></script>
 </body>
 </html>
