@@ -50,6 +50,49 @@
       .change-sig-pill.no_incorporado{background:#fde8ea;color:#922f38}
       .comparison-validation-details{margin-top:14px;padding-top:2px}
       .comparison-validation-details p{margin:8px 0 0;padding:11px 12px;border-left:3px solid #d7951f;border-radius:8px;background:#fff7e8;color:#6a5125;font-size:.71rem;line-height:1.5}
+      .normative-framework-section,.sig-work-section,.validation-flow-section{margin-top:18px;padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff}
+      .normative-framework-section h4,.sig-work-section h4,.validation-flow-section h4{margin:0;color:var(--transsa-navy)}
+      .section-helper{margin:5px 0 14px;color:var(--muted);font-size:.76rem;line-height:1.5}
+      .normative-framework-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .normative-role-card{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
+      .normative-role-card.current{border-left:4px solid #2b7a5a;background:#edf7f2}
+      .normative-role-card.replaced{border-left:4px solid #9293a1}
+      .normative-role-card.context{border-left:4px solid var(--transsa-blue)}
+      .normative-role-card span,.normative-role-card strong,.normative-role-card small{display:block}
+      .normative-role-card span{color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.04em}
+      .normative-role-card strong{margin-top:5px;color:var(--transsa-navy);font-size:.82rem;line-height:1.4}
+      .normative-role-card small{margin-top:5px;color:var(--muted);font-size:.68rem;line-height:1.4}
+      .sig-diagnosis{margin-bottom:14px;padding:14px;border-left:4px solid #d7951f;border-radius:0 11px 11px 0;background:#fff7e8}
+      .sig-diagnosis strong{display:block;color:#72531b;font-size:.8rem}
+      .sig-diagnosis p{margin:5px 0 0;color:#6a5125;font-size:.72rem;line-height:1.5}
+      .sig-action-list{display:grid;gap:10px}
+      .sig-action-card{padding:15px;border:1px solid var(--line);border-radius:13px;background:var(--surface-soft)}
+      .sig-action-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+      .sig-action-code{display:inline-flex;margin-right:7px;padding:4px 7px;border-radius:7px;background:var(--transsa-navy);color:#fff;font-size:.62rem;font-weight:700}
+      .sig-action-type{color:var(--transsa-blue);font-size:.66rem;font-weight:700}
+      .sig-action-status{padding:5px 8px;border-radius:999px;font-size:.62rem;font-weight:700;white-space:nowrap}
+      .sig-action-status.definida,.sig-action-status.definida_parcial{color:#176342;background:#e4f5ec}
+      .sig-action-status.bloqueada_por_planos{color:#922f38;background:#fde8ea}
+      .sig-action-status.pendiente_revision{color:#735110;background:#fff3cf}
+      .sig-action-card h5{margin:10px 0 4px;color:var(--transsa-navy);font-size:.86rem}
+      .sig-action-instruction{margin:0;color:#424a59;font-size:.74rem;line-height:1.52}
+      .sig-action-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
+      .sig-action-meta div{padding:9px;border-radius:9px;background:#fff;border:1px solid var(--line)}
+      .sig-action-meta span,.sig-action-meta strong{display:block}
+      .sig-action-meta span{color:var(--muted);font-size:.58rem;text-transform:uppercase}
+      .sig-action-meta strong{margin-top:3px;color:#404858;font-size:.68rem;line-height:1.4}
+      .sig-action-result{margin:10px 0 0;color:#303747;font-size:.7rem;line-height:1.45}
+      .validation-flow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+      .validation-step{position:relative;padding:11px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);text-align:center}
+      .validation-step::before{content:"";display:block;width:9px;height:9px;margin:0 auto 7px;border-radius:50%;background:#b9bbc5}
+      .validation-step.completo{background:#edf7f2;color:#176342}
+      .validation-step.completo::before{background:#2b7a5a}
+      .validation-step.en_progreso{background:#fff7e8;color:#735110}
+      .validation-step.en_progreso::before{background:#d7951f}
+      .validation-step span{font-size:.61rem;font-weight:700;line-height:1.3}
+      .sig-work-summary{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px}
+      .sig-work-kpis{display:flex;gap:7px;flex-wrap:wrap}
+      .sig-work-kpis span{padding:6px 8px;border-radius:8px;background:var(--surface-soft);color:var(--muted);font-size:.65rem;font-weight:600}
       @media(max-width:760px){
         .detailed-comparison-heading{display:block}
         .detailed-comparison-status{display:inline-flex;margin-top:8px}
@@ -70,10 +113,194 @@
     .replaceAll("_", " ")
     .replace(/\b\w/g, character => character.toUpperCase());
 
-  function comparisonTemplate(comparison) {
+  const actionLabel = value => ({
+    REEMPLAZAR_GEOMETRIA: "Reemplazar geometría",
+    CREAR_CORRESPONDENCIA: "Crear correspondencia",
+    AGREGAR_Y_RECODIFICAR_POLIGONOS: "Agregar y recodificar",
+    AGREGAR_POLIGONOS: "Agregar polígonos",
+    ACTUALIZAR_ATRIBUTOS: "Actualizar atributos",
+    RESOLVER_ZONAS_NO_REPRODUCIDAS: "Resolver zonas",
+    VERIFICAR_E_INTEGRAR_ENMIENDA: "Verificar e integrar",
+    AGREGAR_CAPAS_SUPLEMENTARIAS: "Agregar capas suplementarias"
+  }[value] || typeLabel(value));
+
+  const statusLabel = value => ({
+    definida: "Acción definida",
+    definida_parcial: "Definición parcial",
+    bloqueada_por_planos: "Requiere planos",
+    pendiente_revision: "Pendiente de revisión"
+  }[value] || typeLabel(value));
+
+  function frameworkTemplate(item, comparison) {
+    const previous = comparison.instrumento_anterior || {};
+    const current = comparison.instrumento_nuevo || {};
+    const otherPlans = (item.instrumentos || []).filter(plan =>
+      String(plan.tipo_ipt || "") !== "PRC" &&
+      Number(plan.registro) !== Number(previous.registro) &&
+      Number(plan.registro) !== Number(current.registro)
+    );
+    const roleFor = plan => {
+      const type = String(plan.tipo_ipt || "IPT");
+      if (type === "PS") return "Plan seccional independiente · reemplaza normativa solo en su ámbito";
+      if (type === "PRI" || type === "PRM" || type === "PRDU") return "Normativa superior o intercomunal aplicable";
+      if (type === "LU") return "Límite urbano aplicable";
+      return "Instrumento complementario";
+    };
+
+    return `
+      <section class="normative-framework-section">
+        <h4>Normativa aplicable y versiones</h4>
+        <p class="section-helper">Se distingue el instrumento base vigente, la versión reemplazada y la normativa que sigue aplicando simultáneamente.</p>
+        <div class="normative-framework-grid">
+          <article class="normative-role-card current">
+            <span>PRC base vigente</span>
+            <strong>${escape(current.nombre || "PRC Coquimbo 2026")}</strong>
+            <small>${escape([current.fecha, current.acto].filter(Boolean).join(" · "))}</small>
+          </article>
+          <article class="normative-role-card replaced">
+            <span>Versión reemplazada · histórico</span>
+            <strong>${escape(previous.nombre || "PRC Coquimbo 2019")}</strong>
+            <small>${escape([previous.fecha, previous.acto].filter(Boolean).join(" · "))}</small>
+          </article>
+          ${otherPlans.map(plan => `
+            <article class="normative-role-card context">
+              <span>${escape(roleFor(plan))}</span>
+              <strong>${escape(plan.nombre || plan.tipo_ipt || "IPT")}</strong>
+              <small>${escape([plan.tipo_ipt, plan.fecha].filter(Boolean).join(" · "))}</small>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function validationTemplate(comparison) {
+    const steps = Array.isArray(comparison.flujo_validacion) ? comparison.flujo_validacion : [];
+    if (!steps.length) return "";
+    return `
+      <section class="validation-flow-section">
+        <h4>Avance de la actualización SIG</h4>
+        <p class="section-helper">El estado final depende de completar toda la cadena, no solo de encontrar el acto normativo.</p>
+        <div class="validation-flow">
+          ${steps.map(step => `
+            <div class="validation-step ${escape(step.estado || "pendiente")}">
+              <span>${escape(step.nombre)}</span>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function sigWorkTemplate(comparison) {
+    const actions = Array.isArray(comparison.acciones_sig) ? comparison.acciones_sig : [];
+    const diagnosis = comparison.diagnostico_sig || {};
+    if (!actions.length) return "";
+    const blocked = actions.filter(action => action.estado === "bloqueada_por_planos").length;
+    const defined = actions.filter(action => String(action.estado || "").startsWith("definida")).length;
+
+    return `
+      <section class="sig-work-section">
+        <div class="sig-work-summary">
+          <div>
+            <h4>Qué hay que hacer en el SIG</h4>
+            <p class="section-helper">Cada cambio normativo se traduce en una tarea técnica verificable.</p>
+          </div>
+          <div class="sig-work-kpis">
+            <span>${actions.length} acciones</span>
+            <span>${defined} definidas</span>
+            <span>${blocked} requieren planos</span>
+          </div>
+        </div>
+        <div class="sig-diagnosis">
+          <strong>Diagnóstico actual: no publicar todavía como SIG 2026 validado</strong>
+          <p>${escape(diagnosis.motivo || "La versión cartográfica disponible aún no acredita equivalencia con el instrumento vigente.")}</p>
+        </div>
+        <div class="sig-action-list">
+          ${actions.map(action => `
+            <article class="sig-action-card">
+              <div class="sig-action-head">
+                <div>
+                  <span class="sig-action-code">${escape(action.id)}</span>
+                  <span class="sig-action-type">${escape(actionLabel(action.accion))}</span>
+                </div>
+                <span class="sig-action-status ${escape(action.estado || "pendiente_revision")}">${escape(statusLabel(action.estado))}</span>
+              </div>
+              <h5>${escape(action.objeto)}</h5>
+              <p class="sig-action-instruction">${escape(action.instruccion)}</p>
+              <div class="sig-action-meta">
+                <div><span>Capa objetivo</span><strong>${escape(action.capa_objetivo)}</strong></div>
+                <div><span>Ámbito</span><strong>${escape(action.ambito)}</strong></div>
+                <div><span>Dependencia</span><strong>${escape(action.dependencia)}</strong></div>
+                <div><span>Prioridad</span><strong>${escape(action.prioridad)}</strong></div>
+              </div>
+              <p class="sig-action-result"><strong>Resultado esperado:</strong> ${escape(action.resultado_esperado)}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function primeCoquimboData() {
+    const item = vigenciaInstruments().find(instrument =>
+      (instrument.comparaciones_versiones || []).some(candidate => candidate.id === "coquimbo-prc-2019-2026")
+    );
+    if (!item) return;
+    const comparison = item.comparaciones_versiones.find(candidate => candidate.id === "coquimbo-prc-2019-2026");
+    const actions = comparison?.acciones_sig || [];
+    if (!actions.length) return;
+
+    item.nombre = "PRC 2026 y normativa aplicable";
+    item.actos_posteriores_pendientes = actions.length;
+    item.confianza = "documental media · SIG baja";
+    item.resumen_alerta = `El PRC 2026 reemplaza al PRC 2019. Se identificaron ${comparison.cambios?.length || 0} cambios normativos y ${actions.length} acciones SIG; la geometría aún debe validarse contra las láminas oficiales.`;
+    item.alertas = [
+      {
+        tipo: "Plan de acción SIG definido",
+        nivel: "medio",
+        mensaje: `Se definieron ${actions.length} tareas técnicas. Las que modifican geometría permanecen bloqueadas hasta comparar y vectorizar los planos oficiales.`
+      },
+      {
+        tipo: "Versión GeoIDE no acreditada",
+        nivel: "alto",
+        mensaje: "La capa disponible no debe declararse equivalente al PRC 2026 hasta validar zonificación, códigos y parámetros."
+      }
+    ];
+  }
+
+  function refineCoquimboHeader(item, comparison, detail) {
+    const actions = comparison.acciones_sig || [];
+    const instrumentName = detail.querySelector(".vigencia-instrument-name");
+    if (instrumentName) instrumentName.textContent = "PRC vigente: 2026-01-05 · PRC reemplazado: 2019-07-10";
+
+    const alertBox = detail.querySelector(".vigencia-alert-box");
+    if (alertBox) alertBox.innerHTML = "<strong>Revisión necesaria</strong><span>Plan de acción SIG definido · ejecución pendiente</span>";
+
+    detail.querySelectorAll(".detail-item").forEach(card => {
+      const label = card.querySelector("span");
+      const value = card.querySelector("strong");
+      if (!label || !value) return;
+      if (label.textContent.trim() === "Instrumento base") {
+        label.textContent = "PRC vigente";
+        value.textContent = comparison.instrumento_nuevo?.fecha || "2026-01-05";
+      } else if (label.textContent.trim() === "Versión cartográfica") {
+        label.textContent = "SIG actualmente asociado";
+        value.textContent = comparison.diagnostico_sig?.capa_actual || "Versión no acreditada";
+      } else if (label.textContent.trim() === "Actos pendientes") {
+        label.textContent = "Acciones SIG identificadas";
+        value.textContent = String(actions.length);
+      }
+    });
+  }
+
+  function comparisonTemplate(comparison, item) {
     const changes = Array.isArray(comparison.cambios) ? comparison.cambios : [];
 
     return `
+      ${frameworkTemplate(item, comparison)}
+      ${validationTemplate(comparison)}
+      ${sigWorkTemplate(comparison)}
       <section class="detailed-comparison-section">
         <div class="detailed-comparison-heading">
           <div>
@@ -128,18 +355,20 @@
       .find(candidate => candidate.id === "coquimbo-prc-2019-2026" && Array.isArray(candidate.cambios) && candidate.cambios.length);
     if (!comparison) return;
 
+    refineCoquimboHeader(item, comparison, detail);
+
     const planSection = detail.querySelector(".commune-plan-section");
     const supportingSection = detail.querySelector(".supporting-records-section, .commune-change-section");
     const mapSection = detail.querySelector(".vigencia-map-section");
 
     if (supportingSection) {
-      supportingSection.insertAdjacentHTML("beforebegin", comparisonTemplate(comparison));
+      supportingSection.insertAdjacentHTML("beforebegin", comparisonTemplate(comparison, item));
     } else if (planSection) {
-      planSection.insertAdjacentHTML("afterend", comparisonTemplate(comparison));
+      planSection.insertAdjacentHTML("afterend", comparisonTemplate(comparison, item));
     } else if (mapSection) {
-      mapSection.insertAdjacentHTML("beforebegin", comparisonTemplate(comparison));
+      mapSection.insertAdjacentHTML("beforebegin", comparisonTemplate(comparison, item));
     } else {
-      detail.insertAdjacentHTML("beforeend", comparisonTemplate(comparison));
+      detail.insertAdjacentHTML("beforeend", comparisonTemplate(comparison, item));
     }
   }
 
@@ -149,6 +378,7 @@
     addDetailedComparison();
   };
 
+  primeCoquimboData();
   injectStyles();
   if (typeof renderVigencia === "function") renderVigencia();
 })();
