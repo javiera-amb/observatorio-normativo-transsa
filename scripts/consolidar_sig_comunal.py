@@ -40,6 +40,17 @@ def read_json(path: Path, default: Any) -> Any:
         return default
 
 
+def extract_list(payload: Any, key: str) -> list[dict[str, Any]]:
+    """Acepta tanto una lista directa como el objeto contenedor del Inspector."""
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        value = payload.get(key, [])
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+    return []
+
+
 def extract_appended_payload(path: Path) -> str:
     raw = path.read_text(encoding="utf-8").strip()
     pattern = re.compile(
@@ -58,6 +69,7 @@ def load_national_acts(repo: Path) -> list[dict[str, Any]]:
     ]
     if not all(path.exists() for path in files):
         return []
+
     try:
         encoded = "".join(extract_appended_payload(path) for path in files)
         rows = json.loads(gzip.decompress(base64.b64decode(encoded)).decode("utf-8"))
@@ -87,6 +99,7 @@ def load_national_acts(repo: Path) -> list[dict[str, Any]]:
 def load_vigentes(repo: Path) -> list[dict[str, Any]]:
     instruments: list[dict[str, Any]] = []
     prefix = "window.VIGENCIA_IPT_ROWS=(window.VIGENCIA_IPT_ROWS||[]).concat("
+
     for path in sorted((repo / "data").glob("ipt_vigentes_*.js")):
         raw = path.read_text(encoding="utf-8").strip()
         if not raw.startswith(prefix) or not raw.endswith(");"):
@@ -95,6 +108,7 @@ def load_vigentes(repo: Path) -> list[dict[str, Any]]:
             rows = json.loads(raw[len(prefix):-2])
         except Exception:
             continue
+
         for row in rows:
             if not isinstance(row, list) or len(row) < 8:
                 continue
@@ -123,14 +137,18 @@ def current_act(act: dict[str, Any]) -> bool:
     return state in {"vigente", "en desarrollo", ""} or "vigente" in state
 
 
-def act_affects_instrument(act: dict[str, Any], instrument: dict[str, Any]) -> tuple[bool, str]:
+def act_affects_instrument(
+    act: dict[str, Any], instrument: dict[str, Any]
+) -> tuple[bool, str]:
     record = str(instrument.get("registro") or "")
     codes = {str(code) for code in act.get("codigos_origen", [])}
     if record and record in codes:
         return True, "codigo_origen"
 
     same_region = norm(act.get("region")) == norm(instrument.get("region"))
-    same_commune = norm(instrument.get("comuna")) in {norm(value) for value in act.get("comunas", [])}
+    same_commune = norm(instrument.get("comuna")) in {
+        norm(value) for value in act.get("comunas", [])
+    }
     same_type = norm(act.get("tipo_ipt")) == norm(instrument.get("tipo_ipt"))
     if same_region and same_commune and same_type:
         return True, "comuna_tipo"
@@ -142,25 +160,40 @@ def layer_date(layer: dict[str, Any]) -> str:
     return value if valid_date(value) else ""
 
 
-def evidence_for_act(act: dict[str, Any], layers: list[dict[str, Any]]) -> list[str]:
+def evidence_for_act(
+    act: dict[str, Any], layers: list[dict[str, Any]]
+) -> list[str]:
     act_tokens = {
-        token for token in norm(f"{act.get('titulo', '')} {act.get('tipo_acto', '')}").split()
-        if len(token) >= 4 and token not in {"plan", "regulador", "comunal", "modificacion", "enmienda", "rectificacion"}
+        token
+        for token in norm(f"{act.get('titulo', '')} {act.get('tipo_acto', '')}").split()
+        if len(token) >= 4
+        and token
+        not in {
+            "plan", "regulador", "comunal", "modificacion",
+            "enmienda", "rectificacion",
+        }
     }
     act_date = str(act.get("fecha") or "")
     evidence: list[str] = []
+
     for layer in layers:
         text = norm(f"{layer.get('archivo', '')} {layer.get('capa', '')}")
         matches = sum(token in text for token in act_tokens)
         if act_tokens and matches >= min(2, len(act_tokens)):
-            evidence.append(f"Nombre SIG compatible: {layer.get('archivo', '')} · {layer.get('capa', '')}")
+            evidence.append(
+                f"Nombre SIG compatible: {layer.get('archivo', '')} · {layer.get('capa', '')}"
+            )
+
         ldate = layer_date(layer)
         if valid_date(act_date) and ldate and ldate >= act_date:
             evidence.append(f"Fecha de capa {ldate} posterior al acto {act_date}")
+
     return sorted(set(evidence))
 
 
-def shape_summary(layer: dict[str, Any], linkage: dict[str, Any]) -> dict[str, Any]:
+def shape_summary(
+    layer: dict[str, Any], linkage: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "sig_id": layer.get("sig_id", ""),
         "archivo": layer.get("archivo", ""),
@@ -183,8 +216,10 @@ def classify_instrument(
     acts: list[dict[str, Any]],
 ) -> dict[str, Any]:
     layers = [pair[0] for pair in linked_pairs]
-    linkages = [pair[1] for pair in linked_pairs]
-    strong = [pair for pair in linked_pairs if pair[1].get("estado") == "vinculado"]
+    strong = [
+        pair for pair in linked_pairs
+        if pair[1].get("estado") == "vinculado"
+    ]
     base_date = instrument.get("fecha") if valid_date(instrument.get("fecha")) else ""
 
     posterior: list[dict[str, Any]] = []
@@ -196,59 +231,94 @@ def classify_instrument(
             continue
         if base_date and valid_date(act.get("fecha")) and act["fecha"] <= base_date:
             continue
+
         item = dict(act)
         item["tipo_vinculo_normativo"] = relation
         item["evidencia_sig"] = evidence_for_act(item, layers)
         posterior.append(item)
-    posterior.sort(key=lambda item: (item.get("fecha") or "9999-99-99", item.get("titulo") or ""))
 
-    verified_missing = []
-    verified_included = []
-    # Reservado para futuras revisiones manuales/geoespaciales. No inferimos ausencia solo por nombre.
+    posterior.sort(
+        key=lambda item: (
+            item.get("fecha") or "9999-99-99",
+            item.get("titulo") or "",
+        )
+    )
+
+    # Estos dos grupos se llenarán después con una revisión espacial efectiva.
+    # No inferimos que una modificación está incorporada solo por el nombre o fecha.
+    verified_missing: list[dict[str, Any]] = []
+    verified_included: list[dict[str, Any]] = []
 
     if not linked_pairs:
         status = "sin_sig"
         label = "Sin cartografía SIG vinculada"
         apt = "NO"
-        reason = "No se encontró una capa SIG vinculada con suficiente confianza al instrumento vigente."
+        reason = (
+            "No se encontró una capa SIG vinculada con suficiente confianza "
+            "al instrumento vigente."
+        )
     elif not strong:
         status = "vinculo_sig_ambiguo"
         label = "SIG encontrado, vínculo ambiguo"
         apt = "REVISAR"
-        reason = "Existe cartografía candidata, pero no se puede asegurar todavía que corresponda al instrumento correcto."
+        reason = (
+            "Existe cartografía candidata, pero todavía no se puede asegurar "
+            "que corresponda al instrumento correcto."
+        )
     elif verified_missing:
         status = "desactualizado_verificado"
         label = "Desactualizado verificado"
         apt = "NO"
-        reason = "Existe al menos un cambio normativo vigente cuya incorporación SIG fue verificada como ausente."
-    elif verified_included and len(verified_included) == len(posterior):
+        reason = (
+            "Existe al menos un cambio normativo vigente cuya incorporación "
+            "SIG fue verificada como ausente."
+        )
+    elif posterior and verified_included and len(verified_included) == len(posterior):
         status = "actualizado_verificado"
         label = "Actualizado verificado"
         apt = "SI"
-        reason = "Todos los cambios posteriores vigentes fueron verificados en la cartografía."
+        reason = (
+            "Todos los cambios posteriores vigentes fueron verificados "
+            "en la cartografía."
+        )
     elif not posterior:
         status = "vigente_sin_cambios_posteriores"
         label = "Vigente · sin cambios posteriores detectados"
         apt = "SI"
-        reason = "La cartografía está vinculada al instrumento vigente y no se detectaron actos posteriores vigentes que requieran incorporación."
+        reason = (
+            "La cartografía está vinculada al instrumento vigente y no se "
+            "detectaron actos posteriores vigentes que requieran incorporación."
+        )
     else:
         with_evidence = [act for act in posterior if act.get("evidencia_sig")]
-        if len(with_evidence) == len(posterior):
+        if with_evidence and len(with_evidence) == len(posterior):
             status = "probablemente_actualizado"
             label = "Probablemente actualizado · falta verificación espacial"
             apt = "REVISAR"
-            reason = "Hay evidencia SIG compatible con todos los actos posteriores, pero aún falta comprobar geometría y atributos."
+            reason = (
+                "Hay evidencia SIG compatible con todos los actos posteriores, "
+                "pero aún falta comprobar geometría y atributos."
+            )
         else:
             status = "requiere_revision_cambios"
             label = "Requiere revisar cambios posteriores"
             apt = "REVISAR"
-            reason = "Existen actos normativos posteriores al instrumento base y no está verificado que todos estén incorporados en el SIG."
+            reason = (
+                "Existen actos normativos posteriores al instrumento base y "
+                "no está verificado que todos estén incorporados en el SIG."
+            )
 
     best_pair = None
     if strong:
-        best_pair = max(strong, key=lambda pair: float(pair[1].get("score") or 0))
+        best_pair = max(
+            strong,
+            key=lambda pair: float(pair[1].get("score") or 0),
+        )
     elif linked_pairs:
-        best_pair = max(linked_pairs, key=lambda pair: float(pair[1].get("score") or 0))
+        best_pair = max(
+            linked_pairs,
+            key=lambda pair: float(pair[1].get("score") or 0),
+        )
 
     return {
         "registro": instrument.get("registro"),
@@ -263,30 +333,75 @@ def classify_instrument(
         "capa_recomendada": best_pair[0].get("capa", "") if best_pair else "",
         "campo_zona": best_pair[0].get("campo_zona", "") if best_pair else "",
         "crs": best_pair[0].get("crs", "") if best_pair else "",
-        "cartografia": [shape_summary(layer, link) for layer, link in linked_pairs],
+        "cartografia": [
+            shape_summary(layer, link)
+            for layer, link in linked_pairs
+        ],
         "actos_posteriores": posterior,
         "cantidad_actos_posteriores": len(posterior),
-        "ultimo_acto_posterior": max((act.get("fecha", "") for act in posterior if valid_date(act.get("fecha"))), default=""),
+        "ultimo_acto_posterior": max(
+            (
+                act.get("fecha", "")
+                for act in posterior
+                if valid_date(act.get("fecha"))
+            ),
+            default="",
+        ),
         "verificacion": "automatica_preliminar",
     }
 
 
+def load_inspector_outputs(output: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    layers_payload = read_json(output / "capas_sig_ipt.json", {})
+    linkages_payload = read_json(output / "vinculacion_sig_ipt.json", {})
+
+    layers = extract_list(layers_payload, "capas")
+    linkages = extract_list(linkages_payload, "vinculaciones")
+
+    if not layers:
+        raise RuntimeError(
+            "capas_sig_ipt.json existe, pero no contiene capas válidas. "
+            "Vuelve a ejecutar el Inspector SIG IPT."
+        )
+    if not linkages:
+        raise RuntimeError(
+            "vinculacion_sig_ipt.json existe, pero no contiene vinculaciones válidas. "
+            "Vuelve a ejecutar el Inspector SIG IPT."
+        )
+
+    return layers, linkages
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Genera un consolidado SIG por comuna y aptitud para visor.")
+    parser = argparse.ArgumentParser(
+        description="Genera un consolidado SIG por comuna y aptitud para visor."
+    )
     parser.add_argument("--repo", required=True, type=Path)
     args = parser.parse_args()
 
     repo = args.repo.expanduser().resolve()
     output = repo / "_local" / "sig_ipt"
-    layers = read_json(output / "capas_sig_ipt.json", [])
-    linkages = read_json(output / "vinculacion_sig_ipt.json", [])
-    if not isinstance(layers, list) or not isinstance(linkages, list):
-        raise RuntimeError("Faltan resultados válidos del Inspector SIG IPT.")
 
+    layers, linkages = load_inspector_outputs(output)
     instruments = load_vigentes(repo)
     acts = load_national_acts(repo)
-    layer_by_id = {str(layer.get("sig_id")): layer for layer in layers}
-    pairs_by_record: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = defaultdict(list)
+
+    if not instruments:
+        raise RuntimeError(
+            "No se pudieron cargar los instrumentos vigentes del Portal IPT desde data/ipt_vigentes_*.js."
+        )
+
+    layer_by_id = {
+        str(layer.get("sig_id")): layer
+        for layer in layers
+        if layer.get("sig_id")
+    }
+
+    pairs_by_record: dict[
+        str,
+        list[tuple[dict[str, Any], dict[str, Any]]],
+    ] = defaultdict(list)
+
     for linkage in linkages:
         record = linkage.get("registro_portal")
         layer = layer_by_id.get(str(linkage.get("sig_id")))
@@ -296,40 +411,83 @@ def main() -> int:
 
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for instrument in instruments:
-        grouped[(norm(instrument.get("region")), norm(instrument.get("comuna")))].append(instrument)
+        grouped[
+            (norm(instrument.get("region")), norm(instrument.get("comuna")))
+        ].append(instrument)
 
     consolidated: list[dict[str, Any]] = []
+
     for (_region_key, _commune_key), commune_instruments in grouped.items():
         sample = commune_instruments[0]
-        evaluated = []
+        evaluated: list[dict[str, Any]] = []
+
         for instrument in commune_instruments:
             record = str(instrument.get("registro") or "")
-            evaluated.append(classify_instrument(instrument, pairs_by_record.get(record, []), acts))
+            evaluated.append(
+                classify_instrument(
+                    instrument,
+                    pairs_by_record.get(record, []),
+                    acts,
+                )
+            )
 
         prc = sorted(
-            [item for item in evaluated if str(item.get("tipo_ipt")).upper() == "PRC"],
+            [
+                item for item in evaluated
+                if str(item.get("tipo_ipt")).upper() == "PRC"
+            ],
             key=lambda item: item.get("fecha_instrumento") or "",
             reverse=True,
         )
         lu = sorted(
-            [item for item in evaluated if str(item.get("tipo_ipt")).upper() == "LU"],
+            [
+                item for item in evaluated
+                if str(item.get("tipo_ipt")).upper() == "LU"
+            ],
             key=lambda item: item.get("fecha_instrumento") or "",
             reverse=True,
         )
-        inter = [item for item in evaluated if str(item.get("tipo_ipt")).upper() in {"PRI", "PRM", "PRDU"}]
-        ps = [item for item in evaluated if str(item.get("tipo_ipt")).upper() == "PS"]
+        inter = [
+            item for item in evaluated
+            if str(item.get("tipo_ipt")).upper() in {"PRI", "PRM", "PRDU"}
+        ]
+        ps = [
+            item for item in evaluated
+            if str(item.get("tipo_ipt")).upper() == "PS"
+        ]
+
         principal = prc[0] if prc else (lu[0] if lu else None)
 
         consolidated.append({
-            "id": f"{norm(sample.get('region')).replace(' ', '-')}-{norm(sample.get('comuna')).replace(' ', '-')}",
+            "id": (
+                f"{norm(sample.get('region')).replace(' ', '-')}-"
+                f"{norm(sample.get('comuna')).replace(' ', '-')}"
+            ),
             "region": sample.get("region", ""),
             "comuna": sample.get("comuna", ""),
-            "estado_principal": principal.get("estado_sig") if principal else "sin_instrumento_comunal",
-            "estado_principal_label": principal.get("estado_sig_label") if principal else "Sin PRC/LU vigente identificado",
-            "apto_para_visor": principal.get("apto_para_visor") if principal else "REVISAR",
-            "archivo_recomendado": principal.get("archivo_recomendado") if principal else "",
-            "capa_recomendada": principal.get("capa_recomendada") if principal else "",
-            "motivo": principal.get("motivo") if principal else "No se identificó un PRC o límite urbano comunal principal.",
+            "estado_principal": (
+                principal.get("estado_sig")
+                if principal else "sin_instrumento_comunal"
+            ),
+            "estado_principal_label": (
+                principal.get("estado_sig_label")
+                if principal else "Sin PRC/LU vigente identificado"
+            ),
+            "apto_para_visor": (
+                principal.get("apto_para_visor")
+                if principal else "REVISAR"
+            ),
+            "archivo_recomendado": (
+                principal.get("archivo_recomendado") if principal else ""
+            ),
+            "capa_recomendada": (
+                principal.get("capa_recomendada") if principal else ""
+            ),
+            "motivo": (
+                principal.get("motivo")
+                if principal
+                else "No se identificó un PRC o límite urbano comunal principal."
+            ),
             "prc": prc,
             "limites_urbanos": lu,
             "seccionales": ps,
@@ -338,37 +496,75 @@ def main() -> int:
             "fecha_revision": datetime.now().isoformat(timespec="seconds"),
         })
 
-    consolidated.sort(key=lambda item: (norm(item["region"]), norm(item["comuna"])))
+    consolidated.sort(
+        key=lambda item: (norm(item["region"]), norm(item["comuna"]))
+    )
 
     summary = {
         "fecha_generacion": datetime.now().isoformat(timespec="seconds"),
+        "capas_sig_leidas": len(layers),
+        "vinculaciones_sig_leidas": len(linkages),
+        "instrumentos_portal": len(instruments),
+        "actos_normativos": len(acts),
         "comunas": len(consolidated),
-        "aptos_si": sum(item["apto_para_visor"] == "SI" for item in consolidated),
-        "aptos_revisar": sum(item["apto_para_visor"] == "REVISAR" for item in consolidated),
-        "aptos_no": sum(item["apto_para_visor"] == "NO" for item in consolidated),
+        "aptos_si": sum(
+            item["apto_para_visor"] == "SI" for item in consolidated
+        ),
+        "aptos_revisar": sum(
+            item["apto_para_visor"] == "REVISAR" for item in consolidated
+        ),
+        "aptos_no": sum(
+            item["apto_para_visor"] == "NO" for item in consolidated
+        ),
         "estados": {},
     }
+
     for item in consolidated:
         key = item["estado_principal"]
         summary["estados"][key] = summary["estados"].get(key, 0) + 1
 
-    payload = {"resumen": summary, "comunas": consolidated}
+    payload = {
+        "resumen": summary,
+        "comunas": consolidated,
+    }
+
+    output.mkdir(parents=True, exist_ok=True)
+
     (output / "consolidado_sig_comunal.json").write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
     )
     (output / "consolidado_sig_comunal.js").write_text(
-        "window.CONSOLIDADO_SIG_COMUNAL = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
+        "window.CONSOLIDADO_SIG_COMUNAL = "
+        + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        + ";\n",
         encoding="utf-8",
     )
 
     csv_fields = [
-        "region", "comuna", "estado_principal_label", "apto_para_visor",
-        "archivo_recomendado", "capa_recomendada", "motivo",
-        "prc_fecha", "prc_nombre", "actos_posteriores", "ultimo_acto_posterior",
+        "region",
+        "comuna",
+        "estado_principal_label",
+        "apto_para_visor",
+        "archivo_recomendado",
+        "capa_recomendada",
+        "motivo",
+        "prc_fecha",
+        "prc_nombre",
+        "actos_posteriores",
+        "ultimo_acto_posterior",
     ]
-    with (output / "consolidado_sig_comunal.csv").open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=csv_fields, delimiter=";")
+
+    with (output / "consolidado_sig_comunal.csv").open(
+        "w", encoding="utf-8-sig", newline=""
+    ) as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=csv_fields,
+            delimiter=";",
+        )
         writer.writeheader()
+
         for item in consolidated:
             main_prc = item["prc"][0] if item["prc"] else None
             writer.writerow({
@@ -379,20 +575,34 @@ def main() -> int:
                 "archivo_recomendado": item["archivo_recomendado"],
                 "capa_recomendada": item["capa_recomendada"],
                 "motivo": item["motivo"],
-                "prc_fecha": main_prc.get("fecha_instrumento", "") if main_prc else "",
-                "prc_nombre": main_prc.get("nombre", "") if main_prc else "",
-                "actos_posteriores": main_prc.get("cantidad_actos_posteriores", 0) if main_prc else 0,
-                "ultimo_acto_posterior": main_prc.get("ultimo_acto_posterior", "") if main_prc else "",
+                "prc_fecha": (
+                    main_prc.get("fecha_instrumento", "") if main_prc else ""
+                ),
+                "prc_nombre": (
+                    main_prc.get("nombre", "") if main_prc else ""
+                ),
+                "actos_posteriores": (
+                    main_prc.get("cantidad_actos_posteriores", 0)
+                    if main_prc else 0
+                ),
+                "ultimo_acto_posterior": (
+                    main_prc.get("ultimo_acto_posterior", "")
+                    if main_prc else ""
+                ),
             })
 
     print()
     print("CONSOLIDADO SIG COMUNAL")
     print("-" * 72)
-    print(f"Comunas consolidadas : {summary['comunas']}")
-    print(f"Aptas para visor     : {summary['aptos_si']}")
-    print(f"Requieren revisión   : {summary['aptos_revisar']}")
-    print(f"No aptas             : {summary['aptos_no']}")
-    print(f"Salida                : {output / 'consolidado_sig_comunal.csv'}")
+    print(f"Capas SIG leídas      : {summary['capas_sig_leidas']}")
+    print(f"Vínculos SIG leídos   : {summary['vinculaciones_sig_leidas']}")
+    print(f"Instrumentos Portal   : {summary['instrumentos_portal']}")
+    print(f"Actos normativos      : {summary['actos_normativos']}")
+    print(f"Comunas consolidadas  : {summary['comunas']}")
+    print(f"Aptas para visor      : {summary['aptos_si']}")
+    print(f"Requieren revisión    : {summary['aptos_revisar']}")
+    print(f"No aptas              : {summary['aptos_no']}")
+    print(f"Salida                 : {output / 'consolidado_sig_comunal.csv'}")
     return 0
 
 
