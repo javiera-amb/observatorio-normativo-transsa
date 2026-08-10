@@ -46,7 +46,9 @@ if not defined PYTHON_CMD (
     exit /b 10
 )
 
-%PYTHON_CMD% "%REPO%\scripts\consolidar_sig_comunal.py" --repo "%REPO%"
+rem La version v2 reconstruye los 1.784 actos con la misma logica
+rem que utiliza la pagina web y luego llama al consolidado existente.
+%PYTHON_CMD% "%REPO%\scripts\consolidar_sig_comunal_v2.py" --repo "%REPO%"
 set "RESULTADO=%errorlevel%"
 
 echo.
