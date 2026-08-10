@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 """
-Wrapper de consolidar_sig_comunal.py para cargar de forma robusta la base
-nacional de 1.784 actos IPT.
+Wrapper robusto de consolidar_sig_comunal.py para cargar los 1.784 actos IPT.
 
-Prioridad:
-1. Bloques nacionales completos 01 ... 10 (incluye 09.js).
-2. Reconstruccion del bloque 9 con 09a ... 09e, solo como respaldo.
-3. Bloques originales actos_ipt_gz_*.js, solo como ultimo respaldo.
+La fuente comprimida del repositorio llega a descomprimirse pero presenta un
+CRC GZIP inconsistente. Por eso este script:
+1. reutiliza una copia JSON limpia si ya fue validada;
+2. intenta los bloques nacionales completos 01 ... 10;
+3. si GZIP falla SOLO por integridad, lee el DEFLATE interno ignorando el
+   trailer CRC y valida el contenido por estructura y conteos conocidos;
+4. guarda una copia JSON limpia para no depender nuevamente del GZIP roto.
 
 No modifica ni vuelve a recorrer la cartografia SIG.
 """
@@ -15,7 +17,10 @@ No modifica ni vuelve a recorrer la cartografia SIG.
 import base64
 import gzip
 import json
+import struct
 import sys
+import zlib
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -25,10 +30,19 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import consolidar_sig_comunal as base  # noqa: E402
 
-STANDARD_PART_LENGTH = 10179
-FINAL_PART_LENGTH = 10173
-EXPECTED_ENCODED_LENGTH = STANDARD_PART_LENGTH * 9 + FINAL_PART_LENGTH
 EXPECTED_ROWS = 1784
+EXPECTED_STATES = {
+    "Vigente": 955,
+    "Derogado": 631,
+    "En Desarrollo": 198,
+}
+EXPECTED_TYPES = {
+    "Enmienda": 158,
+    "Rectificación": 38,
+    "Modificación mediante seccional": 130,
+}
+EXPECTED_LINKED = 275
+CACHE_NAME = "actos_ipt_nacionales_limpio.json"
 
 
 def _fragment(path: Path) -> str:
@@ -37,7 +51,82 @@ def _fragment(path: Path) -> str:
     return base.extract_appended_payload(path)
 
 
-def _decode_rows(encoded: str, label: str) -> list[list[Any]]:
+def _validate_rows(rows: Any, label: str) -> list[list[Any]]:
+    if not isinstance(rows, list):
+        raise RuntimeError(f"{label}: el contenido no es una lista.")
+    if len(rows) != EXPECTED_ROWS:
+        raise RuntimeError(
+            f"{label}: contiene {len(rows)} actos; se esperaban {EXPECTED_ROWS}."
+        )
+
+    for position, row in enumerate(rows):
+        if not isinstance(row, list) or len(row) < 17:
+            raise RuntimeError(f"{label}: fila {position} incompleta.")
+
+    states = Counter(str(row[6] or "") for row in rows)
+    types = Counter(str(row[11] or "") for row in rows)
+    linked = sum(bool(row[10]) for row in rows)
+
+    state_mismatches = [
+        f"{name}: {states.get(name, 0)} != {expected}"
+        for name, expected in EXPECTED_STATES.items()
+        if states.get(name, 0) != expected
+    ]
+    type_mismatches = [
+        f"{name}: {types.get(name, 0)} != {expected}"
+        for name, expected in EXPECTED_TYPES.items()
+        if types.get(name, 0) != expected
+    ]
+
+    if state_mismatches or type_mismatches or linked != EXPECTED_LINKED:
+        details = state_mismatches + type_mismatches
+        if linked != EXPECTED_LINKED:
+            details.append(f"vinculados por codigo: {linked} != {EXPECTED_LINKED}")
+        raise RuntimeError(
+            f"{label}: el contenido no coincide con el reporte anual conocido: "
+            + "; ".join(details)
+        )
+
+    return rows
+
+
+def _gzip_payload_without_crc(compressed: bytes) -> bytes:
+    """Extrae y descomprime el DEFLATE de un GZIP sin validar CRC/ISIZE."""
+    if len(compressed) < 18 or compressed[:2] != b"\x1f\x8b":
+        raise RuntimeError("cabecera GZIP no reconocida")
+    if compressed[2] != 8:
+        raise RuntimeError("metodo GZIP distinto de DEFLATE")
+
+    flags = compressed[3]
+    position = 10
+
+    # FEXTRA
+    if flags & 0x04:
+        if position + 2 > len(compressed):
+            raise RuntimeError("cabecera FEXTRA incompleta")
+        xlen = struct.unpack("<H", compressed[position:position + 2])[0]
+        position += 2 + xlen
+
+    # FNAME / FCOMMENT
+    for mask in (0x08, 0x10):
+        if flags & mask:
+            end = compressed.find(b"\x00", position)
+            if end < 0:
+                raise RuntimeError("cabecera GZIP de texto incompleta")
+            position = end + 1
+
+    # FHCRC
+    if flags & 0x02:
+        position += 2
+
+    if position >= len(compressed) - 8:
+        raise RuntimeError("GZIP sin cuerpo DEFLATE suficiente")
+
+    deflate_body = compressed[position:-8]
+    return zlib.decompress(deflate_body, -zlib.MAX_WBITS)
+
+
+def _decode_rows(encoded: str, label: str) -> tuple[list[list[Any]], bool]:
     if len(encoded) % 4 != 0:
         raise RuntimeError(
             f"{label}: longitud Base64 no divisible por 4 ({len(encoded):,})."
@@ -48,118 +137,99 @@ def _decode_rows(encoded: str, label: str) -> list[list[Any]]:
     except Exception as error:
         raise RuntimeError(f"{label}: Base64 invalida: {error}") from error
 
+    crc_bypassed = False
     try:
         raw = gzip.decompress(compressed)
-    except Exception as error:
-        raise RuntimeError(f"{label}: GZIP invalido: {error}") from error
+    except Exception as gzip_error:
+        # La copia actual llega al final del stream pero su trailer CRC es
+        # inconsistente. Recuperamos SOLO el DEFLATE y validamos despues el
+        # JSON contra todos los conteos conocidos del reporte anual.
+        try:
+            raw = _gzip_payload_without_crc(compressed)
+            crc_bypassed = True
+        except Exception as raw_error:
+            raise RuntimeError(
+                f"{label}: GZIP invalido ({gzip_error}); "
+                f"tampoco se pudo recuperar DEFLATE ({raw_error})."
+            ) from raw_error
 
     try:
         rows = json.loads(raw.decode("utf-8"))
     except Exception as error:
         raise RuntimeError(f"{label}: JSON invalido: {error}") from error
 
-    if not isinstance(rows, list):
-        raise RuntimeError(f"{label}: el contenido no es una lista.")
-    if len(rows) != EXPECTED_ROWS:
-        raise RuntimeError(
-            f"{label}: contiene {len(rows)} actos; se esperaban {EXPECTED_ROWS}."
-        )
-    return rows
+    return _validate_rows(rows, label), crc_bypassed
 
 
-def _try_candidate(encoded: str, label: str, errors: list[str]) -> list[list[Any]] | None:
+def _cache_path(repo: Path) -> Path:
+    return repo / "_local" / "sig_ipt" / CACHE_NAME
+
+
+def _load_cache(repo: Path) -> list[list[Any]] | None:
+    path = _cache_path(repo)
+    if not path.exists():
+        return None
     try:
-        rows = _decode_rows(encoded, label)
+        rows = json.loads(path.read_text(encoding="utf-8"))
+        rows = _validate_rows(rows, "copia JSON limpia")
     except Exception as error:
-        errors.append(str(error))
+        print(f"AVISO. Se ignora cache normativa invalida: {error}")
         return None
 
     print("Base normativa IPT:")
-    print(f"- Fuente utilizada    : {label}")
-    print(f"- Flujo Base64        : {len(encoded):,} caracteres")
+    print("- Fuente utilizada    : copia JSON limpia validada")
     print(f"- Actos verificados   : {len(rows):,}")
+    print("- Conteos de control  : OK")
     print()
     return rows
 
 
-def _rebuild_national_rows(repo: Path) -> list[list[Any]]:
-    data = repo / "data"
-    errors: list[str] = []
+def _save_cache(repo: Path, rows: list[list[Any]]) -> None:
+    path = _cache_path(repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(rows, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
 
-    # 1) Fuente prioritaria: los diez bloques completos.
-    #    Importante: aqui se usa actos_ipt_nacional_09.js directamente.
+
+def _rebuild_national_rows(repo: Path) -> list[list[Any]]:
+    cached = _load_cache(repo)
+    if cached is not None:
+        return cached
+
+    data = repo / "data"
     national_files = [
         data / f"actos_ipt_nacional_{index:02d}.js"
         for index in range(1, 11)
     ]
-    if all(path.exists() for path in national_files):
-        raw_payload = "".join(_fragment(path) for path in national_files)
-        rows = _try_candidate(
-            raw_payload,
-            "bloques nacionales completos 01-10",
-            errors,
+    missing = [path.name for path in national_files if not path.exists()]
+    if missing:
+        raise RuntimeError(
+            "Faltan bloques nacionales: " + ", ".join(missing)
         )
-        if rows is not None:
-            return rows
-    else:
-        missing = [path.name for path in national_files if not path.exists()]
-        errors.append("faltan bloques nacionales: " + ", ".join(missing))
-        raw_payload = ""
 
-    # 2) Respaldo: reproduccion de la reparacion web con 09a ... 09e.
-    #    Solo se intenta si los fragmentos tienen el largo completo esperado.
-    repair_files = [
-        data / f"actos_ipt_nacional_09{letter}.js"
-        for letter in "abcde"
-    ]
-    if raw_payload and all(path.exists() for path in repair_files):
-        repair_parts = [_fragment(path) for path in repair_files]
-        repaired_ninth = "".join(repair_parts)
-
-        if len(repaired_ninth) == STANDARD_PART_LENGTH:
-            prefix = raw_payload[: STANDARD_PART_LENGTH * 8]
-            suffix = raw_payload[-FINAL_PART_LENGTH:]
-            repaired_payload = prefix + repaired_ninth + suffix
-            rows = _try_candidate(
-                repaired_payload,
-                "bloque 9 reconstruido con 09a-09e",
-                errors,
-            )
-            if rows is not None:
-                return rows
-        else:
-            lengths = ", ".join(
-                f"09{letter}={len(part):,}"
-                for letter, part in zip("abcde", repair_parts)
-            )
-            errors.append(
-                "fragmentos 09a-09e incompletos: "
-                f"total {len(repaired_ninth):,} de {STANDARD_PART_LENGTH:,} "
-                f"({lengths})"
-            )
-
-    # 3) Ultimo respaldo: bloques originales generados desde el CSV anual.
-    original_files = sorted(data.glob("actos_ipt_gz_*.js"))
-    if original_files:
-        try:
-            original_payload = "".join(_fragment(path) for path in original_files)
-            rows = _try_candidate(
-                original_payload,
-                "bloques originales actos_ipt_gz_*",
-                errors,
-            )
-            if rows is not None:
-                return rows
-        except Exception as error:
-            errors.append(f"bloques originales: {error}")
-    else:
-        errors.append("no existen bloques originales actos_ipt_gz_*.js")
-
-    detail = "\n  - ".join(errors)
-    raise RuntimeError(
-        "No se pudo reconstruir una copia integra de los 1.784 actos IPT.\n"
-        f"  - {detail}"
+    encoded = "".join(_fragment(path) for path in national_files)
+    rows, crc_bypassed = _decode_rows(
+        encoded,
+        "bloques nacionales completos 01-10",
     )
+
+    _save_cache(repo, rows)
+
+    print("Base normativa IPT:")
+    print("- Fuente utilizada    : bloques nacionales completos 01-10")
+    print(f"- Flujo Base64        : {len(encoded):,} caracteres")
+    if crc_bypassed:
+        print("- CRC GZIP original   : inconsistente; DEFLATE recuperado")
+    else:
+        print("- CRC GZIP original   : OK")
+    print(f"- Actos verificados   : {len(rows):,}")
+    print("- Conteos de control  : OK")
+    print(f"- Copia limpia        : _local\\sig_ipt\\{CACHE_NAME}")
+    print()
+
+    return rows
 
 
 def load_national_acts(repo: Path) -> list[dict[str, Any]]:
@@ -167,11 +237,6 @@ def load_national_acts(repo: Path) -> list[dict[str, Any]]:
 
     acts: list[dict[str, Any]] = []
     for row in rows:
-        if not isinstance(row, list) or len(row) < 17:
-            raise RuntimeError(
-                "Se encontro una fila normativa incompleta dentro de los 1.784 actos."
-            )
-
         acts.append({
             "id": row[0],
             "region": row[1] or "",
@@ -185,11 +250,6 @@ def load_national_acts(repo: Path) -> list[dict[str, Any]]:
             "codigos_origen": row[10] if isinstance(row[10], list) else [],
             "tipo_acto": row[11] or "Modificacion",
         })
-
-    if len(acts) != EXPECTED_ROWS:
-        raise RuntimeError(
-            f"Se interpretaron {len(acts)} actos; se esperaban {EXPECTED_ROWS}."
-        )
 
     return acts
 
