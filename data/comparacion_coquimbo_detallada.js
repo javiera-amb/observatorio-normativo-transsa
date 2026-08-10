@@ -222,6 +222,130 @@
         estado: "version_no_acreditada"
       }
     ],
+    diagnostico_sig: {
+      objetivo: "Actualizar el SIG comunal para que represente el PRC Coquimbo 2026 como base vigente y conserve el PRC 2019 únicamente como antecedente histórico.",
+      capa_actual: "PRC_Coquimbo / versión GeoIDE no acreditada",
+      instrumento_objetivo: "PRC Coquimbo 2026",
+      fecha_instrumento_objetivo: "2026-01-05",
+      aptitud_actual_visor: "NO",
+      motivo: "La versión cartográfica disponible no está acreditada como equivalente a las trece láminas oficiales del PRC 2026.",
+      criterio_publicacion: "La capa solo podrá pasar a lista para visor cuando la geometría, los códigos de zona y los parámetros normativos hayan sido validados contra las láminas y la ordenanza 2026."
+    },
+    acciones_sig: [
+      {
+        id: "COQ-SIG-01",
+        prioridad: "crítica",
+        accion: "REEMPLAZAR_GEOMETRIA",
+        objeto: "Zonificación base del PRC",
+        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
+        ambito: "Coquimbo, Tongoy y Guanaqueros",
+        instruccion: "Sustituir la zonificación 2019 por los polígonos oficiales del PRC 2026. Mantener la versión 2019 en la capa histórica y no mezclar ambas vigencias.",
+        cambios_normativos: ["coq-vigencia-2026"],
+        estado: "bloqueada_por_planos",
+        dependencia: "Vectorizar y controlar las trece láminas oficiales 2026.",
+        resultado_esperado: "Una única zonificación base vigente con fecha normativa 2026-01-05."
+      },
+      {
+        id: "COQ-SIG-02",
+        prioridad: "crítica",
+        accion: "CREAR_CORRESPONDENCIA",
+        objeto: "Homologación de zonas 2019–2026",
+        capa_objetivo: "TABLA_EQUIVALENCIA_ZONAS",
+        ambito: "Todos los códigos de zona del PRC",
+        instruccion: "Construir una tabla que clasifique cada zona 2019 como equivalente, reemplazada, subdividida, absorbida o eliminada respecto del PRC 2026.",
+        cambios_normativos: ["coq-zu3-intensidad", "coq-zu5-subzonas", "coq-infraestructura", "coq-zu18-zu19"],
+        estado: "definida",
+        dependencia: "Comparación espacial de planos 2019 y 2026.",
+        resultado_esperado: "Trazabilidad completa entre códigos antiguos y vigentes, sin homologaciones automáticas incorrectas."
+      },
+      {
+        id: "COQ-SIG-03",
+        prioridad: "alta",
+        accion: "AGREGAR_Y_RECODIFICAR_POLIGONOS",
+        objeto: "Nuevas subzonas residenciales",
+        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
+        ambito: "Polígonos ZU3-A y ZU5-A a ZU5-D",
+        instruccion: "Digitalizar las nuevas subzonas y asignar sus códigos y parámetros 2026. No aplicar los parámetros de ZU3 o ZU5 base a estos polígonos.",
+        cambios_normativos: ["coq-zu3a-densidad", "coq-zu5-subzonas"],
+        estado: "bloqueada_por_planos",
+        dependencia: "Delimitación oficial en láminas 2026.",
+        resultado_esperado: "Subzonas residenciales individualizadas con normativa propia."
+      },
+      {
+        id: "COQ-SIG-04",
+        prioridad: "alta",
+        accion: "AGREGAR_POLIGONOS",
+        objeto: "Zonas nuevas productivas, patrimoniales y de parques",
+        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
+        ambito: "ZP3, AVP2-A, ZCH3, ZCH4, ZCH5, ZCH5-A, ZAVPC y ZAVPC-A",
+        instruccion: "Incorporar los polígonos nuevos y vincularlos con sus artículos y parámetros. Las protecciones patrimoniales que operen por superposición deben conservarse también en una capa temática.",
+        cambios_normativos: ["coq-zp3-productiva", "coq-patrimonio", "coq-parques"],
+        estado: "bloqueada_por_planos",
+        dependencia: "Delimitación oficial y definición del modelo de superposición patrimonial.",
+        resultado_esperado: "Nuevas zonas visibles y consultables sin perder su condición temática."
+      },
+      {
+        id: "COQ-SIG-05",
+        prioridad: "alta",
+        accion: "ACTUALIZAR_ATRIBUTOS",
+        objeto: "Recodificación de infraestructura",
+        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
+        ambito: "ZI1, ZI4 y antigua ZI5",
+        instruccion: "Actualizar la tabla de atributos conforme al catálogo 2026: ZI1 integra transporte marítimo y portuario; ZI4 identifica caletas pesqueras; no conservar ZI5 como código vigente sin resolver su correspondencia territorial.",
+        cambios_normativos: ["coq-infraestructura"],
+        estado: "definida",
+        dependencia: "Tabla de equivalencia y revisión de polígonos.",
+        resultado_esperado: "Códigos de infraestructura coherentes con la ordenanza 2026."
+      },
+      {
+        id: "COQ-SIG-06",
+        prioridad: "alta",
+        accion: "RESOLVER_ZONAS_NO_REPRODUCIDAS",
+        objeto: "ZU18 y familia ZU19",
+        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
+        ambito: "Polígonos 2019 ZU18, ZU19, ZU19-1 y ZU19-2",
+        instruccion: "No eliminar estos polígonos por nombre. Superponer ambas versiones y determinar qué códigos 2026 absorben o reemplazan cada sector.",
+        cambios_normativos: ["coq-zu18-zu19"],
+        estado: "bloqueada_por_planos",
+        dependencia: "Superposición espacial 2019–2026.",
+        resultado_esperado: "Todos los polígonos antiguos con destino normativo 2026 documentado."
+      },
+      {
+        id: "COQ-SIG-07",
+        prioridad: "crítica",
+        accion: "VERIFICAR_E_INTEGRAR_ENMIENDA",
+        objeto: "Ex Maestranza Ferronor",
+        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
+        ambito: "Fajas ferroviarias desafectadas y área del Plan Urbano Habitacional Ferronor",
+        instruccion: "Comparar la Enmienda N.º 1 con el PRC 2026 y determinar si ZU3 fue incorporada, modificada o reemplazada. Aplicar solo la solución normativa final vigente.",
+        cambios_normativos: ["coq-ferronor"],
+        estado: "pendiente_revision",
+        dependencia: "Polígono oficial de la enmienda y lámina 2026 correspondiente.",
+        resultado_esperado: "Ferronor representado una sola vez con su normativa vigente final."
+      },
+      {
+        id: "COQ-SIG-08",
+        prioridad: "media",
+        accion: "AGREGAR_CAPAS_SUPLEMENTARIAS",
+        objeto: "Incentivos, riesgos, vialidad y protección",
+        capa_objetivo: "CAPAS_TEMATICAS_PRC_COQUIMBO",
+        ambito: "Ámbito urbano comunal",
+        instruccion: "Modelar como capas o atributos suplementarios los incentivos urbanísticos, riesgos, vialidad estructurante, utilidad pública y protección. No reemplazar la zona base cuando la norma opera por superposición.",
+        cambios_normativos: ["coq-incentivos", "coq-patrimonio"],
+        estado: "definida_parcial",
+        dependencia: "Completar revisión de artículos y planos temáticos.",
+        resultado_esperado: "El visor informa la zona base y todas las condiciones superpuestas aplicables."
+      }
+    ],
+    flujo_validacion: [
+      { id: "normativa", nombre: "Normativa identificada", estado: "completo" },
+      { id: "comparacion", nombre: "Cambio normativo validado", estado: "en_progreso" },
+      { id: "accion", nombre: "Acción SIG definida", estado: "en_progreso" },
+      { id: "ejecucion", nombre: "Cambio aplicado", estado: "pendiente" },
+      { id: "geometria", nombre: "Geometría validada", estado: "pendiente" },
+      { id: "atributos", nombre: "Atributos validados", estado: "pendiente" },
+      { id: "visor", nombre: "Listo para visor", estado: "pendiente" }
+    ],
     pendientes: [
       "Vectorizar y comparar las trece láminas oficiales del PRC 2026.",
       "Construir correspondencia poligonal entre códigos de zona 2019 y 2026.",
