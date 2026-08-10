@@ -57,24 +57,55 @@ def extract_appended_payload(path: Path) -> str:
         r'window\.ACTOS_IPT_GZ=\(window\.ACTOS_IPT_GZ\|\|""\)\+("(?:[^"\\]|\\.)*");'
     )
     matches = pattern.findall(raw)
+    if not matches:
+        raise RuntimeError(f"No se pudo leer el bloque normativo {path.name}.")
     return "".join(json.loads(match) for match in matches)
+
+
+def decode_act_files(files: list[Path]) -> list[list[Any]]:
+    if not files or not all(path.exists() for path in files):
+        return []
+    encoded = "".join(extract_appended_payload(path) for path in files)
+    compressed = base64.b64decode(encoded, validate=True)
+    rows = json.loads(gzip.decompress(compressed).decode("utf-8"))
+    return rows if isinstance(rows, list) else []
 
 
 def load_national_acts(repo: Path) -> list[dict[str, Any]]:
     data = repo / "data"
-    files = [
-        *(data / f"actos_ipt_nacional_{index:02d}.js" for index in range(1, 9)),
-        *(data / f"actos_ipt_nacional_09{letter}.js" for letter in "abcde"),
-        data / "actos_ipt_nacional_10.js",
-    ]
-    if not all(path.exists() for path in files):
-        return []
+    rows: list[list[Any]] = []
+    errors: list[str] = []
 
-    try:
-        encoded = "".join(extract_appended_payload(path) for path in files)
-        rows = json.loads(gzip.decompress(base64.b64decode(encoded)).decode("utf-8"))
-    except Exception:
-        return []
+    # Fuente original generada desde el CSV anual del Portal IPT.
+    # Es la fuente prioritaria porque corresponde directamente a los 1.784 actos
+    # utilizados en el análisis nacional.
+    original_files = sorted(data.glob("actos_ipt_gz_*.js"))
+    if original_files:
+        try:
+            rows = decode_act_files(original_files)
+        except Exception as error:
+            errors.append(f"bloques originales: {error}")
+
+    # Compatibilidad con la segunda versión fragmentada de la base.
+    if len(rows) != 1784:
+        national_files = [
+            *(data / f"actos_ipt_nacional_{index:02d}.js" for index in range(1, 9)),
+            *(data / f"actos_ipt_nacional_09{letter}.js" for letter in "abcde"),
+            data / "actos_ipt_nacional_10.js",
+        ]
+        try:
+            fallback_rows = decode_act_files(national_files)
+            if fallback_rows:
+                rows = fallback_rows
+        except Exception as error:
+            errors.append(f"bloques nacionales: {error}")
+
+    if len(rows) != 1784:
+        detail = " | ".join(errors) if errors else "sin bloques decodificables"
+        raise RuntimeError(
+            "No se pudieron cargar los 1.784 actos normativos del Portal IPT. "
+            f"Se obtuvieron {len(rows)}. Detalle: {detail}"
+        )
 
     acts: list[dict[str, Any]] = []
     for row in rows:
@@ -93,6 +124,12 @@ def load_national_acts(repo: Path) -> list[dict[str, Any]]:
             "codigos_origen": row[10] if isinstance(row[10], list) else [],
             "tipo_acto": row[11] or "Modificación",
         })
+
+    if len(acts) != 1784:
+        raise RuntimeError(
+            "La base normativa se abrió, pero no se pudieron interpretar todos los actos. "
+            f"Actos interpretados: {len(acts)} de 1.784."
+        )
     return acts
 
 
