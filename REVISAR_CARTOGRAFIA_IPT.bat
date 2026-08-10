@@ -4,13 +4,11 @@ chcp 65001 >nul
 
 title Inspector SIG IPT - Transsa Urban Intelligence
 
-REM Carpeta del repositorio: quitamos la barra final para evitar una comilla sobrante al llamar Python.
 set "REPO=%~dp0"
 if "%REPO:~-1%"=="\" set "REPO=%REPO:~0,-1%"
 
 set "CARPETA_SIG=C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\PRC_Actualización Transsa_2026_S2"
 
-REM También puedes arrastrar otra carpeta sobre este archivo .bat.
 if not "%~1"=="" set "CARPETA_SIG=%~1"
 
 echo ================================================================
@@ -27,6 +25,8 @@ echo Este proceso SOLO LEE la cartografia. No modifica GPKG ni SHP.
 echo.
 echo Version 2: interpreta IPT_Region / tipo IPT / comuna / archivo,
 echo separa planes seccionales y excluye predios/RGC de referencia.
+echo Luego genera un consolidado por comuna para evaluar si el SIG
+echo puede utilizarse en el visor o requiere revision normativa.
 echo.
 
 if not exist "%REPO%\index.html" (
@@ -45,6 +45,14 @@ if not exist "%REPO%\scripts\inspector_sig_ipt_v2.py" (
     exit /b 4
 )
 
+if not exist "%REPO%\scripts\consolidar_sig_comunal.py" (
+    echo ERROR: falta scripts\consolidar_sig_comunal.py en el repositorio.
+    echo Haz Fetch origin y Pull origin en GitHub Desktop y vuelve a intentar.
+    echo.
+    pause
+    exit /b 5
+)
+
 if not exist "%CARPETA_SIG%" (
     echo ERROR: No encuentro la carpeta SIG indicada.
     echo.
@@ -55,45 +63,54 @@ if not exist "%CARPETA_SIG%" (
     exit /b 2
 )
 
-set "RESULTADO=10"
-
+set "PYTHON_CMD="
 where py >nul 2>nul
-if not errorlevel 1 (
-    py -3 "%REPO%\scripts\inspector_sig_ipt_v2.py" --root "%CARPETA_SIG%" --repo "%REPO%"
-    set "RESULTADO=!errorlevel!"
+if not errorlevel 1 set "PYTHON_CMD=py -3"
+if not defined PYTHON_CMD (
+    where python >nul 2>nul
+    if not errorlevel 1 set "PYTHON_CMD=python"
+)
+
+if not defined PYTHON_CMD (
+    echo ERROR: No encuentro Python en este computador.
+    set "RESULTADO=10"
     goto :FIN
 )
 
-where python >nul 2>nul
-if not errorlevel 1 (
-    python "%REPO%\scripts\inspector_sig_ipt_v2.py" --root "%CARPETA_SIG%" --repo "%REPO%"
-    set "RESULTADO=!errorlevel!"
-    goto :FIN
-)
+%PYTHON_CMD% "%REPO%\scripts\inspector_sig_ipt_v2.py" --root "%CARPETA_SIG%" --repo "%REPO%"
+set "RESULTADO=!errorlevel!"
+if not "!RESULTADO!"=="0" goto :FIN
 
-echo ERROR: No encuentro Python en este computador.
-echo Instala Python o agrega Python al PATH y vuelve a ejecutar este archivo.
-set "RESULTADO=10"
+echo.
+echo ================================================================
+echo GENERANDO CONSOLIDADO SIG POR COMUNA
+echo ================================================================
+echo.
+%PYTHON_CMD% "%REPO%\scripts\consolidar_sig_comunal.py" --repo "%REPO%"
+set "RESULTADO=!errorlevel!"
 
 :FIN
 echo.
 if "%RESULTADO%"=="0" (
     echo ================================================================
-    echo LISTO. El inventario SIG termino correctamente.
+    echo LISTO. El inventario y consolidado SIG terminaron correctamente.
     echo ================================================================
     echo.
     echo Resultados:
     echo %REPO%\_local\sig_ipt
     echo.
+    echo Archivos clave:
+    echo - resumen_sig_ipt.json
+    echo - consolidado_sig_comunal.csv
+    echo - consolidado_sig_comunal.json
+    echo.
     echo Abriendo carpeta de resultados...
     if exist "%REPO%\_local\sig_ipt" start "" "%REPO%\_local\sig_ipt"
 ) else (
     echo ================================================================
-    echo ERROR. El inventario SIG NO termino correctamente.
+    echo ERROR. El proceso SIG NO termino correctamente.
     echo Codigo devuelto por Python: %RESULTADO%
     echo ================================================================
-    echo.
-    echo No se mostrara un mensaje de exito hasta que el proceso termine de verdad.
 )
 echo.
 pause
