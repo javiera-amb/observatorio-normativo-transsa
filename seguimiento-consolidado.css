@@ -5,6 +5,7 @@
 .seguimiento-kpis article.available{border-top-color:#2b7a5a}
 .seguimiento-kpis article.review{border-top-color:#d7951f}
 .seguimiento-kpis article.unavailable{border-top-color:#b94652}
+.seguimiento-kpis article.pending{border-top-color:#9aa2af}.seguimiento-kpis article.development{border-top-color:#d7951f}.seguimiento-kpis article.ready{border-top-color:#2b7a5a}.seguimiento-kpis article.platform{border-top-color:var(--transsa-blue)}
 .seguimiento-kpis span,.seguimiento-kpis strong,.seguimiento-kpis small{display:block}
 .seguimiento-kpis span{color:var(--muted);font-size:.68rem;font-weight:600}
 .seguimiento-kpis strong{margin-top:5px;color:var(--transsa-navy);font-size:1.55rem;line-height:1}
@@ -35,6 +36,7 @@
 .seguimiento-date{margin-top:4px;color:var(--muted);font-size:.61rem}
 .seguimiento-source-state{color:#313948;font-weight:600}
 .seguimiento-table td small{margin-top:5px;color:var(--muted);font-size:.61rem;line-height:1.42}
+.seguimiento-table td small.seguimiento-state-warning{color:#a33a43;font-weight:700}
 .seguimiento-consumption-pill,.seguimiento-audit-pill{display:inline-flex;padding:6px 8px;border-radius:999px;font-size:.6rem;font-weight:750;line-height:1.2}
 .seguimiento-consumption-pill.disponible{background:#e4f5ec;color:#176342}
 .seguimiento-consumption-pill.usar_con_revision{background:#fff3cf;color:#735110}
@@ -44,14 +46,15 @@
 .seguimiento-audit-pill.pendiente_revision{background:#fff3cf;color:#735110}
 .seguimiento-audit-pill.sin_cartografia,.seguimiento-audit-pill.sin_iniciar{background:#edf0f4;color:#56616f}
 .seguimiento-operational-pill{display:inline-flex;padding:6px 8px;border-radius:999px;font-size:.59rem;font-weight:750;line-height:1.2}
-.seguimiento-operational-pill.encontrada,.seguimiento-operational-pill.publicada,.seguimiento-operational-pill.completo{background:#e4f5ec;color:#176342}
-.seguimiento-operational-pill.en_preparacion,.seguimiento-operational-pill.en_proceso{background:#fff3cf;color:#735110}
-.seguimiento-operational-pill.no_registrada,.seguimiento-operational-pill.pendiente,.seguimiento-operational-pill.no_verificada{background:#edf0f4;color:#56616f}
+.seguimiento-operational-pill.encontrada,.seguimiento-operational-pill.listo,.seguimiento-operational-pill.aprobado{background:#e4f5ec;color:#176342}
+.seguimiento-operational-pill.en_desarrollo,.seguimiento-operational-pill.observaciones{background:#fff3cf;color:#735110}
+.seguimiento-operational-pill.en_plataforma{background:#e8e9ff;color:#3838a5}
+.seguimiento-operational-pill.pendiente,.seguimiento-operational-pill.no_verificada{background:#edf0f4;color:#56616f}
 .seguimiento-operational-pill.no_encontrada{background:#fde8ea;color:#922f38}
 .seguimiento-alert-count{display:block;color:var(--transsa-navy);font-size:.71rem}
 .seguimiento-detail-button{padding:7px 9px;border:1px solid #cfd3ff;border-radius:8px;background:#f5f5ff;color:var(--transsa-blue);font:inherit;font-size:.62rem;font-weight:700;cursor:pointer;white-space:nowrap}
 .seguimiento-detail-button:hover{background:#ececff}
-.seguimiento-interpretation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.seguimiento-interpretation{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
 .seguimiento-interpretation div{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center}
 .seguimiento-interpretation strong{color:var(--transsa-navy);font-size:.73rem}
 .seguimiento-interpretation p{grid-column:2;margin:3px 0 0;color:var(--muted);font-size:.65rem;line-height:1.45}
@@ -59,6 +62,8 @@
 .seguimiento-dot.available{background:#2b7a5a}
 .seguimiento-dot.review{background:#d7951f}
 .seguimiento-dot.unavailable{background:#b94652}
+.seguimiento-dot.pending{background:#9aa2af}.seguimiento-dot.development{background:#d7951f}.seguimiento-dot.ready{background:#2b7a5a}.seguimiento-dot.platform{background:var(--transsa-blue)}
+.seguimiento-definitions{margin-top:14px}
 @media(max-width:1050px){
   .seguimiento-kpis{grid-template-columns:1fr 1fr}
   .seguimiento-filters{grid-template-columns:1fr 1fr}

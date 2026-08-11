@@ -22,8 +22,8 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-estado-operativo-2">
-  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-estado-operativo-2">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-modelo-prc-3">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-modelo-prc-3">
 </head>
 <body>
   <header class="topbar">
@@ -487,7 +487,7 @@
         <div>
           <p class="eyebrow">ESTADO NACIONAL · VISTA PARA PROPITEQ</p>
           <h2>Seguimiento consolidado de normativa</h2>
-          <p>Una fila por comuna para saber qué PRC está disponible, qué debe revisarse y qué puede consumir Propiteq.</p>
+          <p>Una fila por comuna para distinguir el estado informado por el equipo, el QA normativo/SIG y la publicación efectiva en Propiteq.</p>
         </div>
         <div class="seguimiento-header-actions">
           <span class="seguimiento-readonly-badge">Estado operativo controlado</span>
@@ -496,11 +496,11 @@
         </div>
       </div>
 
-      <section class="seguimiento-kpis" aria-label="Resumen nacional de seguimiento normativo">
-        <article><span>Comunas</span><strong id="seguimientoMetricTotal">0</strong><small>Cobertura nacional</small></article>
-        <article class="available"><span>Disponible</span><strong id="seguimientoMetricAvailable">0</strong><small>Consumo habilitado</small></article>
-        <article class="review"><span>Usar con revisión</span><strong id="seguimientoMetricReview">0</strong><small>Con alertas o controles</small></article>
-        <article class="unavailable"><span>No disponible</span><strong id="seguimientoMetricUnavailable">0</strong><small>Sin capa o sin información</small></article>
+      <section class="seguimiento-kpis production-kpis" aria-label="Estado de producción informado por el equipo">
+        <article class="pending"><span>Pendiente</span><strong id="seguimientoMetricPending">0</strong><small>No iniciado o no informado</small></article>
+        <article class="development"><span>En desarrollo</span><strong id="seguimientoMetricDevelopment">0</strong><small>El equipo está construyendo la capa</small></article>
+        <article class="ready"><span>Listo</span><strong id="seguimientoMetricReady">0</strong><small>Producción terminada y QA aprobado</small></article>
+        <article class="platform"><span>En la plataforma</span><strong id="seguimientoMetricPlatform">0</strong><small>Publicado y visible para Propiteq</small></article>
       </section>
 
       <section class="seguimiento-filter-panel">
@@ -521,15 +521,6 @@
             <select id="seguimientoRegion"><option value="">Todas</option></select>
           </label>
           <label>
-            <span>Disponibilidad Propiteq</span>
-            <select id="seguimientoConsumption">
-              <option value="">Todas</option>
-              <option value="disponible">Disponible</option>
-              <option value="usar_con_revision">Usar con revisión</option>
-              <option value="no_disponible">No disponible</option>
-            </select>
-          </label>
-          <label>
             <span>Auditoría</span>
             <select id="seguimientoAudit">
               <option value="">Todas</option>
@@ -541,21 +532,22 @@
             </select>
           </label>
           <label>
-            <span>Publicación</span>
-            <select id="seguimientoPublication">
+            <span>Estado del equipo</span>
+            <select id="seguimientoProduction">
               <option value="">Todas</option>
-              <option value="publicada">Publicada</option>
-              <option value="en_preparacion">En preparación</option>
-              <option value="no_registrada">No registrada</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="en_desarrollo">En desarrollo</option>
+              <option value="listo">Listo</option>
+              <option value="en_plataforma">En la plataforma</option>
             </select>
           </label>
           <label>
             <span>QA</span>
             <select id="seguimientoQa">
               <option value="">Todos</option>
-              <option value="completo">QA completo</option>
-              <option value="en_proceso">QA en proceso</option>
               <option value="pendiente">QA pendiente</option>
+              <option value="observaciones">QA con observaciones</option>
+              <option value="aprobado">QA aprobado</option>
             </select>
           </label>
         </div>
@@ -569,10 +561,10 @@
                 <th>Región / comuna</th>
                 <th>IPT vigente identificado</th>
                 <th>Cartografía</th>
-                <th>Publicación</th>
+                <th>Estado del equipo</th>
                 <th>QA</th>
-                <th>Alertas</th>
-                <th>Última revisión</th>
+                <th>Cambios / controles</th>
+                <th>Último QA</th>
                 <th></th>
               </tr>
             </thead>
@@ -587,9 +579,14 @@
       </section>
 
       <section class="seguimiento-interpretation">
-        <div><span class="seguimiento-dot available"></span><strong>Disponible</strong><p>Existe una capa recomendada para consumo. Mantiene control preliminar hasta completar auditoría avanzada.</p></div>
-        <div><span class="seguimiento-dot review"></span><strong>Usar con revisión</strong><p>La capa existe, pero tiene cambios, vínculos o controles pendientes.</p></div>
-        <div><span class="seguimiento-dot unavailable"></span><strong>No disponible</strong><p>No hay cartografía vinculada o la comuna todavía no fue consolidada.</p></div>
+        <div><span class="seguimiento-dot pending"></span><strong>Pendiente</strong><p>El equipo aún no comienza o no ha informado avance.</p></div>
+        <div><span class="seguimiento-dot development"></span><strong>En desarrollo</strong><p>La cartografía está siendo construida, corregida o consolidada.</p></div>
+        <div><span class="seguimiento-dot ready"></span><strong>Listo</strong><p>Producción terminada y QA aprobado; falta publicar.</p></div>
+        <div><span class="seguimiento-dot platform"></span><strong>En la plataforma</strong><p>La versión aprobada está visible para Propiteq.</p></div>
+      </section>
+      <section class="capas-audit-banner seguimiento-definitions">
+        <h3>Cómo leer “cambios / controles” y “último QA”</h3>
+        <p>Un “acto posterior” es una modificación, enmienda, rectificación o acto normativo asociado al instrumento base cuya incorporación al SIG debe comprobarse. Los “controles” son verificaciones concretas de normativa, geometría, atributos, topología, fuentes y publicación. “Último QA” es la fecha de la última auditoría técnica registrada; no es la fecha de edición del archivo ni de Notion.</p>
       </section>
     </section>
 
@@ -618,36 +615,40 @@
 
       <section class="capas-kpis" aria-label="Resumen de cobertura de la comuna seleccionada">
         <article><span>IPT aplicables</span><strong id="capasMetricIpt">0</strong><small id="capasMetricIptTypes">Sin registros</small></article>
-        <article class="verified"><span>Capas declaradas</span><strong id="capasMetricCovered">0</strong><small>Incluidas o de alcance nacional</small></article>
+        <article class="verified"><span>Cobertura comunal declarada</span><strong id="capasMetricCovered">0</strong><small>La ficha identifica explícitamente la comuna</small></article>
         <article class="review"><span>Cruce pendiente</span><strong id="capasMetricPending">0</strong><small>Falta revisar geometría por comuna</small></article>
         <article class="alert"><span>No aplica / proceso</span><strong id="capasMetricNotApplicable">0</strong><small>Fuera de alcance o no es capa</small></article>
       </section>
 
       <section class="capas-coverage-section">
-        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 1 · NORMATIVA</p><h3>IPT normativos identificados</h3><p>Cada instrumento distingue existencia normativa, cartografía encontrada, publicación en Transsa/Propiteq y QA. Ningún estado se completa por inferencia.</p></div><span id="capasIptCount" class="result-count"></span></div>
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 1 · NORMATIVA</p><h3>IPT normativos identificados</h3><p>El PRC se controla exclusivamente con la base que estamos construyendo en Transsa. Notion no se usa para declarar su versión, avance ni QA.</p></div><span id="capasIptCount" class="result-count"></span></div>
         <div id="capasIptGrid" class="capas-ipt-grid"></div>
         <div id="capasIptEmpty" class="empty-state" hidden><div>IPT</div><h3>Sin IPT registrado</h3><p>La comuna no aparece en el consolidado actual de Portal IPT.</p></div>
       </section>
 
       <section class="capas-coverage-section">
         <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 2 · INFORMACIÓN ESPACIAL</p><h3>Capas territoriales para la comuna</h3><p>Se muestran por separado la fecha del dato y la fecha en que se editó su ficha de Notion.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
+        <div class="capas-audit-banner">
+          <h3>Qué significa “cruce pendiente”</h3>
+          <p>La fuente o el archivo existe, pero todavía debemos abrirlo, validar geometría y proyección, intersectarlo con el límite comunal oficial y guardar el resultado —presencia, cantidad de elementos, fecha, versión y huella del archivo— en la matriz de cobertura.</p>
+        </div>
         <div class="capas-coverage-filters">
           <label><span>Buscar capa</span><input id="capasSearch" type="search" placeholder="Metro, predios, riesgos, establecimientos…"></label>
           <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="declarada">Cobertura declarada</option><option value="pendiente">Por confirmar</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option></select></label>
         </div>
-        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Cartografía</th><th>Publicación</th><th>QA</th><th>Fecha del dato</th><th>Ficha / evidencia</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
+        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Archivo espacial</th><th>Estado del equipo</th><th>QA</th><th>Fecha del dato</th><th>Ficha / evidencia</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
         <div id="capasCoverageEmpty" class="empty-state" hidden><div>GIS</div><h3>Sin capas para este filtro</h3><p>Prueba con otro estado o término de búsqueda.</p></div>
       </section>
 
       <section class="capas-method">
         <div><p class="eyebrow">CÓMO LEER ESTA PÁGINA</p><h3>Disponibilidad no es validación</h3></div>
         <ol>
-          <li>Los IPT provienen del consolidado de Portal IPT y se ordenan por tipo y fecha normativa.</li>
-          <li>Las capas provienen del Diccionario de Datos de Notion.</li>
+          <li>Los IPT se identifican con fuentes oficiales; el estado cartográfico del PRC proviene de la base Transsa en construcción.</li>
+          <li>Notion sirve como inventario inicial de capas territoriales, no como prueba suficiente de vigencia, cobertura o calidad.</li>
           <li>“Declarada” significa que la ficha nombra la comuna o afirma alcance nacional; todavía puede faltar el cruce geométrico.</li>
           <li>“Por confirmar” significa que existe un archivo, pero la ficha no acredita si contiene la comuna.</li>
-          <li>“Publicada” exige registro explícito del destino y fecha de carga; encontrar un archivo no basta.</li>
-          <li>“QA completo” exige que no queden controles pendientes y que exista fecha o evidencia del cierre.</li>
+          <li>El equipo actualiza uno de cuatro estados: pendiente, en desarrollo, listo o en la plataforma.</li>
+          <li>El QA es independiente: pendiente, con observaciones o aprobado.</li>
           <li>La auditoría normativa detallada se consulta en “Seguimiento PRC” e “IPT y vigencia”.</li>
         </ol>
       </section>
@@ -803,11 +804,11 @@
   <script src="data/historicos.js"></script>
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
-  <script src="data/estado_operativo_datos.js?v=20260811-estado-operativo-1"></script>
-  <script src="seguimiento-consolidado.js?v=20260811-estado-operativo-2"></script>
+  <script src="data/estado_operativo_datos.js?v=20260811-modelo-prc-3"></script>
+  <script src="seguimiento-consolidado.js?v=20260811-modelo-prc-3"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-cobertura-1"></script>
-  <script src="capas-territoriales.js?v=20260811-estado-operativo-2"></script>
+  <script src="capas-territoriales.js?v=20260811-modelo-prc-3"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

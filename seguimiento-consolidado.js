@@ -6,7 +6,7 @@
     region: "",
     consumption: "",
     audit: "",
-    publication: "",
+    production: "",
     qa: "",
   };
 
@@ -35,16 +35,17 @@
     sin_iniciar: "Sin iniciar",
   };
 
-  const publicationLabels = {
-    publicada: "Publicada",
-    en_preparacion: "En preparación",
-    no_registrada: "No registrada",
+  const productionLabels = {
+    pendiente: "Pendiente",
+    en_desarrollo: "En desarrollo",
+    listo: "Listo",
+    en_plataforma: "En la plataforma",
   };
 
   const qaLabels = {
-    completo: "QA completo",
-    en_proceso: "QA en proceso",
     pendiente: "QA pendiente",
+    observaciones: "QA con observaciones",
+    aprobado: "QA aprobado",
   };
 
   function operationalStatus(row) {
@@ -52,20 +53,19 @@
     const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
     let qa = override.qa;
     if (!qa && Number.isFinite(row.controles_totales) && Number.isFinite(row.controles_pendientes)) {
-      qa = row.controles_pendientes === 0 && row.controles_totales > 0
-        ? "completo"
-        : row.controles_pendientes < row.controles_totales ? "en_proceso" : "pendiente";
+      qa = row.controles_pendientes === 0 && row.controles_totales > 0 ? "aprobado" : "observaciones";
     }
-    if (!qa && ["auditoria_avanzada", "control_preliminar"].includes(row.estado_auditoria)) qa = "en_proceso";
+    const production = override.estado_produccion || "pendiente";
     return {
       cartography: hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
-      publication: override.publicacion || "no_registrada",
+      production,
       qa: qa || "pendiente",
-      publicationDate: override.fecha_publicacion || "",
+      statusDate: override.fecha_estado || "",
       qaDate: override.fecha_qa || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || "",
       note: override.nota || "",
+      inconsistency: ["listo", "en_plataforma"].includes(production) && qa !== "aprobado",
     };
   }
 
@@ -92,17 +92,17 @@
         && (!state.region || row.region === state.region)
         && (!state.consumption || row.consumo_propieteq === state.consumption)
         && (!state.audit || row.estado_auditoria === state.audit)
-        && (!state.publication || operational.publication === state.publication)
+        && (!state.production || operational.production === state.production)
         && (!state.qa || operational.qa === state.qa);
     });
   }
 
   function alertText(row) {
     if (Number.isFinite(row.controles_pendientes)) {
-      return `${row.controles_pendientes} de ${row.controles_totales} controles`;
+      return `${row.controles_pendientes} de ${row.controles_totales} controles abiertos`;
     }
     if (row.actos_posteriores) {
-      return `${row.actos_posteriores} ${row.actos_posteriores === 1 ? "acto" : "actos"}`;
+      return `${row.actos_posteriores} ${row.actos_posteriores === 1 ? "acto posterior" : "actos posteriores"}`;
     }
     return "—";
   }
@@ -132,20 +132,22 @@
           <small title="${escape(sourceDetail)}">${escape(sourceDetail || "Sin archivo o servicio vinculado")}</small>
         </td>
         <td>
-          <span class="seguimiento-operational-pill publication ${escape(operational.publication)}">${escape(publicationLabels[operational.publication])}</span>
-          <small>${escape(operational.publicationDate ? `Publicada: ${operational.publicationDate}` : operational.responsible)}</small>
-          <small>${escape(consumptionLabels[consumption] || consumption)} para consumo</small>
+          <span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span>
+          <small>${escape(operational.statusDate ? `Actualizado: ${operational.statusDate}` : operational.responsible)}</small>
+          <small>${escape(operational.production === "en_plataforma" ? "Visible para Propiteq" : "Aún no acreditado en plataforma")}</small>
+          ${operational.inconsistency ? `<small class="seguimiento-state-warning">Estado incompatible: requiere QA aprobado.</small>` : ""}
         </td>
         <td>
           <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaLabels[operational.qa])}</span>
-          <small>${escape(operational.qaDate ? `Cierre: ${operational.qaDate}` : auditLabels[audit] || audit)}</small>
+          <small>${escape(operational.qaDate ? `Último QA: ${operational.qaDate}` : "Sin fecha de QA")}</small>
           ${Number.isFinite(row.controles_pendientes) ? `<small>${escape(`${row.controles_pendientes} de ${row.controles_totales} controles pendientes`)}</small>` : ""}
         </td>
         <td>
           <strong class="seguimiento-alert-count">${escape(alertText(row))}</strong>
+          ${row.actos_posteriores ? `<small>Cambios normativos que deben comprobarse en la cartografía.</small>` : ""}
           ${row.ultimo_acto_posterior ? `<small>Último acto: ${escape(row.ultimo_acto_posterior)}</small>` : ""}
         </td>
-        <td>${escape(row.ultima_revision || "Sin revisión registrada")}</td>
+        <td>${escape(operational.qaDate || row.ultima_revision || "Sin QA registrado")}</td>
         <td>
           ${row.ficha_disponible ? `<button class="seguimiento-detail-button" type="button" data-seguimiento-commune="${escape(row.comuna)}">Ver ficha</button>` : ""}
         </td>
@@ -154,11 +156,11 @@
   }
 
   function renderMetrics() {
-    const summary = data().resumen || {};
-    if ($("seguimientoMetricTotal")) $("seguimientoMetricTotal").textContent = summary.total || 0;
-    if ($("seguimientoMetricAvailable")) $("seguimientoMetricAvailable").textContent = summary.disponibles || 0;
-    if ($("seguimientoMetricReview")) $("seguimientoMetricReview").textContent = summary.con_revision || 0;
-    if ($("seguimientoMetricUnavailable")) $("seguimientoMetricUnavailable").textContent = summary.no_disponibles || 0;
+    const statuses = data().comunas.map(operationalStatus);
+    if ($("seguimientoMetricPending")) $("seguimientoMetricPending").textContent = statuses.filter(item => item.production === "pendiente").length;
+    if ($("seguimientoMetricDevelopment")) $("seguimientoMetricDevelopment").textContent = statuses.filter(item => item.production === "en_desarrollo").length;
+    if ($("seguimientoMetricReady")) $("seguimientoMetricReady").textContent = statuses.filter(item => item.production === "listo").length;
+    if ($("seguimientoMetricPlatform")) $("seguimientoMetricPlatform").textContent = statuses.filter(item => item.production === "en_plataforma").length;
   }
 
   function renderTable() {
@@ -180,7 +182,7 @@
   function downloadCsv() {
     const headers = [
       "region", "comuna", "prc_nombre", "prc_fecha", "estado_fuente",
-      "cartografia_estado", "publicacion_estado", "fecha_publicacion",
+      "cartografia_estado", "estado_produccion", "fecha_estado",
       "qa_estado", "fecha_qa", "responsable", "estado_auditoria", "disponibilidad_propieteq", "motivo",
       "actos_posteriores", "controles_pendientes", "controles_totales",
       "ultima_revision", "archivo_recomendado", "capa_recomendada",
@@ -190,7 +192,7 @@
       const operational = operationalStatus(row);
       const values = [
         row.region, row.comuna, row.prc_nombre, row.prc_fecha, row.estado_fuente,
-        operational.cartography, operational.publication, operational.publicationDate,
+        operational.cartography, operational.production, operational.statusDate,
         operational.qa, operational.qaDate, operational.responsible,
         auditLabels[row.estado_auditoria] || row.estado_auditoria,
         consumptionLabels[row.consumo_propieteq] || row.consumo_propieteq,
@@ -242,8 +244,8 @@
       state.audit = event.target.value;
       renderTable();
     });
-    $("seguimientoPublication")?.addEventListener("change", event => {
-      state.publication = event.target.value;
+    $("seguimientoProduction")?.addEventListener("change", event => {
+      state.production = event.target.value;
       renderTable();
     });
     $("seguimientoQa")?.addEventListener("change", event => {

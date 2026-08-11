@@ -1,21 +1,21 @@
 window.ESTADO_OPERATIVO_DATOS = {
   corte: "2026-08-11",
   destino_publicacion: "Transsa / Propiteq",
-  criterio: "Un archivo encontrado no se considera publicado ni con QA completo sin un registro operativo explícito.",
+  criterio: "El equipo actualiza el estado de producción. El QA se registra de forma independiente después de comparar cartografía, normativa y cambios aplicables.",
   valores_permitidos: {
-    publicacion: ["no_registrada", "en_preparacion", "publicada"],
-    qa: ["pendiente", "en_proceso", "completo"]
+    estado_produccion: ["pendiente", "en_desarrollo", "listo", "en_plataforma"],
+    qa: ["pendiente", "observaciones", "aprobado"]
   },
   // Clave: "Región|Comuna". Solo registrar hechos confirmados por el equipo.
   // Ejemplo:
   // "Coquimbo|Coquimbo": {
-  //   publicacion: "publicada",
-  //   qa: "completo",
-  //   fecha_publicacion: "2026-08-11",
+  //   estado_produccion: "en_plataforma",
+  //   qa: "aprobado",
+  //   fecha_estado: "2026-08-11",
   //   fecha_qa: "2026-08-11",
   //   responsable: "Nombre Apellido",
   //   evidencia: "URL o identificador del dataset publicado",
-  //   nota: "Control final aprobado"
+  //   nota: "QA aprobado y capa visible en Propiteq"
   // }
   comunas: {},
 

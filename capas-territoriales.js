@@ -21,6 +21,7 @@
   const operationalSource = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {}, capas: {} };
   const communeSource = () => window.SEGUIMIENTO_NORMATIVO?.comunas || [];
   const iptSource = () => window.VIGENCIA_CARTOGRAFICA?.instrumentos || [];
+  const territorialLayers = () => layersSource().capas.filter(layer => normalize(layer.nombre) !== normalize("Planes Reguladores Comunales"));
 
   function communeRows() {
     const rows = communeSource();
@@ -72,17 +73,23 @@
     return latest;
   }
 
-  const operationalLabels = {
-    publicada: "Publicada",
-    en_preparacion: "En preparación",
-    no_registrada: "No registrada",
-    completo: "QA completo",
-    en_proceso: "QA en proceso",
+  const productionLabels = {
+    pendiente: "Pendiente",
+    en_desarrollo: "En desarrollo",
+    listo: "Listo",
+    en_plataforma: "En la plataforma",
+  };
+  const qaLabels = {
+    aprobado: "QA aprobado",
+    observaciones: "QA con observaciones",
     pendiente: "QA pendiente",
+  };
+  const cartographyLabels = {
     encontrada: "Encontrada",
     otra_version: "De otra versión",
     no_verificada: "No verificada",
     no_acreditada: "No acreditada",
+    fuente_nacional: "Fuente nacional identificada",
   };
 
   function communeAuditRow() {
@@ -99,10 +106,10 @@
   function inferredQa(row, override) {
     if (override.qa) return override.qa;
     if (Number.isFinite(row?.controles_totales) && Number.isFinite(row?.controles_pendientes)) {
-      if (row.controles_pendientes === 0 && row.controles_totales > 0) return "completo";
-      return row.controles_pendientes < row.controles_totales ? "en_proceso" : "pendiente";
+      if (row.controles_pendientes === 0 && row.controles_totales > 0) return "aprobado";
+      return "observaciones";
     }
-    return ["auditoria_avanzada", "control_preliminar"].includes(row?.estado_auditoria) ? "en_proceso" : "pendiente";
+    return "pendiente";
   }
 
   function instrumentOperational(instrument, isLatest) {
@@ -112,14 +119,19 @@
     const hasReferencedCartography = Boolean(row?.archivo_recomendado || row?.capa_recomendada);
     const sameVersion = hasReferencedCartography && row?.prc_fecha === instrument.fecha;
     const cartography = sameVersion ? "encontrada" : hasReferencedCartography && instrument.tipo_ipt === "PRC" ? "otra_version" : "no_verificada";
+    const production = isPrincipalPrc ? override.estado_produccion || "pendiente" : "pendiente";
+    const qa = isPrincipalPrc ? inferredQa(row, override) : "pendiente";
+    const stateWarning = ["listo", "en_plataforma"].includes(production) && qa !== "aprobado"
+      ? " Estado incompatible: requiere QA aprobado."
+      : "";
     return {
       cartography,
       cartographyDetail: sameVersion
         ? [row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ")
         : cartography === "otra_version" ? `El archivo registrado corresponde al PRC ${row.prc_fecha || "sin fecha"}.` : "No hay archivo o servicio vinculado a esta versión.",
-      publication: isPrincipalPrc ? override.publicacion || "no_registrada" : "no_registrada",
-      publicationDetail: isPrincipalPrc && override.fecha_publicacion ? `${override.fecha_publicacion} · ${override.evidencia || "sin enlace de evidencia"}` : "Sin registro explícito de carga en Transsa/Propiteq.",
-      qa: isPrincipalPrc ? inferredQa(row, override) : "pendiente",
+      production,
+      productionDetail: `${isPrincipalPrc && override.fecha_estado ? `${override.fecha_estado} · ${override.responsable || "sin responsable"}` : "Estado pendiente de actualización por el equipo."}${stateWarning}`,
+      qa,
       qaDetail: isPrincipalPrc && Number.isFinite(row?.controles_pendientes)
         ? `${row.controles_pendientes} de ${row.controles_totales} controles pendientes.`
         : isPrincipalPrc && override.fecha_qa ? `Cierre ${override.fecha_qa}.` : "Sin cierre de QA registrado para este instrumento.",
@@ -136,9 +148,9 @@
         <dl><div><dt>Escala</dt><dd>${escape(instrument.nivel_planificacion || "Sin dato")}</dd></div><div><dt>Fecha normativa</dt><dd>${escape(instrument.fecha || "Sin fecha")}</dd></div></dl>
         <div class="capas-operational-grid">
           <div><span>Normativa</span><strong class="capas-status-pill identified">Identificada</strong><small>Registro Portal IPT ${escape(instrument.registro || "")}</small></div>
-          <div><span>Cartografía</span><strong class="capas-status-pill ${escape(operational.cartography)}">${escape(operationalLabels[operational.cartography])}</strong><small>${escape(operational.cartographyDetail)}</small></div>
-          <div><span>Publicación</span><strong class="capas-status-pill ${escape(operational.publication)}">${escape(operationalLabels[operational.publication])}</strong><small>${escape(operational.publicationDetail)}</small></div>
-          <div><span>Control de calidad</span><strong class="capas-status-pill ${escape(operational.qa)}">${escape(operationalLabels[operational.qa])}</strong><small>${escape(operational.qaDetail)}</small></div>
+          <div><span>Cartografía</span><strong class="capas-status-pill ${escape(operational.cartography)}">${escape(cartographyLabels[operational.cartography])}</strong><small>${escape(operational.cartographyDetail)}</small></div>
+          <div><span>Estado del equipo</span><strong class="capas-status-pill ${escape(operational.production)}">${escape(productionLabels[operational.production])}</strong><small>${escape(operational.productionDetail)}</small></div>
+          <div><span>Control de calidad</span><strong class="capas-status-pill ${escape(operational.qa)}">${escape(qaLabels[operational.qa])}</strong><small>${escape(operational.qaDetail)}</small></div>
         </div>
         <a href="${escape(instrument.fuente || "https://portalipt.minvu.cl/instrumentos")}" target="_blank" rel="noopener noreferrer">Abrir Portal IPT ↗</a>
       </article>`;
@@ -179,7 +191,7 @@
     let result;
     switch (meta.modo) {
       case "nacional_declarada":
-        result = { state: "declarada", label: "Cobertura nacional declarada", detail: "Falta verificar presencia o cantidad de elementos en la comuna." };
+        result = { state: "pendiente", label: "Alcance nacional declarado", detail: "El alcance proviene de la ficha o fuente; falta ejecutar el cruce para confirmar presencia y cantidad de elementos en la comuna." };
         break;
       case "comunas_versionadas":
         result = versionCoverage(meta, commune);
@@ -212,16 +224,20 @@
     const formats = layer.formatos?.length ? layer.formatos.join(" · ") : "Revisar ficha";
     const categories = layer.categorias?.length ? layer.categorias.join(" · ") : "Sin categoría";
     const override = operationalSource().capas?.[layer.nombre] || {};
-    const cartography = layer.formatos?.length ? "encontrada" : result.state === "proceso" ? "no_acreditada" : "no_verificada";
-    const publication = override.publicacion || "no_registrada";
+    const meta = coverageSource().capas[layer.nombre] || {};
+    const cartography = layer.formatos?.length
+      ? "encontrada"
+      : meta.modo === "nacional_declarada" ? "fuente_nacional"
+        : result.state === "proceso" ? "no_acreditada" : "no_verificada";
+    const production = override.estado_produccion || "pendiente";
     const qa = override.qa || "pendiente";
     return `
       <tr>
         <td><span class="capas-table-category">${escape(categories)}</span><strong>${escape(layer.nombre)}</strong><small>${escape(layer.owner || "Sin responsable")}</small></td>
         <td><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small></td>
-        <td><span class="capas-status-pill ${escape(cartography)}">${escape(operationalLabels[cartography])}</span><small>${escape(formats)}</small></td>
-        <td><span class="capas-status-pill ${escape(publication)}">${escape(operationalLabels[publication])}</span><small>${escape(override.fecha_publicacion || "Sin fecha de carga")}</small></td>
-        <td><span class="capas-status-pill ${escape(qa)}">${escape(operationalLabels[qa])}</span><small>${escape(override.fecha_qa || `Catálogo: ${layer.verificacion || "sin verificar"}`)}</small></td>
+        <td><span class="capas-status-pill ${escape(cartography)}">${escape(cartographyLabels[cartography])}</span><small>${escape(cartography === "fuente_nacional" ? "Alcance nacional declarado; falta vincular el archivo fuente." : formats)}</small></td>
+        <td><span class="capas-status-pill ${escape(production)}">${escape(productionLabels[production])}</span><small>${escape(override.fecha_estado || "Sin actualización del equipo")}</small></td>
+        <td><span class="capas-status-pill ${escape(qa)}">${escape(qaLabels[qa])}</span><small>${escape(override.fecha_qa || `Catálogo: ${layer.verificacion || "sin verificar"}`)}</small></td>
         <td><strong>${escape(result.dataDate)}</strong><small>${escape(result.dateLabel)}</small></td>
         <td><strong>${escape(layer.ultima_edicion || "Sin fecha")}</strong><small>Última edición de la ficha</small><a href="${escape(layer.url)}" target="_blank" rel="noopener noreferrer">Ver evidencia en Notion ↗</a></td>
       </tr>`;
@@ -230,13 +246,13 @@
   function filteredTerritorial() {
     const commune = selectedCommune();
     const query = normalize(state.search);
-    return layersSource().capas.map(layer => ({ layer, result: territorialCoverage(layer, commune) }))
+    return territorialLayers().map(layer => ({ layer, result: territorialCoverage(layer, commune) }))
       .filter(item => !state.coverage || item.result.state === state.coverage)
       .filter(item => !query || normalize([item.layer.nombre, ...(item.layer.categorias || []), item.layer.owner].join(" ")).includes(query));
   }
 
   function renderTerritorial() {
-    const all = layersSource().capas.map(layer => ({ layer, result: territorialCoverage(layer, selectedCommune()) }));
+    const all = territorialLayers().map(layer => ({ layer, result: territorialCoverage(layer, selectedCommune()) }));
     const rows = filteredTerritorial();
     $("capasCoverageBody").innerHTML = rows.map(item => coverageRow(item.layer, item.result)).join("");
     $("capasTerritorialCount").textContent = `${rows.length} de ${all.length} capas`;
