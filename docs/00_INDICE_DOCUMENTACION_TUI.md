@@ -31,6 +31,7 @@ No existe una serie continua de diecinueve archivos. Los documentos disponibles 
 | 17 | `17_REEMPLAZOS_INTEGRALES_Y_FUENTES_MULTIFUENTE.md` | Regla nacional |
 | 18 | `18_PLATAFORMA_OPERATIVA_USUARIOS_QGIS.md` | Plataforma operativa |
 | 19 | `19_SEGUIMIENTO_PROPITEQ_Y_CAPAS_TERRITORIALES.md` | Seguimiento y capas |
+| 20 | `20_FUENTES_EXTERNAS_Y_AUTOMATIZACION_CAPAS.md` | Fuentes y adquisición automática |
 
 ## Qué conviene guardar
 
@@ -46,5 +47,6 @@ No existe una serie continua de diecinueve archivos. Los documentos disponibles 
 - `data/seguimiento_normativo.js`;
 - `capas-territoriales.js` y `capas-territoriales.css`;
 - `data/capas_territoriales.js`;
+- `data/fuentes_capas_externas.js`;
 - ficha detallada de Coquimbo y sus datos de auditoría;
 - `index.html`, `app.js` y `ux-refresh.js`.

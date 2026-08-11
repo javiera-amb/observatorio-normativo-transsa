@@ -6,7 +6,7 @@ window.COBERTURA_CAPAS_COMUNAL = {
     fecha: "2026-08-11",
     comunas_objetivo: 346,
     capas_procesadas: 0,
-    motivo: "El límite comunal ya fue recibido y auditado. Faltan materializar los archivos vigentes de las capas territoriales para ejecutar sus intersecciones."
+    motivo: "El límite comunal ya fue recibido y auditado. El barrido externo localizó 13 fuentes recuperables o potencialmente recuperables; aún falta descargarlas, controlar su versión y ejecutar sus intersecciones."
   },
   limite_base: {
     archivo: "Comunas SII-Transsa 2.gpkg",
