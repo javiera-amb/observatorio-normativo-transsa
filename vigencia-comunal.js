@@ -110,6 +110,8 @@
     const selected = vigenciaState.selectedId === item.id ? "selected" : "";
     const types = (item.tipos_ipt || []).join(" · ") || "IPT";
     const changes = Number(item.cantidad_actos || 0);
+    const changeLabel = item.indicador_cambios
+      || `${changes} ${changes === 1 ? "acto asociado" : "actos asociados"}`;
     return `
       <button class="vigencia-instrument-card ${selected}" data-vigencia-id="${escapeAttribute(item.id)}">
         <div class="vigencia-card-heading">
@@ -125,7 +127,7 @@
         </div>
         <div class="vigencia-card-footer">
           <span class="vigencia-alert-label ${statusClass}">${escapeHtml(item.estado_alerta || "Sin clasificación")}</span>
-          <span>${changes} ${changes === 1 ? "cambio" : "cambios"}</span>
+          <span>${escapeHtml(changeLabel)}</span>
         </div>
       </button>
     `;

@@ -60,6 +60,13 @@
 
     const previousTokens = significantNameTokens(previous, item);
     const currentTokens = significantNameTokens(current, item);
+
+    // Dos PRC cuyos nombres solo difieren por expresiones como
+    // "actualización" o "nuevo" siguen perteneciendo a la misma línea
+    // normativa cuando, al retirar el nombre de la comuna y los términos
+    // genéricos, ninguno conserva un ámbito territorial distinto.
+    if (type === "PRC" && !previousTokens.size && !currentTokens.size) return true;
+
     const similarity = overlapCoefficient(previousTokens, currentTokens);
 
     const thresholds = {
