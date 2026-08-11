@@ -1492,12 +1492,17 @@ function init() {
           ? "vigencia"
           : location.hash === "#seguimiento"
             ? "seguimiento"
-            : "diario";
+            : location.hash === "#capas"
+              ? "capas"
+              : "diario";
   switchModule(requestedModule);
   if (requestedModule === "mapa") renderTerritorialMap();
   if (requestedModule === "vigencia") renderVigencia();
   if (requestedModule === "seguimiento" && typeof window.renderSeguimientoNormativo === "function") {
     window.renderSeguimientoNormativo();
+  }
+  if (requestedModule === "capas" && typeof window.renderCapasTerritoriales === "function") {
+    window.renderCapasTerritoriales();
   }
 }
 
