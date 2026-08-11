@@ -61,7 +61,7 @@
       production,
       qa: qa || "pendiente",
       statusDate: override.fecha_estado || "",
-      qaDate: override.fecha_qa || "",
+      qaDate: override.fecha_qa || row.ultima_revision || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || "",
       note: override.nota || "",

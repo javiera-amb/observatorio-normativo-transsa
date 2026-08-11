@@ -133,7 +133,7 @@
       productionDetail: `${isPrincipalPrc && override.fecha_estado ? `${override.fecha_estado} · ${override.responsable || "sin responsable"}` : "Estado pendiente de actualización por el equipo."}${stateWarning}`,
       qa,
       qaDetail: isPrincipalPrc && Number.isFinite(row?.controles_pendientes)
-        ? `${row.controles_pendientes} de ${row.controles_totales} controles pendientes.`
+        ? `${row.controles_pendientes} de ${row.controles_totales} controles pendientes · último QA ${override.fecha_qa || row.ultima_revision || "sin fecha"}.`
         : isPrincipalPrc && override.fecha_qa ? `Cierre ${override.fecha_qa}.` : "Sin cierre de QA registrado para este instrumento.",
     };
   }
