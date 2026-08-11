@@ -42,6 +42,8 @@ El primer snapshot se obtuvo el 11 de agosto de 2026 desde **Diccionario de Dato
 
 La plataforma muestra los 34 registros identificables y enlaza cada ficha original de Notion. La conexión confirma metadatos de catálogo —nombre, categoría, Data Owner y última edición—, pero no demuestra por sí sola cobertura comunal, vigencia de la fuente ni calidad geométrica.
 
+El 11 de agosto de 2026 se revisaron también los adjuntos visibles en las fichas. Se identificaron referencias concretas —por ejemplo `Comunas_SII-Transsa.gpkg`, `Embalse_2026.gpkg`, `Zonas_EOD.gpkg`, `Campamentos_2024.gpkg` y los tres GeoPackage de Metro—, además de fichas sin archivo y shapefiles incompletos. Los binarios vigentes están alojados o enlazados desde OneDrive/SharePoint y todavía no fueron materializados en el entorno de cruce; por eso no se declara cobertura efectiva.
+
 ### Hallazgos inmediatos
 
 1. **Planes Reguladores Comunales** tiene su verificación de Notion expirada.
@@ -61,6 +63,19 @@ Una capa territorial pasa de “existe en el catálogo” a “disponible para P
 - QA geométrica y de atributos;
 - responsable y fecha de última revisión;
 - evidencia enlazada.
+
+### Estados del cruce comunal
+
+| Estado | Evidencia exigida |
+|---|---|
+| Cobertura confirmada | Archivo leído, geometría válida e intersección con cantidad mayor que cero |
+| Sin elementos | Archivo leído e intersección ejecutada con resultado cero |
+| Cruce bloqueado | Falta el archivo, el adjunto es incompleto o el formato no es espacial |
+| Cruce pendiente | El archivo está materializado, pero el lote aún no se ejecuta |
+| Error de cruce | El proceso falló y conserva el motivo técnico |
+| No aplica | La fuente tiene un ámbito territorial excluyente que no incluye la comuna |
+
+La matriz se genera con `scripts/cruzar_capas_por_comuna.py` y se publica en `data/cobertura_capas_resultados.js`. Cada archivo procesado conserva nombre, tamaño, subcapas y SHA-256. La clave comunal es `Región|Comuna` y el lote debe contener las 346 comunas, salvo una ejecución diagnóstica explícita.
 
 ## Evolución del inventario territorial
 

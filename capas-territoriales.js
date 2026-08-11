@@ -18,6 +18,7 @@
 
   const layersSource = () => window.CAPAS_TERRITORIALES || { capas: [] };
   const coverageSource = () => window.COBERTURA_CAPAS_COMUNAL || { capas: {} };
+  const crossSource = () => window.COBERTURA_CAPAS_RESULTADOS || { capas: {} };
   const operationalSource = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {}, capas: {} };
   const communeSource = () => window.SEGUIMIENTO_NORMATIVO?.comunas || [];
   const iptSource = () => window.VIGENCIA_CARTOGRAFICA?.instrumentos || [];
@@ -90,6 +91,11 @@
     no_verificada: "No verificada",
     no_acreditada: "No acreditada",
     fuente_nacional: "Fuente nacional identificada",
+    archivo_procesado: "Archivo procesado",
+    referencia_identificada: "Referencia de archivo",
+    referencia_incompleta: "Archivo incompleto",
+    sin_archivo: "Sin archivo",
+    formato_no_espacial: "Formato no espacial",
   };
 
   function communeAuditRow() {
@@ -170,72 +176,65 @@
     return { instruments, latest };
   }
 
-  function versionCoverage(meta, commune) {
-    for (const version of meta.versiones || []) {
-      if ((version.comunas || []).some(name => normalize(name) === normalize(commune.comuna))) {
-        return {
-          state: "declarada",
-          label: `Incluida en versión ${version.version}`,
-          detail: [version.fecha_archivo ? `Archivo ${version.fecha_archivo}` : `Versión ${version.fecha}`, version.observacion].filter(Boolean).join(" · "),
-          dataDate: version.fecha_archivo || version.fecha
-        };
-      }
-    }
-    return { state: "pendiente", label: "No declarada en el consolidado", detail: "No significa que la comuna no tenga PRC; solo que no está nombrada en las versiones del GeoPackage consolidado.", dataDate: meta.fecha_dato };
-  }
-
   function territorialCoverage(layer, commune) {
     const meta = coverageSource().capas[layer.nombre] || { modo: "por_confirmar", fecha_dato: "Sin fecha del dato", detalle: "La ficha no declara cobertura comunal." };
+    const sourceMeta = coverageSource().fuentes?.[layer.nombre] || { estado: "sin_archivo", archivos: [] };
+    const crossLayer = crossSource().capas?.[layer.nombre];
+    const key = `${commune.region}|${commune.comuna}`;
+    const cross = crossLayer?.comunas?.[key];
     const regionMatch = (meta.regiones || []).some(region => normalize(region) === normalize(commune.region));
     const communeMatch = (meta.comunas || []).some(name => normalize(name) === normalize(commune.comuna));
     let result;
-    switch (meta.modo) {
-      case "nacional_declarada":
-        result = { state: "pendiente", label: "Alcance nacional declarado", detail: "El alcance proviene de la ficha o fuente; falta ejecutar el cruce para confirmar presencia y cantidad de elementos en la comuna." };
-        break;
-      case "comunas_versionadas":
-        result = versionCoverage(meta, commune);
-        break;
-      case "comunas_declaradas":
-        result = communeMatch
-          ? { state: "declarada", label: "Comuna declarada en la ficha", detail: meta.detalle }
-          : { state: "pendiente", label: "Cobertura no acreditada", detail: "La ficha solo enumera otras comunas." };
-        break;
-      case "regiones_y_comunas":
-        result = regionMatch || communeMatch
-          ? { state: "declarada", label: regionMatch ? "Región declarada en la ficha" : "Comuna declarada en la ficha", detail: meta.detalle }
-          : { state: "pendiente", label: "Cobertura no acreditada", detail: "La comuna no aparece en el alcance documentado." };
-        break;
-      case "region_exclusiva_por_confirmar":
-        result = regionMatch
-          ? { state: "pendiente", label: "Dentro del ámbito; falta cruce", detail: meta.detalle }
-          : { state: "no_aplica", label: "Fuera del ámbito territorial", detail: `La ficha restringe la capa a ${meta.regiones.join(", ")}.` };
-        break;
-      case "proceso":
-        result = { state: "proceso", label: "Proceso, no capa consumible", detail: meta.detalle };
-        break;
-      default:
-        result = { state: "pendiente", label: "Por confirmar con archivo", detail: meta.detalle || "La ficha no enumera cobertura comunal." };
+    if (meta.modo === "proceso" || sourceMeta.estado === "no_es_capa") {
+      result = { state: "proceso", label: "Proceso, no capa consumible", detail: meta.detalle };
+    } else if (meta.modo === "region_exclusiva_por_confirmar" && !regionMatch) {
+      result = { state: "no_aplica", label: "Fuera del ámbito territorial", detail: `La ficha restringe la capa a ${(meta.regiones || []).join(", ")}.` };
+    } else if (cross?.estado === "con_cobertura") {
+      result = {
+        state: "confirmada",
+        label: `Cobertura confirmada · ${cross.elementos} ${cross.elementos === 1 ? "elemento" : "elementos"}`,
+        detail: `Cruce geométrico ejecutado. Código comunal ${cross.codigo_comuna || "sin dato"}.`,
+      };
+    } else if (cross?.estado === "sin_elementos") {
+      result = { state: "sin_elementos", label: "Sin elementos en la comuna", detail: "El archivo fue procesado y la intersección válida dio cero elementos." };
+    } else if (crossLayer?.estado === "error") {
+      result = { state: "error", label: "Error de cruce", detail: crossLayer.motivo || "La capa no pudo procesarse." };
+    } else if (["sin_archivo", "referencia_incompleta", "formato_no_espacial"].includes(sourceMeta.estado)) {
+      const reason = sourceMeta.estado === "sin_archivo" ? "La ficha no contiene un archivo espacial recuperable."
+        : sourceMeta.estado === "referencia_incompleta" ? (sourceMeta.detalle || "La referencia no reúne todos los componentes necesarios.")
+          : "El adjunto identificado no es una capa espacial consumible.";
+      result = { state: "bloqueada", label: "Cruce bloqueado · falta fuente válida", detail: reason };
+    } else {
+      const files = (sourceMeta.archivos || []).join(" · ");
+      result = {
+        state: "bloqueada",
+        label: "Cruce bloqueado · archivo no materializado",
+        detail: files ? `Notion referencia ${files}, pero el archivo aún no está disponible para ejecutar la intersección.` : "Falta materializar el archivo vigente.",
+      };
     }
-    return { ...result, dataDate: result.dataDate || meta.fecha_dato || "Sin fecha del dato", dateLabel: meta.fecha_etiqueta || "Fecha del dato" };
+    const documentaryScope = meta.modo === "nacional_declarada" ? "Alcance documental nacional; no confirma presencia comunal."
+      : meta.modo === "comunas_declaradas" && communeMatch ? "La ficha nombra la comuna; falta prueba geométrica."
+        : meta.modo === "regiones_y_comunas" && (regionMatch || communeMatch) ? "La ficha incluye el ámbito; falta prueba geométrica."
+          : "";
+    return { ...result, documentaryScope, dataDate: result.dataDate || meta.fecha_dato || "Sin fecha del dato", dateLabel: meta.fecha_etiqueta || "Fecha del dato" };
   }
 
   function coverageRow(layer, result) {
-    const formats = layer.formatos?.length ? layer.formatos.join(" · ") : "Revisar ficha";
     const categories = layer.categorias?.length ? layer.categorias.join(" · ") : "Sin categoría";
     const override = operationalSource().capas?.[layer.nombre] || {};
-    const meta = coverageSource().capas[layer.nombre] || {};
-    const cartography = layer.formatos?.length
-      ? "encontrada"
-      : meta.modo === "nacional_declarada" ? "fuente_nacional"
-        : result.state === "proceso" ? "no_acreditada" : "no_verificada";
+    const sourceMeta = coverageSource().fuentes?.[layer.nombre] || { estado: "sin_archivo", archivos: [] };
+    const crossLayer = crossSource().capas?.[layer.nombre];
+    const cartography = crossLayer?.estado === "procesada" ? "archivo_procesado"
+      : sourceMeta.estado === "no_es_capa" ? "no_acreditada" : sourceMeta.estado;
+    const sourceFiles = crossLayer?.fuentes?.map(item => item.archivo).join(" · ")
+      || (sourceMeta.archivos || []).join(" · ") || sourceMeta.detalle || "La ficha no aporta un archivo espacial.";
     const production = override.estado_produccion || "pendiente";
     const qa = override.qa || "pendiente";
     return `
       <tr>
         <td><span class="capas-table-category">${escape(categories)}</span><strong>${escape(layer.nombre)}</strong><small>${escape(layer.owner || "Sin responsable")}</small></td>
-        <td><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small></td>
-        <td><span class="capas-status-pill ${escape(cartography)}">${escape(cartographyLabels[cartography])}</span><small>${escape(cartography === "fuente_nacional" ? "Alcance nacional declarado; falta vincular el archivo fuente." : formats)}</small></td>
+        <td><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small>${result.documentaryScope ? `<small class="capas-documentary-note">${escape(result.documentaryScope)}</small>` : ""}</td>
+        <td><span class="capas-status-pill ${escape(cartography)}">${escape(cartographyLabels[cartography] || "Sin archivo")}</span><small>${escape(sourceFiles)}</small></td>
         <td><span class="capas-status-pill ${escape(production)}">${escape(productionLabels[production])}</span><small>${escape(override.fecha_estado || "Sin actualización del equipo")}</small></td>
         <td><span class="capas-status-pill ${escape(qa)}">${escape(qaLabels[qa])}</span><small>${escape(override.fecha_qa || `Catálogo: ${layer.verificacion || "sin verificar"}`)}</small></td>
         <td><strong>${escape(result.dataDate)}</strong><small>${escape(result.dateLabel)}</small></td>
@@ -265,9 +264,22 @@
     const types = [...ipt.latest.keys()].sort((a, b) => a.localeCompare(b, "es"));
     $("capasMetricIpt").textContent = ipt.instruments.length;
     $("capasMetricIptTypes").textContent = types.length ? types.join(" · ") : "Sin registros";
-    $("capasMetricCovered").textContent = territorial.filter(item => item.result.state === "declarada").length;
-    $("capasMetricPending").textContent = territorial.filter(item => item.result.state === "pendiente").length;
-    $("capasMetricNotApplicable").textContent = territorial.filter(item => ["no_aplica", "proceso"].includes(item.result.state)).length;
+    $("capasMetricCovered").textContent = territorial.filter(item => item.result.state === "confirmada").length;
+    $("capasMetricPending").textContent = territorial.filter(item => ["bloqueada", "pendiente", "error"].includes(item.result.state)).length;
+    $("capasMetricNotApplicable").textContent = territorial.filter(item => ["sin_elementos", "no_aplica", "proceso"].includes(item.result.state)).length;
+  }
+
+  function renderCrossBanner() {
+    const source = crossSource();
+    const processed = Object.values(source.capas || {}).filter(layer => layer.estado === "procesada").length;
+    const execution = coverageSource().ejecucion || {};
+    if (source.generado_en && source.limite_comunal) {
+      $("capasCrossBannerTitle").textContent = `Matriz nacional ejecutada · ${processed} capas`;
+      $("capasCrossBannerText").textContent = `Cruce con ${source.limite_comunal.comunas || 0} comunas. Fuente comunal: ${source.limite_comunal.archivo || "sin dato"}. Cada archivo procesado conserva su huella SHA-256.`;
+      return;
+    }
+    $("capasCrossBannerTitle").textContent = `Matriz nacional bloqueada · 0 de ${territorialLayers().length} capas procesadas`;
+    $("capasCrossBannerText").textContent = execution.motivo || "Falta materializar los archivos espaciales y ejecutar la intersección con las 346 comunas.";
   }
 
   function render() {
@@ -277,6 +289,7 @@
     const ipt = renderIpt();
     const territorial = renderTerritorial();
     renderMetrics(ipt, territorial);
+    renderCrossBanner();
   }
 
   function bind() {

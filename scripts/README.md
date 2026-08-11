@@ -16,3 +16,25 @@ python scripts/run_sprint1.py
 - `validate_sprint1.py`: verifica cantidad, JSON y equivalencia exacta.
 
 Los scripts son idempotentes: pueden ejecutarse nuevamente sin duplicar eventos.
+
+## Cruce territorial para las 346 comunas
+
+`cruzar_capas_por_comuna.py` construye la matriz real capa × comuna. No usa el alcance declarado en Notion como sustituto de una intersección espacial.
+
+```bash
+pip install -r scripts/requirements_geoespacial.txt
+python scripts/cruzar_capas_por_comuna.py \
+  --comunas /ruta/Comunas_SII-Transsa.gpkg \
+  --fuentes-dir /ruta/capas_vigentes
+```
+
+El proceso:
+
+- exige 346 comunas y campos de código, comuna y región;
+- busca los archivos definidos en `config/capas_territoriales_fuentes.json`;
+- valida que cada archivo tenga CRS y geometrías consumibles;
+- elimina falsos positivos causados solo por contacto de borde;
+- guarda presencia, cantidad de elementos, métricas de intersección y SHA-256;
+- escribe `data/cobertura_capas_resultados.js`, que consume la vista “Cobertura comunal”.
+
+Una capa sin archivo queda `bloqueada`; una capa procesada puede quedar `con_cobertura` o `sin_elementos` para cada comuna. Cero elementos es un resultado, no un pendiente.

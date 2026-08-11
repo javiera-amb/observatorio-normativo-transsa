@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
   <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-modelo-prc-3">
-  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-modelo-prc-3">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-cruce-nacional-1">
 </head>
 <body>
   <header class="topbar">
@@ -608,16 +608,16 @@
         <div>
           <p class="eyebrow">SELECCIONA UNA COMUNA</p>
           <h3 id="capasSelectedTitle">Cobertura de Coquimbo</h3>
-          <p>La cobertura territorial es documental hasta ejecutar el cruce espacial del archivo. No modifica el estado de auditoría del PRC.</p>
+          <p>La cobertura territorial solo se confirma con un cruce geométrico. Una referencia en Notion no equivale a presencia efectiva en la comuna y no modifica el estado de auditoría del PRC.</p>
         </div>
         <label><span>Comuna</span><select id="capasCommuneSelect"></select></label>
       </section>
 
       <section class="capas-kpis" aria-label="Resumen de cobertura de la comuna seleccionada">
         <article><span>IPT aplicables</span><strong id="capasMetricIpt">0</strong><small id="capasMetricIptTypes">Sin registros</small></article>
-        <article class="verified"><span>Cobertura comunal declarada</span><strong id="capasMetricCovered">0</strong><small>La ficha identifica explícitamente la comuna</small></article>
-        <article class="review"><span>Cruce pendiente</span><strong id="capasMetricPending">0</strong><small>Falta revisar geometría por comuna</small></article>
-        <article class="alert"><span>No aplica / proceso</span><strong id="capasMetricNotApplicable">0</strong><small>Fuera de alcance o no es capa</small></article>
+        <article class="verified"><span>Cobertura confirmada</span><strong id="capasMetricCovered">0</strong><small>Intersección ejecutada con elementos</small></article>
+        <article class="review"><span>Cruce bloqueado / pendiente</span><strong id="capasMetricPending">0</strong><small>Falta archivo o ejecutar el proceso</small></article>
+        <article class="alert"><span>Sin elementos / no aplica</span><strong id="capasMetricNotApplicable">0</strong><small>Cruce en cero, fuera de alcance o no es capa</small></article>
       </section>
 
       <section class="capas-coverage-section">
@@ -627,14 +627,14 @@
       </section>
 
       <section class="capas-coverage-section">
-        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 2 · INFORMACIÓN ESPACIAL</p><h3>Capas territoriales para la comuna</h3><p>Se muestran por separado la fecha del dato y la fecha en que se editó su ficha de Notion.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
-        <div class="capas-audit-banner">
-          <h3>Qué significa “cruce pendiente”</h3>
-          <p>La fuente o el archivo existe, pero todavía debemos abrirlo, validar geometría y proyección, intersectarlo con el límite comunal oficial y guardar el resultado —presencia, cantidad de elementos, fecha, versión y huella del archivo— en la matriz de cobertura.</p>
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 2 · INFORMACIÓN ESPACIAL</p><h3>Capas territoriales para la comuna</h3><p>El estado principal proviene del cruce geométrico. La fecha del dato y la edición de Notion se mantienen como metadatos separados.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
+        <div class="capas-audit-banner" id="capasCrossBanner">
+          <h3 id="capasCrossBannerTitle">Matriz nacional aún no ejecutada</h3>
+          <p id="capasCrossBannerText">El catálogo ya distingue referencias de archivos, archivos incompletos y fichas sin adjunto. Para confirmar cobertura debemos materializar los archivos vigentes, validar CRS y geometría, e intersectarlos con las 346 comunas.</p>
         </div>
         <div class="capas-coverage-filters">
           <label><span>Buscar capa</span><input id="capasSearch" type="search" placeholder="Metro, predios, riesgos, establecimientos…"></label>
-          <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="declarada">Cobertura declarada</option><option value="pendiente">Por confirmar</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option></select></label>
+          <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="confirmada">Cobertura confirmada</option><option value="sin_elementos">Sin elementos</option><option value="bloqueada">Cruce bloqueado</option><option value="pendiente">Cruce pendiente</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option><option value="error">Error de cruce</option></select></label>
         </div>
         <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Archivo espacial</th><th>Estado del equipo</th><th>QA</th><th>Fecha del dato</th><th>Ficha / evidencia</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
         <div id="capasCoverageEmpty" class="empty-state" hidden><div>GIS</div><h3>Sin capas para este filtro</h3><p>Prueba con otro estado o término de búsqueda.</p></div>
@@ -645,8 +645,9 @@
         <ol>
           <li>Los IPT se identifican con fuentes oficiales; el estado cartográfico del PRC proviene de la base Transsa en construcción.</li>
           <li>Notion sirve como inventario inicial de capas territoriales, no como prueba suficiente de vigencia, cobertura o calidad.</li>
-          <li>“Declarada” significa que la ficha nombra la comuna o afirma alcance nacional; todavía puede faltar el cruce geométrico.</li>
-          <li>“Por confirmar” significa que existe un archivo, pero la ficha no acredita si contiene la comuna.</li>
+          <li>“Cobertura confirmada” significa que el archivo vigente intersecta la comuna y se registró la cantidad de elementos.</li>
+          <li>“Sin elementos” es un resultado válido: el archivo fue procesado y el cruce dio cero para esa comuna.</li>
+          <li>“Cruce bloqueado” significa que Notion puede nombrar el archivo, pero la geometría todavía no está disponible para el proceso.</li>
           <li>El equipo actualiza uno de cuatro estados: pendiente, en desarrollo, listo o en la plataforma.</li>
           <li>El QA es independiente: pendiente, con observaciones o aprobado.</li>
           <li>La auditoría normativa detallada se consulta en “Seguimiento PRC” e “IPT y vigencia”.</li>
@@ -807,8 +808,9 @@
   <script src="data/estado_operativo_datos.js?v=20260811-modelo-prc-3"></script>
   <script src="seguimiento-consolidado.js?v=20260811-modelo-prc-4"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
-  <script src="data/cobertura_capas_comunal.js?v=20260811-cobertura-1"></script>
-  <script src="capas-territoriales.js?v=20260811-modelo-prc-4"></script>
+  <script src="data/cobertura_capas_comunal.js?v=20260811-cruce-nacional-1"></script>
+  <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-1"></script>
+  <script src="capas-territoriales.js?v=20260811-cruce-nacional-1"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
