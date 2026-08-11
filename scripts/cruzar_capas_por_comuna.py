@@ -20,6 +20,25 @@ from typing import Any, Iterable
 
 EXTENSIONES = {".gpkg", ".shp", ".geojson", ".json", ".kml", ".kmz", ".zip", ".parquet"}
 
+# Nombres usados por el consolidado web. La geometría conserva el nombre de
+# origen en el archivo, pero la clave de salida debe coincidir con la matriz de
+# las 346 comunas.
+NOMBRES_CANONICOS = {
+    "paiguano": "Paihuano",
+    "tiltil": "Til Til",
+    "alto biobio": "Alto Bio Bio",
+    "cholchol": "Chol Chol",
+    "coihaique": "Coyhaique",
+}
+
+COMUNAS_SIN_GEOMETRIA = [
+    {
+        "region": "Magallanes y de la Antártica Chilena",
+        "comuna": "Antártica",
+        "codigo_comuna": "12202",
+    }
+]
+
 
 def normalizar(valor: str) -> str:
     texto = unicodedata.normalize("NFD", str(valor or ""))
@@ -100,6 +119,24 @@ def preparar_geometrias(gdf, crs_metrico: str):
     return limpio.to_crs(crs_metrico)
 
 
+def preparar_comunas(comunas, campo_codigo: str, campo_comuna: str, campo_region: str, crs_metrico: str):
+    comunas = comunas.copy()
+    comunas[campo_comuna] = comunas[campo_comuna].map(
+        lambda nombre: NOMBRES_CANONICOS.get(normalizar(nombre), nombre)
+    )
+    comunas = comunas[comunas.geometry.notna() & ~comunas.geometry.is_empty]
+    if hasattr(comunas.geometry, "make_valid"):
+        comunas.geometry = comunas.geometry.make_valid()
+    # El GeoPackage Transsa contiene Santiago, Santiago Sur y Santiago Oeste.
+    # Para el monitoreo comunal se disuelven como una sola comuna de Santiago.
+    comunas = comunas.dissolve(
+        by=[campo_region, campo_comuna],
+        as_index=False,
+        aggfunc={campo_codigo: "min"},
+    )
+    return comunas.to_crs(crs_metrico)
+
+
 def interseccion_significativa(geometria, comuna, tolerancia: float) -> tuple[bool, float, float]:
     inter = geometria.intersection(comuna)
     if inter.is_empty:
@@ -118,7 +155,8 @@ def interseccion_significativa(geometria, comuna, tolerancia: float) -> tuple[bo
 
 def cruzar_fuentes(
     fuentes: list[Path], comunas_metricas, campo_codigo: str, campo_comuna: str,
-    campo_region: str, crs_metrico: str, tolerancia: float, gpd, pd
+    campo_region: str, crs_metrico: str, tolerancia: float, comunas_sin_geometria,
+    gpd, pd
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     fragmentos = []
     evidencia = []
@@ -167,6 +205,15 @@ def cruzar_fuentes(
             "area_interseccion_m2": round(area_total, 2),
             "longitud_interseccion_m": round(longitud_total, 2),
         }
+    for faltante in comunas_sin_geometria:
+        clave = f"{faltante['region']}|{faltante['comuna']}"
+        resultados[clave] = {
+            "codigo_comuna": faltante["codigo_comuna"],
+            "estado": "sin_limite_comunal",
+            "elementos": None,
+            "area_interseccion_m2": None,
+            "longitud_interseccion_m": None,
+        }
     return resultados, evidencia
 
 
@@ -176,7 +223,7 @@ def main() -> int:
     parser.add_argument("--fuentes-dir", required=True, type=Path, help="Carpeta con los archivos espaciales vigentes.")
     parser.add_argument("--manifest", type=Path, default=Path("config/capas_territoriales_fuentes.json"))
     parser.add_argument("--salida", type=Path, default=Path("data/cobertura_capas_resultados.js"))
-    parser.add_argument("--campo-codigo", default="cve_comuna")
+    parser.add_argument("--campo-codigo", default="rialcomsii")
     parser.add_argument("--campo-comuna", default="COMUNA")
     parser.add_argument("--campo-region", default="REGION")
     parser.add_argument("--crs-metrico", default="EPSG:6933", help="CRS para eliminar contactos de borde y calcular métricas.")
@@ -191,10 +238,15 @@ def main() -> int:
     faltantes = [campo for campo in requeridos if campo not in comunas.columns]
     if faltantes:
         raise SystemExit(f"Faltan campos en el límite comunal: {', '.join(faltantes)}")
-    comunas = comunas.drop_duplicates(subset=[args.campo_region, args.campo_comuna]).copy()
-    if len(comunas) != 346 and not args.permitir_conteo_distinto:
-        raise SystemExit(f"Se esperaban 346 comunas y se encontraron {len(comunas)}. Revise la fuente o use --permitir-conteo-distinto.")
-    comunas_metricas = preparar_geometrias(comunas, args.crs_metrico)
+    comunas_metricas = preparar_comunas(
+        comunas, args.campo_codigo, args.campo_comuna, args.campo_region, args.crs_metrico
+    )
+    total_objetivo = len(comunas_metricas) + len(COMUNAS_SIN_GEOMETRIA)
+    if total_objetivo != 346 and not args.permitir_conteo_distinto:
+        raise SystemExit(
+            f"Se esperaban 346 comunas objetivo y se obtuvieron {total_objetivo} "
+            f"({len(comunas_metricas)} con geometría y {len(COMUNAS_SIN_GEOMETRIA)} sin geometría)."
+        )
     disponibles = indice_archivos(args.fuentes_dir)
     generado = datetime.now(timezone.utc).isoformat(timespec="seconds")
     salida: dict[str, Any] = {
@@ -204,7 +256,10 @@ def main() -> int:
         "limite_comunal": {
             "archivo": args.comunas.name,
             "sha256": sha256(args.comunas),
-            "comunas": len(comunas),
+            "registros_origen": len(comunas),
+            "geometrias_comunales": len(comunas_metricas),
+            "comunas_objetivo": total_objetivo,
+            "comunas_sin_geometria": COMUNAS_SIN_GEOMETRIA,
             "crs_origen": str(comunas.crs),
             "crs_metrico": args.crs_metrico,
         },
@@ -227,7 +282,8 @@ def main() -> int:
         try:
             resultados, evidencia = cruzar_fuentes(
                 fuentes, comunas_metricas, args.campo_codigo, args.campo_comuna,
-                args.campo_region, args.crs_metrico, args.tolerancia, gpd, pd
+                args.campo_region, args.crs_metrico, args.tolerancia,
+                COMUNAS_SIN_GEOMETRIA, gpd, pd
             )
             salida["capas"][nombre] = {
                 "estado": "procesada",
@@ -235,6 +291,7 @@ def main() -> int:
                 "resumen": {
                     "comunas_con_cobertura": sum(1 for v in resultados.values() if v["estado"] == "con_cobertura"),
                     "comunas_sin_elementos": sum(1 for v in resultados.values() if v["estado"] == "sin_elementos"),
+                    "comunas_sin_limite": sum(1 for v in resultados.values() if v["estado"] == "sin_limite_comunal"),
                 },
                 "comunas": resultados,
             }

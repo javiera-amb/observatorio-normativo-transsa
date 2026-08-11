@@ -6,7 +6,19 @@ window.COBERTURA_CAPAS_COMUNAL = {
     fecha: "2026-08-11",
     comunas_objetivo: 346,
     capas_procesadas: 0,
-    motivo: "Los adjuntos espaciales están referenciados desde Notion, pero los archivos vigentes aún no están materializados en una carpeta accesible para el proceso automático."
+    motivo: "El límite comunal ya fue recibido y auditado. Faltan materializar los archivos vigentes de las capas territoriales para ejecutar sus intersecciones."
+  },
+  limite_base: {
+    archivo: "Comunas SII-Transsa 2.gpkg",
+    capa: "comunas_siitranssa",
+    sha256: "dd27030c04285cdbf078c8d1434b79b8a8a55499234a23b6744ecc87c6602089",
+    registros_origen: 347,
+    geometrias_comunales: 345,
+    comunas_objetivo: 346,
+    crs: "SIRGAS-Chile 2002",
+    ajuste_santiago: "Santiago, Santiago Sur y Santiago Oeste se disuelven como una comuna.",
+    sin_geometria: ["Antártica"],
+    normalizaciones: ["Paiguano → Paihuano", "Tiltil → Til Til", "Alto Biobío → Alto Bio Bio", "Cholchol → Chol Chol", "Coihaique → Coyhaique"]
   },
   fuentes: {
     "Áreas Protegidas": { estado: "sin_archivo", archivos: [] },

@@ -197,6 +197,8 @@
       };
     } else if (cross?.estado === "sin_elementos") {
       result = { state: "sin_elementos", label: "Sin elementos en la comuna", detail: "El archivo fue procesado y la intersección válida dio cero elementos." };
+    } else if (cross?.estado === "sin_limite_comunal") {
+      result = { state: "bloqueada", label: "Cruce bloqueado · falta límite comunal", detail: "La matriz incluye la comuna, pero el GeoPackage base no contiene su geometría." };
     } else if (crossLayer?.estado === "error") {
       result = { state: "error", label: "Error de cruce", detail: crossLayer.motivo || "La capa no pudo procesarse." };
     } else if (["sin_archivo", "referencia_incompleta", "formato_no_espacial"].includes(sourceMeta.estado)) {
@@ -275,7 +277,7 @@
     const execution = coverageSource().ejecucion || {};
     if (source.generado_en && source.limite_comunal) {
       $("capasCrossBannerTitle").textContent = `Matriz nacional ejecutada · ${processed} capas`;
-      $("capasCrossBannerText").textContent = `Cruce con ${source.limite_comunal.comunas || 0} comunas. Fuente comunal: ${source.limite_comunal.archivo || "sin dato"}. Cada archivo procesado conserva su huella SHA-256.`;
+      $("capasCrossBannerText").textContent = `Cruce para ${source.limite_comunal.comunas_objetivo || 0} comunas (${source.limite_comunal.geometrias_comunales || 0} con geometría). Fuente comunal: ${source.limite_comunal.archivo || "sin dato"}. Cada archivo procesado conserva su huella SHA-256.`;
       return;
     }
     $("capasCrossBannerTitle").textContent = `Matriz nacional bloqueada · 0 de ${territorialLayers().length} capas procesadas`;

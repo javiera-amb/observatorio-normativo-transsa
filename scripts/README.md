@@ -30,7 +30,10 @@ python scripts/cruzar_capas_por_comuna.py \
 
 El proceso:
 
-- exige 346 comunas y campos de código, comuna y región;
+- exige una matriz objetivo de 346 comunas y campos de código, comuna y región;
+- disuelve Santiago, Santiago Sur y Santiago Oeste en una sola comuna de Santiago;
+- normaliza Paiguano/Paihuano, Tiltil/Til Til, Alto Biobío/Alto Bio Bio, Cholchol/Chol Chol y Coihaique/Coyhaique;
+- conserva Antártica como bloqueo explícito cuando el límite base no contiene su geometría;
 - busca los archivos definidos en `config/capas_territoriales_fuentes.json`;
 - valida que cada archivo tenga CRS y geometrías consumibles;
 - elimina falsos positivos causados solo por contacto de borde;

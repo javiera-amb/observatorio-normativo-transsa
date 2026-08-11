@@ -1,4 +1,5 @@
 .seguimiento-header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.seguimiento-view-switch{display:flex;padding:3px;border:1px solid #d9dce5;border-radius:11px;background:#f2f3f7}.seguimiento-view-switch button{min-height:32px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:#626b79;font:inherit;font-size:.66rem;font-weight:750;cursor:pointer}.seguimiento-view-switch button.active{background:#fff;color:var(--transsa-navy);box-shadow:0 1px 4px rgba(32,36,80,.12)}
 .seguimiento-readonly-badge{padding:8px 11px;border:1px solid #cfd4dc;border-radius:999px;background:#f4f5f8;color:#5a6270;font-size:.72rem;font-weight:700}
 .seguimiento-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 18px}
 .seguimiento-kpis article{padding:17px;border:1px solid var(--line);border-top:4px solid var(--transsa-blue);border-radius:14px;background:#fff}
@@ -64,13 +65,16 @@
 .seguimiento-dot.unavailable{background:#b94652}
 .seguimiento-dot.pending{background:#9aa2af}.seguimiento-dot.development{background:#d7951f}.seguimiento-dot.ready{background:#2b7a5a}.seguimiento-dot.platform{background:var(--transsa-blue)}
 .seguimiento-definitions{margin-top:14px}
+.seguimiento-internal-intro{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:16px;padding:20px;border:1px solid #d8daf2;border-left:5px solid var(--transsa-blue);border-radius:16px;background:linear-gradient(135deg,#f7f7ff,#fff)}.seguimiento-internal-intro>div>span{color:var(--transsa-blue);font-size:.61rem;font-weight:800;letter-spacing:.11em}.seguimiento-internal-intro h3{margin:5px 0;color:var(--transsa-navy);font-size:1.05rem}.seguimiento-internal-intro p{max-width:760px;margin:0;color:#616a78;font-size:.7rem;line-height:1.5}.internal-kpis article.unassigned{border-top-color:#b94652}.internal-filters{grid-template-columns:1.35fr repeat(4,minmax(0,1fr))}.internal-table{min-width:1640px}.internal-table td:first-child{width:155px}.internal-table td:nth-child(2){width:135px}.internal-table td:nth-child(3){width:150px}.internal-table td:nth-child(4){width:150px}.internal-table td:nth-child(5){width:145px}.internal-table td:nth-child(6){width:190px}.internal-table td:nth-child(7){width:260px}.internal-table td:nth-child(8){width:120px}.seguimiento-owner,.seguimiento-stage,.seguimiento-priority{display:inline-flex;padding:6px 8px;border-radius:999px;font-size:.59rem;font-weight:750;line-height:1.2}.seguimiento-owner{background:#e8e9ff;color:#3838a5}.seguimiento-owner.unassigned{background:#fde8ea;color:#922f38}.seguimiento-stage{background:#edf0f4;color:#505b69}.seguimiento-stage.qa{background:#e8e9ff;color:#3838a5}.seguimiento-stage.actualizacion_sig{background:#fff3cf;color:#735110}.seguimiento-stage.publicacion{background:#e4f5ec;color:#176342}.seguimiento-priority{margin-top:6px!important}.seguimiento-priority.critica{background:#fde8ea;color:#922f38}.seguimiento-priority.alta{background:#fff0d5;color:#895100}.seguimiento-priority.media{background:#e7f0fa;color:#285d80}.seguimiento-priority.baja{background:#edf0f4;color:#596473}.seguimiento-progress{width:100%;height:7px;margin-top:9px;overflow:hidden;border-radius:999px;background:#e7e9ef}.seguimiento-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--transsa-blue),#7367ff)}.seguimiento-blocking{color:#a33a43!important;font-weight:700}.seguimiento-next-action{margin:0;color:#343d4b;font-size:.65rem;line-height:1.45}.seguimiento-internal-legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.seguimiento-internal-legend>div{padding:15px;border:1px solid var(--line);border-radius:13px;background:#fff}.seguimiento-internal-legend strong{color:var(--transsa-navy);font-size:.7rem}.seguimiento-internal-legend p{margin:5px 0 0;color:var(--muted);font-size:.63rem;line-height:1.45}
 @media(max-width:1050px){
   .seguimiento-kpis{grid-template-columns:1fr 1fr}
   .seguimiento-filters{grid-template-columns:1fr 1fr}
+  .internal-filters{grid-template-columns:1fr 1fr}
 }
 @media(max-width:680px){
   .seguimiento-header-actions{justify-content:flex-start}
   .seguimiento-kpis,.seguimiento-filters,.seguimiento-interpretation{grid-template-columns:1fr}
+  .seguimiento-internal-intro{align-items:flex-start;flex-direction:column}.seguimiento-internal-legend{grid-template-columns:1fr}
   .seguimiento-filter-heading{align-items:flex-start;flex-direction:column}
   .seguimiento-table-scroll{max-height:none}
 }

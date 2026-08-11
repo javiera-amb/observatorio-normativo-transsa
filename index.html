@@ -22,7 +22,7 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-modelo-prc-3">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-vista-interna-1">
   <link rel="stylesheet" href="capas-territoriales.css?v=20260811-cruce-nacional-1">
 </head>
 <body>
@@ -485,17 +485,21 @@
     <section id="module-seguimiento" class="module-panel">
       <div class="module-header seguimiento-header">
         <div>
-          <p class="eyebrow">ESTADO NACIONAL · VISTA PARA PROPITEQ</p>
+          <p class="eyebrow">ESTADO NACIONAL · CONTROL DE PRC</p>
           <h2>Seguimiento consolidado de normativa</h2>
-          <p>Una fila por comuna para distinguir el estado informado por el equipo, el QA normativo/SIG y la publicación efectiva en Propiteq.</p>
+          <p>Consulta el estado resumido para Propiteq o cambia a la vista interna para gestionar responsables, etapas técnicas, controles y próximas acciones.</p>
         </div>
         <div class="seguimiento-header-actions">
-          <span class="seguimiento-readonly-badge">Estado operativo controlado</span>
-          <a class="secondary-button" href="https://github.com/javiera-amb/observatorio-normativo-transsa/edit/main/data/estado_operativo_datos.js" target="_blank" rel="noopener noreferrer">Actualizar estados ↗</a>
+          <div class="seguimiento-view-switch" role="group" aria-label="Tipo de vista de seguimiento">
+            <button class="active" type="button" data-seguimiento-view="propiteq">Vista Propiteq</button>
+            <button type="button" data-seguimiento-view="equipo">Vista interna</button>
+          </div>
+          <a class="secondary-button" href="https://github.com/javiera-amb/observatorio-normativo-transsa/edit/main/data/estado_operativo_datos.js" target="_blank" rel="noopener noreferrer" title="Acceso de administración en GitHub">Administrar datos ↗</a>
           <button id="seguimientoDownloadCsv" class="secondary-button" type="button">Descargar CSV</button>
         </div>
       </div>
 
+      <div id="seguimientoExternalView">
       <section class="seguimiento-kpis production-kpis" aria-label="Estado de producción informado por el equipo">
         <article class="pending"><span>Pendiente</span><strong id="seguimientoMetricPending">0</strong><small>No iniciado o no informado</small></article>
         <article class="development"><span>En desarrollo</span><strong id="seguimientoMetricDevelopment">0</strong><small>El equipo está construyendo la capa</small></article>
@@ -588,6 +592,48 @@
         <h3>Cómo leer “cambios / controles” y “último QA”</h3>
         <p>Un “acto posterior” es una modificación, enmienda, rectificación o acto normativo asociado al instrumento base cuya incorporación al SIG debe comprobarse. Los “controles” son verificaciones concretas de normativa, geometría, atributos, topología, fuentes y publicación. “Último QA” es la fecha de la última auditoría técnica registrada; no es la fecha de edición del archivo ni de Notion.</p>
       </section>
+      </div>
+
+      <div id="seguimientoInternalView" hidden>
+        <section class="seguimiento-internal-intro">
+          <div><span>USO INTERNO</span><h3>Panel de trabajo del equipo</h3><p>Responsables, etapa técnica, avance informado, controles abiertos y próxima acción. El estado de producción lo actualiza el equipo; el QA se mantiene independiente.</p></div>
+          <span class="seguimiento-readonly-badge">Sin edición en línea todavía</span>
+        </section>
+
+        <section class="seguimiento-kpis internal-kpis" aria-label="Resumen interno de trabajo PRC">
+          <article class="unassigned"><span>Sin responsable</span><strong id="seguimientoInternalUnassigned">0</strong><small>Requieren asignación del equipo</small></article>
+          <article class="development"><span>Trabajo activo</span><strong id="seguimientoInternalActive">0</strong><small>En desarrollo, QA o corrección</small></article>
+          <article class="review"><span>Con bloqueos</span><strong id="seguimientoInternalBlocked">0</strong><small>Falta fuente, comparación o control</small></article>
+          <article class="ready"><span>QA aprobado</span><strong id="seguimientoInternalApproved">0</strong><small>Listos o publicados</small></article>
+        </section>
+
+        <section class="seguimiento-filter-panel internal-filter-panel">
+          <div class="seguimiento-filter-heading"><div><p class="eyebrow">GESTIÓN OPERATIVA</p><h3>Cola nacional de trabajo</h3></div><span id="seguimientoInternalCount" class="result-count"></span></div>
+          <div class="seguimiento-filters internal-filters">
+            <label><span>Buscar</span><input id="seguimientoInternalSearch" type="search" placeholder="Comuna, responsable, etapa o tarea…"></label>
+            <label><span>Región</span><select id="seguimientoInternalRegion"><option value="">Todas</option></select></label>
+            <label><span>Responsable</span><select id="seguimientoInternalOwner"><option value="">Todos</option><option value="__sin_asignar__">Sin asignar</option></select></label>
+            <label><span>Etapa técnica</span><select id="seguimientoInternalStage"><option value="">Todas</option><option value="levantamiento">Levantamiento de fuentes</option><option value="comparacion">Comparación normativa</option><option value="actualizacion_sig">Actualización SIG</option><option value="qa">QA</option><option value="publicacion">Publicación</option></select></label>
+            <label><span>Prioridad</span><select id="seguimientoInternalPriority"><option value="">Todas</option><option value="critica">Crítica</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></label>
+          </div>
+        </section>
+
+        <section class="seguimiento-table-section internal-table-section">
+          <div class="seguimiento-table-scroll">
+            <table class="seguimiento-table internal-table">
+              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
+              <tbody id="seguimientoInternalBody"></tbody>
+            </table>
+          </div>
+          <div id="seguimientoInternalEmpty" class="empty-state" hidden><div>PRC</div><h3>No hay trabajo para estos filtros</h3><p>Prueba con otra etapa, prioridad o responsable.</p></div>
+        </section>
+
+        <section class="seguimiento-internal-legend">
+          <div><strong>Estado de producción</strong><p>Lo informa el equipo: pendiente, en desarrollo, listo o en la plataforma.</p></div>
+          <div><strong>Etapa técnica</strong><p>Indica dónde está el trabajo: fuentes, comparación normativa, actualización SIG, QA o publicación.</p></div>
+          <div><strong>QA</strong><p>Lo registra la auditoría después de revisar normativa, geometría, atributos, topología y publicación.</p></div>
+        </section>
+      </div>
     </section>
 
     <section id="module-capas" class="module-panel">
@@ -805,12 +851,12 @@
   <script src="data/historicos.js"></script>
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
-  <script src="data/estado_operativo_datos.js?v=20260811-modelo-prc-3"></script>
-  <script src="seguimiento-consolidado.js?v=20260811-modelo-prc-4"></script>
+  <script src="data/estado_operativo_datos.js?v=20260811-vista-interna-1"></script>
+  <script src="seguimiento-consolidado.js?v=20260811-vista-interna-1"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
-  <script src="data/cobertura_capas_comunal.js?v=20260811-cruce-nacional-1"></script>
-  <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-1"></script>
-  <script src="capas-territoriales.js?v=20260811-cruce-nacional-1"></script>
+  <script src="data/cobertura_capas_comunal.js?v=20260811-cruce-nacional-2"></script>
+  <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
+  <script src="capas-territoriales.js?v=20260811-cruce-nacional-2"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

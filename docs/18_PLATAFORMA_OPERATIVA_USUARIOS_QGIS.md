@@ -155,6 +155,8 @@ El estado final solo puede activarse cuando:
 - Porcentaje calculado sobre controles, no editado manualmente.
 - Vista consolidada de solo lectura para Propiteq, separada de la gestión interna.
 
+El 11 de agosto de 2026 se incorporó una primera visualización de esta etapa dentro de “Seguimiento PRC”. El conmutador separa “Vista Propiteq” de “Vista interna”. La vista interna ya presenta responsable, etapa técnica, prioridad, porcentaje, QA, bloqueo, próxima acción y última actividad; mientras no exista autenticación y base operativa, los responsables no informados se muestran explícitamente como “Sin asignar” y no se habilita guardado en línea.
+
 ### Etapa 3 — autenticación, D1 y bitácora
 
 - Proteger la versión operativa con Cloudflare Access.
