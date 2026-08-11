@@ -82,6 +82,12 @@ function switchModule(moduleName) {
       vigenciaMap?.invalidateSize({ pan: false });
     }, 80);
   }
+  if (moduleName === "seguimiento" && typeof window.renderSeguimientoNormativo === "function") {
+    setTimeout(window.renderSeguimientoNormativo, 40);
+  }
+  if (moduleName === "capas" && typeof window.renderCapasTerritoriales === "function") {
+    setTimeout(window.renderCapasTerritoriales, 40);
+  }
 }
 
 function filteredReports() {
@@ -1484,10 +1490,15 @@ function init() {
         ? "mapa"
         : location.hash === "#vigencia"
           ? "vigencia"
-          : "diario";
+          : location.hash === "#seguimiento"
+            ? "seguimiento"
+            : "diario";
   switchModule(requestedModule);
   if (requestedModule === "mapa") renderTerritorialMap();
   if (requestedModule === "vigencia") renderVigencia();
+  if (requestedModule === "seguimiento" && typeof window.renderSeguimientoNormativo === "function") {
+    window.renderSeguimientoNormativo();
+  }
 }
 
 init();

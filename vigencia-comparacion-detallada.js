@@ -50,9 +50,49 @@
       .change-sig-pill.no_incorporado{background:#fde8ea;color:#922f38}
       .comparison-validation-details{margin-top:14px;padding-top:2px}
       .comparison-validation-details p{margin:8px 0 0;padding:11px 12px;border-left:3px solid #d7951f;border-radius:8px;background:#fff7e8;color:#6a5125;font-size:.71rem;line-height:1.5}
-      .normative-framework-section,.sig-work-section,.validation-flow-section{margin-top:18px;padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff}
-      .normative-framework-section h4,.sig-work-section h4,.validation-flow-section h4{margin:0;color:var(--transsa-navy)}
+      .audit-blockers-section,.normative-framework-section,.sig-work-section,.validation-flow-section{margin-top:18px;padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff}
+      .audit-blockers-section h4,.normative-framework-section h4,.sig-work-section h4,.validation-flow-section h4{margin:0;color:var(--transsa-navy)}
       .section-helper{margin:5px 0 14px;color:var(--muted);font-size:.76rem;line-height:1.5}
+      .audit-blockers-section{border-color:#e8c0c4;background:#fffdfd}
+      .audit-alert-heading{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:15px;border-left:5px solid #b94652;border-radius:0 12px 12px 0;background:#fff0f1}
+      .audit-alert-heading h4{color:#7e1f2a;font-size:1rem}
+      .audit-alert-heading p{margin:5px 0 0;color:#70343b;font-size:.76rem;line-height:1.5}
+      .audit-alert-badge{padding:7px 10px;border-radius:999px;background:#b94652;color:#fff;font-size:.65rem;font-weight:800;white-space:nowrap}
+      .audit-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}
+      .audit-status-card{padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+      .audit-status-card span,.audit-status-card strong{display:block}
+      .audit-status-card span{font-size:.58rem;color:var(--muted);text-transform:uppercase}
+      .audit-status-card strong{margin-top:4px;color:var(--transsa-navy);font-size:.73rem}
+      .audit-status-card.completo{border-left:4px solid #2b7a5a}
+      .audit-status-card.en_progreso{border-left:4px solid #d7951f}
+      .audit-status-card.bloqueado{border-left:4px solid #b94652}
+      .audit-method{margin:0 0 14px;border:1px solid var(--line);border-radius:11px;background:#fff}
+      .audit-method summary{padding:11px 13px;cursor:pointer;color:var(--transsa-blue);font-size:.7rem;font-weight:800;list-style:none}
+      .audit-method summary::-webkit-details-marker{display:none}
+      .audit-method ol{margin:0;padding:0 28px 13px 34px;color:#424a59;font-size:.7rem;line-height:1.5}
+      .audit-method li+li{margin-top:6px}
+      .audit-control-list{display:grid;gap:10px}
+      .audit-control-card{padding:14px;border:1px solid var(--line);border-left:5px solid #d7951f;border-radius:12px;background:#fff}
+      .audit-control-card.critica{border-left-color:#b94652}
+      .audit-control-card.alta{border-left-color:#d7951f}
+      .audit-control-card.media{border-left-color:#2c8aa8}
+      .audit-control-card.informativa{border-left-color:#2b7a5a;background:#f5fbf8}
+      .audit-control-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+      .audit-control-id{display:inline-flex;margin-right:7px;padding:4px 7px;border-radius:7px;background:var(--transsa-navy);color:#fff;font-size:.6rem;font-weight:800}
+      .audit-control-priority{color:var(--muted);font-size:.62rem;font-weight:700;text-transform:uppercase}
+      .audit-control-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+      .audit-control-state{padding:5px 8px;border-radius:999px;background:#fff3cf;color:#735110;font-size:.6rem;font-weight:800;white-space:nowrap}
+      .audit-control-state.verificado{background:#e4f5ec;color:#176342}
+      .audit-control-assignee{padding:5px 8px;border-radius:999px;background:#edf0f4;color:#56616f;font-size:.6rem;font-weight:700;white-space:nowrap}
+      .audit-control-card h5{margin:9px 0 6px;color:var(--transsa-navy);font-size:.86rem}
+      .audit-control-finding{margin:0;color:#303747;font-size:.73rem;line-height:1.5}
+      .audit-control-detail{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+      .audit-control-detail div{padding:10px;border-radius:9px;background:var(--surface-soft);border:1px solid var(--line)}
+      .audit-control-detail span{display:block;margin-bottom:4px;color:var(--muted);font-size:.57rem;font-weight:700;text-transform:uppercase}
+      .audit-control-detail p{margin:0;color:#424a59;font-size:.68rem;line-height:1.45}
+      .audit-evidence-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+      .audit-evidence-links a{padding:6px 8px;border:1px solid #cfd3ff;border-radius:8px;background:#f5f5ff;color:var(--transsa-blue);font-size:.63rem;font-weight:700;text-decoration:none}
+      .audit-evidence-links a:hover{text-decoration:underline}
       .normative-framework-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
       .normative-role-card{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
       .normative-role-card.current{border-left:4px solid #2b7a5a;background:#edf7f2}
@@ -67,17 +107,18 @@
       .sig-diagnosis p{margin:5px 0 0;color:#6a5125;font-size:.72rem;line-height:1.5}
       .sig-action-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       .sig-action-card{padding:15px;border:1px solid var(--line);border-left:4px solid var(--transsa-blue);border-radius:13px;background:#fff}
-      .sig-action-card.definida,.sig-action-card.definida_parcial{border-left-color:#2b7a5a}
-      .sig-action-card.bloqueada_por_planos{border-left-color:#c75b64}
-      .sig-action-card.pendiente_revision{border-left-color:#d7951f}
+      .sig-action-card.definida,.sig-action-card.definida_parcial,.sig-action-card.verificada{border-left-color:#2b7a5a}
+      .sig-action-card.bloqueada_por_planos,.sig-action-card.bloqueada_por_diferencia{border-left-color:#c75b64}
+      .sig-action-card.pendiente_revision,.sig-action-card.en_revision{border-left-color:#d7951f}
       .sig-action-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
       .sig-action-identity{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
       .sig-action-code{display:inline-flex;margin-right:7px;padding:4px 7px;border-radius:7px;background:var(--transsa-navy);color:#fff;font-size:.62rem;font-weight:700}
       .sig-action-type{color:var(--transsa-blue);font-size:.66rem;font-weight:700}
       .sig-action-status{padding:5px 8px;border-radius:999px;font-size:.62rem;font-weight:700;white-space:nowrap}
       .sig-action-status.definida,.sig-action-status.definida_parcial{color:#176342;background:#e4f5ec}
-      .sig-action-status.bloqueada_por_planos{color:#922f38;background:#fde8ea}
-      .sig-action-status.pendiente_revision{color:#735110;background:#fff3cf}
+      .sig-action-status.verificada{color:#176342;background:#e4f5ec}
+      .sig-action-status.bloqueada_por_planos,.sig-action-status.bloqueada_por_diferencia{color:#922f38;background:#fde8ea}
+      .sig-action-status.pendiente_revision,.sig-action-status.en_revision{color:#735110;background:#fff3cf}
       .sig-action-card h5{margin:10px 0 4px;color:var(--transsa-navy);font-size:.86rem}
       .sig-action-instruction{margin:0;color:#424a59;font-size:.74rem;line-height:1.52}
       .sig-action-details{margin-top:11px;border-top:1px solid var(--line)}
@@ -91,7 +132,7 @@
       .sig-action-meta span{color:var(--muted);font-size:.58rem;text-transform:uppercase}
       .sig-action-meta strong{margin-top:3px;color:#404858;font-size:.68rem;line-height:1.4}
       .sig-action-result{margin:9px 0 0;padding:9px;border-radius:9px;background:#f5f5ff;color:#303747;font-size:.7rem;line-height:1.45}
-      .validation-flow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+      .validation-flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:7px}
       .validation-step{position:relative;padding:11px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);text-align:center}
       .validation-step::before{content:"";display:block;width:9px;height:9px;margin:0 auto 7px;border-radius:50%;background:#b9bbc5}
       .validation-step.completo{background:#edf7f2;color:#176342}
@@ -106,6 +147,10 @@
         .detailed-comparison-heading{display:block}
         .detailed-comparison-status{display:inline-flex;margin-top:8px}
         .before-after-grid{grid-template-columns:1fr}
+        .audit-alert-heading{display:block}
+        .audit-alert-badge{display:inline-flex;margin-top:9px}
+        .audit-status-grid{grid-template-columns:1fr 1fr}
+        .audit-control-detail{grid-template-columns:1fr}
         .sig-work-summary{align-items:flex-start;flex-direction:column}
         .sig-action-list{grid-template-columns:1fr}
         .sig-action-meta{grid-template-columns:1fr}
@@ -127,12 +172,16 @@
 
   const actionLabel = value => ({
     REEMPLAZAR_GEOMETRIA: "Reemplazar geometría",
+    VALIDAR_FUENTE_VECTORIAL: "Validar fuente vectorial",
     CREAR_CORRESPONDENCIA: "Crear correspondencia",
     AGREGAR_Y_RECODIFICAR_POLIGONOS: "Agregar y recodificar",
+    CONTROLAR_CODIGO_FALTANTE: "Resolver diferencia de catálogo",
     AGREGAR_POLIGONOS: "Agregar polígonos",
+    CORREGIR_QA_GEOMETRICA: "Corregir QA geométrica",
     ACTUALIZAR_ATRIBUTOS: "Actualizar atributos",
     RESOLVER_ZONAS_NO_REPRODUCIDAS: "Resolver zonas",
     VERIFICAR_E_INTEGRAR_ENMIENDA: "Verificar e integrar",
+    DOCUMENTAR_ENMIENDA_INCORPORADA: "Documentar incorporación",
     AGREGAR_CAPAS_SUPLEMENTARIAS: "Agregar capas suplementarias"
   }[value] || typeLabel(value));
 
@@ -140,8 +189,81 @@
     definida: "Acción definida",
     definida_parcial: "Definición parcial",
     bloqueada_por_planos: "Requiere planos",
+    bloqueada_por_diferencia: "Diferencia bloqueante",
+    en_revision: "En revisión",
+    verificada: "Verificada",
     pendiente_revision: "Pendiente de revisión"
   }[value] || typeLabel(value));
+
+  function auditBlockersTemplate(comparison) {
+    const audit = comparison.auditoria_operativa || {};
+    const controls = Array.isArray(audit.controles) ? audit.controles : [];
+    const statuses = Array.isArray(audit.estados) ? audit.estados : [];
+    const method = Array.isArray(audit.metodo) ? audit.metodo : [];
+    if (!controls.length) return "";
+    const pending = controls.filter(control => control.estado !== "verificado").length;
+
+    return `
+      <section class="audit-blockers-section">
+        <div class="audit-alert-heading">
+          <div>
+            <h4>${escape(audit.titulo || "Por qué aún no está validado")}</h4>
+            <p>${escape(audit.resumen || "Existen controles pendientes antes de publicar la capa como validada.")}</p>
+          </div>
+          <span class="audit-alert-badge">${pending} controles pendientes</span>
+        </div>
+        ${statuses.length ? `
+          <div class="audit-status-grid">
+            ${statuses.map(status => `
+              <div class="audit-status-card ${escape(status.estado || "pendiente")}">
+                <span>${escape(status.nombre)}</span>
+                <strong>${escape(status.valor)}</strong>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+        ${method.length ? `
+          <details class="audit-method" open>
+            <summary>Qué se revisó y cómo se obtuvieron estos resultados</summary>
+            <ol>${method.map(step => `<li>${escape(step)}</li>`).join("")}</ol>
+          </details>
+        ` : ""}
+        <div class="audit-control-list">
+          ${controls.map(control => `
+            <article class="audit-control-card ${escape(control.prioridad || "media")}">
+              <div class="audit-control-head">
+                <div>
+                  <span class="audit-control-id">${escape(control.id)}</span>
+                  <span class="audit-control-priority">Prioridad ${escape(control.prioridad || "media")}</span>
+                </div>
+                <div class="audit-control-badges">
+                  <span class="audit-control-state ${escape(control.estado || "pendiente")}">${escape(control.estado === "verificado" ? "Verificado" : "Pendiente")}</span>
+                  <span class="audit-control-assignee">Responsable: ${escape(control.responsable || "Por asignar")}</span>
+                </div>
+              </div>
+              <h5>${escape(control.titulo)}</h5>
+              <p class="audit-control-finding">${escape(control.hallazgo)}</p>
+              <div class="audit-control-detail">
+                <div>
+                  <span>Cómo se identificó</span>
+                  <p>${escape(control.como_se_detecto)}</p>
+                </div>
+                <div>
+                  <span>Qué debe hacer el equipo</span>
+                  <p>${escape(control.tarea)}</p>
+                </div>
+              </div>
+              ${Array.isArray(control.evidencias) && control.evidencias.length ? `
+                <div class="audit-evidence-links">
+                  ${control.evidencias.map(evidence => `<a href="${escape(evidence.url)}" target="_blank" rel="noopener noreferrer">${escape(evidence.nombre)} ↗</a>`).join("")}
+                </div>
+              ` : ""}
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
 
   function frameworkTemplate(item, comparison) {
     const previous = comparison.instrumento_anterior || {};
@@ -208,8 +330,8 @@
     const actions = Array.isArray(comparison.acciones_sig) ? comparison.acciones_sig : [];
     const diagnosis = comparison.diagnostico_sig || {};
     if (!actions.length) return "";
-    const blocked = actions.filter(action => action.estado === "bloqueada_por_planos").length;
-    const defined = actions.filter(action => String(action.estado || "").startsWith("definida")).length;
+    const blocked = actions.filter(action => String(action.estado || "").startsWith("bloqueada")).length;
+    const verified = actions.filter(action => action.estado === "verificada").length;
 
     return `
       <section class="sig-work-section">
@@ -220,8 +342,8 @@
           </div>
           <div class="sig-work-kpis">
             <span>${actions.length} acciones</span>
-            <span>${defined} definidas</span>
-            <span>${blocked} requieren planos</span>
+            <span>${verified} verificadas</span>
+            <span>${blocked} bloqueantes</span>
           </div>
         </div>
         <div class="sig-diagnosis">
@@ -267,30 +389,33 @@
     if (!actions.length) return;
 
     item.nombre = "PRC 2026 y normativa aplicable";
-    item.actos_posteriores_pendientes = actions.length;
-    item.confianza = "documental media · SIG baja";
-    item.resumen_alerta = `El PRC 2026 reemplaza al PRC 2019. Se identificaron ${comparison.cambios?.length || 0} cambios normativos y ${actions.length} acciones SIG; la geometría aún debe validarse contra las láminas oficiales.`;
+    const controls = comparison.auditoria_operativa?.controles || [];
+    const pendingControls = controls.filter(control => control.estado !== "verificado").length;
+    item.actos_posteriores_pendientes = pendingControls;
+    item.confianza = "documental alta · correspondencia SIG alta · QA pendiente";
+    item.resumen_alerta = `El PRC 2026 reemplaza al PRC 2019 y el FeatureServer presenta correspondencia alta. Quedan ${pendingControls} controles técnicos antes de declararlo SIG 2026 validado.`;
     item.alertas = [
       {
-        tipo: "Plan de acción SIG definido",
-        nivel: "medio",
-        mensaje: `Se definieron ${actions.length} tareas técnicas. Las que modifican geometría permanecen bloqueadas hasta comparar y vectorizar los planos oficiales.`
+        tipo: "Controles bloqueantes identificados",
+        nivel: "alto",
+        mensaje: `Quedan ${pendingControls} revisiones documentales, de catálogo, atributos o topología. Cada una tiene evidencia y una tarea verificable.`
       },
       {
-        tipo: "Versión GeoIDE no acreditada",
-        nivel: "alto",
-        mensaje: "La capa disponible no debe declararse equivalente al PRC 2026 hasta validar zonificación, códigos y parámetros."
+        tipo: "Fuente vectorial 2026 altamente probable",
+        nivel: "medio",
+        mensaje: "GeoIDE es la fuente operativa preferida y se descarga directamente; la validación final depende de resolver las brechas publicadas."
       }
     ];
   }
 
   function refineCoquimboHeader(item, comparison, detail) {
-    const actions = comparison.acciones_sig || [];
+    const pendingControls = (comparison.auditoria_operativa?.controles || [])
+      .filter(control => control.estado !== "verificado").length;
     const instrumentName = detail.querySelector(".vigencia-instrument-name");
     if (instrumentName) instrumentName.textContent = "PRC vigente: 2026-01-05 · PRC reemplazado: 2019-07-10";
 
     const alertBox = detail.querySelector(".vigencia-alert-box");
-    if (alertBox) alertBox.innerHTML = "<strong>Revisión necesaria</strong><span>Plan de acción SIG definido · ejecución pendiente</span>";
+    if (alertBox) alertBox.innerHTML = "<strong>SIG 2026 aún no validado</strong><span>Fuente vectorial identificada · brechas específicas por resolver</span>";
 
     detail.querySelectorAll(".detail-item").forEach(card => {
       const label = card.querySelector("span");
@@ -303,8 +428,8 @@
         label.textContent = "SIG actualmente asociado";
         value.textContent = comparison.diagnostico_sig?.capa_actual || "Versión no acreditada";
       } else if (label.textContent.trim() === "Actos pendientes") {
-        label.textContent = "Acciones SIG identificadas";
-        value.textContent = String(actions.length);
+        label.textContent = "Controles pendientes";
+        value.textContent = String(pendingControls);
       }
     });
   }
@@ -313,6 +438,7 @@
     const changes = Array.isArray(comparison.cambios) ? comparison.cambios : [];
 
     return `
+      ${auditBlockersTemplate(comparison)}
       ${frameworkTemplate(item, comparison)}
       ${validationTemplate(comparison)}
       ${sigWorkTemplate(comparison)}

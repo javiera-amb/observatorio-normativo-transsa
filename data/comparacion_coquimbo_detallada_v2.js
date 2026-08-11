@@ -11,10 +11,10 @@
     region: "Coquimbo",
     comuna: "Coquimbo",
     tipo_ipt: "PRC",
-    estado_analisis: "en_revision_avanzada",
-    estado_sig: "pendiente_revision",
-    nivel_evidencia: "comparacion_ordenanzas_parcial",
-    fecha_revision: "2026-08-06",
+    estado_analisis: "auditoria_sig_avanzada",
+    estado_sig: "validacion_avanzada_con_brechas",
+    nivel_evidencia: "vector_directo_con_control_documental_y_topologico",
+    fecha_revision: "2026-08-11",
     naturaleza_transicion: "reemplazo_integral_confirmado",
     etiqueta_transicion: "Nuevo PRC base · reemplazo integral",
     paquete_refundido: {
@@ -24,8 +24,10 @@
       consolida: [
         "Un único instrumento base vigente para Coquimbo, Tongoy y Guanaqueros."
       ],
-      incorpora: [],
-      incorpora_estado: "pendiente_validar_actos_anteriores",
+      incorpora: [
+        "La Enmienda N.º 1 Ferronor fue localizada espacialmente y aparece absorbida principalmente por ZU3-A."
+      ],
+      incorpora_estado: "ferronor_verificado_espacialmente",
       cambia: [
         "Intensidad y parámetros de ZU3.",
         "Nuevas subzonas ZU3-A y ZU5-A a ZU5-D.",
@@ -42,10 +44,11 @@
         "Límite urbano: la Municipalidad informó que la actualización no lo modifica."
       ],
       pendientes: [
-        "Determinar qué actos y enmiendas anteriores quedaron efectivamente incorporados.",
-        "Resolver la incorporación o reemplazo de la Enmienda Ferronor.",
-        "Comparar y controlar espacialmente las trece láminas 2026.",
-        "Acreditar la versión efectiva de cada servicio vectorial utilizado."
+        "Determinar el alcance exacto del Decreto Exento N.º 031 que aclara y rectifica el Decreto N.º 3.155.",
+        "Resolver por qué ZU15-A figura en las láminas oficiales y no aparece en las cuatro capas vectoriales descargadas.",
+        "Corregir o justificar geometrías vacías, inválidas y duplicadas detectadas en el servicio vectorial.",
+        "Acreditar la continuidad de los ICH que conservan fecha 2019 dentro de la capa publicada en 2025.",
+        "Comparar y controlar espacialmente las trece láminas 2026."
       ]
     },
     instrumento_anterior: {
@@ -67,9 +70,9 @@
       ordenanza_2019: "revisada",
       ordenanza_2026: "revisión parcial avanzada",
       planos_2019: "pendiente vectorización",
-      planos_2026: "pendiente vectorización",
-      comparacion_sig: "pendiente",
-      alcance: "Primera pasada documental de catálogo de zonas y parámetros seleccionados"
+      planos_2026: "publicados · comparación parcial con servicio vectorial",
+      comparacion_sig: "auditoría avanzada del FeatureServer",
+      alcance: "Control documental, descarga vectorial directa, contraste de códigos, revisión topológica y superposición de Ferronor"
     },
     materias_a_comparar: [
       "Límite urbano y extensión territorial",
@@ -213,16 +216,16 @@
       },
       {
         id: "coq-ferronor",
-        tipo_cambio: "enmienda_transitoria",
-        materia: "Enmienda Ferronor durante la transición",
-        zonas: ["ZU3", "Ex Maestranza Ferronor"],
+        tipo_cambio: "enmienda_incorporada_y_reconvertida",
+        materia: "Enmienda Ferronor incorporada y recodificada en el PRC 2026",
+        zonas: ["ZU3", "ZU3-A", "Ex Maestranza Ferronor"],
         antes: "Las fajas ferroviarias desafectadas quedaron dentro del límite urbano sin normas urbanísticas específicas equivalentes a su entorno.",
-        despues: "La Enmienda N.º 1 asignó normativa ZU3 a las fajas desafectadas para posibilitar el Plan Urbano Habitacional Ferronor, con más de 2.000 viviendas, equipamientos y áreas de parque.",
-        impacto: "Debe verificarse si el PRC 2026 incorporó, reemplazó o redistribuyó esta zonificación y si el SIG disponible refleja la solución final.",
-        estado_documental: "validado_acto",
-        estado_sig: "pendiente_revision",
-        evidencia: "Diario Oficial CVE-2615636 y expediente EAE F28.",
-        fuente: "https://eae.mma.gob.cl/file/494"
+        despues: "La Enmienda N.º 1 asignó ZU3. En el servicio vectorial asociado al PRC 2026, sus tres polígonos aparecen principalmente como ZU3-A.",
+        impacto: "La enmienda no aparece omitida: fue absorbida por el PRC refundido y recodificada. La plataforma debe conservar la trazabilidad ZU3 → ZU3-A.",
+        estado_documental: "validado_acto_y_plano",
+        estado_sig: "incorporado",
+        evidencia: "Polígonos reconstruidos desde la tabla UTM oficial: P1 100% ZU3-A; P2 99,1% ZU3-A; P3 98,1% ZU3-A. Las diferencias menores se concentran en bordes ZU4 y deben controlarse por los tramos curvos del plano.",
+        fuente: "https://eae.mma.gob.cl/storage/documents/04_Anteproyecto_Enmienda_PRC_Coquimbo_Maestranza_Planos.pdf.pdf"
       }
     ],
     evidencia_documental: [
@@ -238,13 +241,28 @@
       },
       {
         tipo: "expediente_actualizacion",
-        nombre: "Sitio del proceso de actualización PRC Coquimbo",
-        url: "https://planreguladorcomunalcoquimbo.cl/prc-coquimbo/"
+        nombre: "Ordenanza Local PRC Coquimbo 2026",
+        url: "https://www.municoquimbo.cl/images/estructura/2026/plan-regulador-24122025/03_Ordenanza_Local.pdf"
       },
       {
-        tipo: "expediente_eae_enmienda",
-        nombre: "Expediente EAE Enmienda Ferronor, código F28",
-        url: "https://eae.mma.gob.cl/file/494"
+        tipo: "plano_oficial_2026",
+        nombre: "Lámina oficial PRC Coquimbo 2026 · Coquimbo 1",
+        url: "https://www.municoquimbo.cl/images/estructura/2026/plan-regulador-24122025/planos-zonificacion-firmados/01_PRC_Coquimbo_Coquimbo_lam1_vf.pdf"
+      },
+      {
+        tipo: "rectificacion_2026",
+        nombre: "Decreto Exento N.º 031 · aclara y rectifica Decreto N.º 3.155",
+        url: "https://www.municoquimbo.cl/images/estructura/2026/plan-regulador-24122025/07_decreto-ex_031_09.01.2025_rectifica-decreto-3155.pdf"
+      },
+      {
+        tipo: "enmienda_ferronor",
+        nombre: "Decreto N.º 470 · promulga Enmienda N.º 1 Ferronor",
+        url: "https://www.municoquimbo.cl/images/estructura/2025/Octubre/pr2019/3-enmienda-n1-plan-regulador-comunal-terrenos-ex-maestranza-ferronor/01-Decreto-470-110225-Promulga-Enmienda-N1-PRC-Terrenos-Ex-Maestranza-Ferronor.pdf"
+      },
+      {
+        tipo: "plano_enmienda_ferronor",
+        nombre: "Plano Ferronor con tabla de vértices UTM",
+        url: "https://eae.mma.gob.cl/storage/documents/04_Anteproyecto_Enmienda_PRC_Coquimbo_Maestranza_Planos.pdf.pdf"
       }
     ],
     evidencia_sig: [
@@ -252,31 +270,152 @@
         tipo: "servicio_geoide",
         nombre: "PRC Coquimbo FeatureServer",
         url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer",
-        estado: "version_no_acreditada"
+        estado: "fuente_vectorial_preferida"
+      },
+      {
+        tipo: "capa_vectorial",
+        nombre: "Zonificación base · capa 3 · 1.183 entidades",
+        url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/3",
+        estado: "descarga_directa_geojson"
+      },
+      {
+        tipo: "capa_vectorial",
+        nombre: "Áreas de riesgo · capa 30 · 354 entidades",
+        url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/30",
+        estado: "descarga_directa_geojson"
+      },
+      {
+        tipo: "capa_vectorial",
+        nombre: "Inmuebles de conservación histórica · capa 31 · 158 entidades",
+        url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/31",
+        estado: "descarga_directa_geojson"
+      },
+      {
+        tipo: "capa_vectorial",
+        nombre: "Subzonas · capa 32 · 503 entidades",
+        url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/32",
+        estado: "descarga_directa_geojson"
       }
     ],
     diagnostico_sig: {
-      objetivo: "Actualizar el SIG comunal para que represente el PRC Coquimbo 2026 como base vigente y conserve el PRC 2019 únicamente como antecedente histórico.",
-      capa_actual: "PRC_Coquimbo / versión GeoIDE no acreditada",
+      objetivo: "Acreditar que el servicio vectorial representa íntegramente el PRC Coquimbo 2026 y documentar cualquier diferencia antes de liberarlo como SIG validado.",
+      capa_actual: "PRC_Coquimbo / GeoIDE MINVU / correspondencia 2026 altamente probable",
       instrumento_objetivo: "PRC Coquimbo 2026",
       fecha_instrumento_objetivo: "2026-01-05",
       aptitud_actual_visor: "NO",
-      motivo: "La versión cartográfica disponible no está acreditada como equivalente a las trece láminas oficiales del PRC 2026.",
-      criterio_publicacion: "La capa solo podrá pasar a lista para visor cuando la geometría, los códigos de zona y los parámetros normativos hayan sido validados contra las láminas y la ordenanza 2026."
+      motivo: "El FeatureServer coincide ampliamente con el Decreto N.º 3.155 y contiene geometría 2026 utilizable, pero aún existen brechas documentales, de catálogo y topología que deben resolverse.",
+      criterio_publicacion: "La capa podrá pasar a SIG 2026 validado cuando se resuelva la rectificación N.º 031, la ausencia vectorial de ZU15-A, los defectos geométricos y la continuidad de la capa ICH."
+    },
+    auditoria_operativa: {
+      titulo: "Por qué aún no dice SIG 2026 validado",
+      resumen: "La fuente vectorial es directa y su correspondencia con el PRC 2026 es alta, pero todavía no supera todos los controles documentales, de catálogo y topología.",
+      estados: [
+        { nombre: "Vigencia legal", valor: "Confirmada", estado: "completo" },
+        { nombre: "Fuente vectorial", valor: "Directa", estado: "completo" },
+        { nombre: "Correspondencia 2026", valor: "Alta", estado: "en_progreso" },
+        { nombre: "QA geométrica", valor: "Con observaciones", estado: "bloqueado" }
+      ],
+      metodo: [
+        "Se identificó el servicio REST que alimenta el visor y se descargaron directamente sus cuatro capas principales en GeoJSON; no se hizo scrapeo de pantalla.",
+        "Se revisaron conteos, campos, fechas y decretos de cada entidad y se contrastaron los códigos de zona con la ordenanza y las láminas municipales firmadas.",
+        "Se ejecutaron controles de geometrías vacías, validez topológica, duplicados, superposiciones y consistencia de atributos.",
+        "La Enmienda Ferronor se reconstruyó desde su tabla oficial de coordenadas UTM y se superpuso con la zonificación 2026."
+      ],
+      controles: [
+        {
+          id: "COQ-VAL-01",
+          prioridad: "crítica",
+          estado: "pendiente",
+          titulo: "Revisar el alcance de la rectificación N.º 031",
+          hallazgo: "Existe un decreto posterior que aclara y rectifica el Decreto N.º 3.155. Mientras no se determine qué texto, plano o referencia corrige, no corresponde cerrar la validación.",
+          como_se_detecto: "Se contrastó la publicación del Decreto N.º 3.155 con el expediente municipal vigente, que incluye expresamente el Decreto Exento N.º 031.",
+          tarea: "Leer el decreto completo, registrar cada rectificación y comprobar si altera atributos, códigos, láminas o solamente antecedentes formales.",
+          evidencias: [
+            { nombre: "Decreto N.º 3.155 en BCN", url: "https://www.bcn.cl/leychile/navegar?idNorma=1219776" },
+            { nombre: "Decreto Exento N.º 031", url: "https://www.municoquimbo.cl/images/estructura/2026/plan-regulador-24122025/07_decreto-ex_031_09.01.2025_rectifica-decreto-3155.pdf" }
+          ]
+        },
+        {
+          id: "COQ-VAL-02",
+          prioridad: "crítica",
+          estado: "pendiente",
+          titulo: "Resolver la ausencia de ZU15-A en el servicio vectorial",
+          hallazgo: "ZU15-A figura en las láminas oficiales y en la ordenanza 2026, pero no aparece como código en las cuatro capas GeoJSON descargadas.",
+          como_se_detecto: "Se extrajo el catálogo de códigos distintos del FeatureServer y se comparó con los códigos publicados en la ordenanza y en las láminas firmadas.",
+          tarea: "Localizar los polígonos ZU15-A en las láminas, verificar si fueron recodificados o están omitidos y documentar la corrección necesaria.",
+          evidencias: [
+            { nombre: "Lámina oficial Coquimbo 1", url: "https://www.municoquimbo.cl/images/estructura/2026/plan-regulador-24122025/planos-zonificacion-firmados/01_PRC_Coquimbo_Coquimbo_lam1_vf.pdf" },
+            { nombre: "FeatureServer · zonificación", url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/3" },
+            { nombre: "Ordenanza Local 2026", url: "https://www.municoquimbo.cl/images/estructura/2026/plan-regulador-24122025/03_Ordenanza_Local.pdf" }
+          ]
+        },
+        {
+          id: "COQ-VAL-03",
+          prioridad: "alta",
+          estado: "pendiente",
+          titulo: "Corregir o justificar geometrías vacías, inválidas y duplicadas",
+          hallazgo: "La zonificación contiene dos geometrías vacías —OBJECTID 656 ZU5 y 892 ZU9-A—. Riesgos contiene cuatro polígonos inválidos —117, 218, 327 y 352— y una geometría duplicada —38 y 72—.",
+          como_se_detecto: "Se ejecutó un control topológico sobre los GeoJSON descargados: geometría vacía, is_valid, duplicados exactos y superposición.",
+          tarea: "Revisar cada OBJECTID contra el plano oficial; corregir la geometría o registrar por qué debe excluirse. Repetir el QA hasta obtener cero errores bloqueantes.",
+          evidencias: [
+            { nombre: "FeatureServer · zonificación", url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/3" },
+            { nombre: "FeatureServer · áreas de riesgo", url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/30" }
+          ]
+        },
+        {
+          id: "COQ-VAL-04",
+          prioridad: "alta",
+          estado: "pendiente",
+          titulo: "Acreditar la continuidad de los ICH 2019–2026",
+          hallazgo: "La capa ICH mezcla 57 registros con fecha 10/07/2019 y 101 con fecha 24/12/2025 sin un campo que explique si fueron mantenidos, modificados o incorporados.",
+          como_se_detecto: "Se agruparon los 158 registros de la capa ICH por fecha y decreto y se revisó la ausencia de campos de linaje o vigencia.",
+          tarea: "Comparar la lista ICH de 2019 con la nómina y planos 2026, clasificando cada registro como mantenido, modificado, eliminado o nuevo.",
+          evidencias: [
+            { nombre: "FeatureServer · ICH", url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/31" },
+            { nombre: "Ordenanza Local 2026", url: "https://www.municoquimbo.cl/images/estructura/2026/plan-regulador-24122025/03_Ordenanza_Local.pdf" }
+          ]
+        },
+        {
+          id: "COQ-VAL-05",
+          prioridad: "media",
+          estado: "pendiente",
+          titulo: "Normalizar atributos y nombres de localidad",
+          hallazgo: "La zonificación usa “Guanaquero”, mientras riesgos y subzonas usan “Guanaqueros”; además existen valores nulos en campos normativos.",
+          como_se_detecto: "Se compararon dominios de atributos, valores nulos y nombres de localidad entre las cuatro capas.",
+          tarea: "Definir dominios normalizados, corregir inconsistencias y conservar el valor original en un campo de trazabilidad.",
+          evidencias: [
+            { nombre: "FeatureServer PRC Coquimbo", url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer" }
+          ]
+        },
+        {
+          id: "COQ-VAL-06",
+          prioridad: "informativa",
+          estado: "verificado",
+          titulo: "Ferronor está incorporado y recodificado",
+          hallazgo: "Los tres polígonos de la Enmienda N.º 1, originalmente ZU3, caen casi íntegramente en ZU3-A del PRC 2026.",
+          como_se_detecto: "Se reconstruyeron los polígonos desde la tabla UTM oficial y se superpusieron con la capa de zonificación: P1 100%; P2 99,1%; P3 98,1% en ZU3-A.",
+          tarea: "Conservar la trazabilidad ZU3 → ZU3-A y revisar únicamente los bordes curvos que intersectan ZU4.",
+          evidencias: [
+            { nombre: "Plano Ferronor con vértices UTM", url: "https://eae.mma.gob.cl/storage/documents/04_Anteproyecto_Enmienda_PRC_Coquimbo_Maestranza_Planos.pdf.pdf" },
+            { nombre: "Decreto N.º 470 Ferronor", url: "https://www.municoquimbo.cl/images/estructura/2025/Octubre/pr2019/3-enmienda-n1-plan-regulador-comunal-terrenos-ex-maestranza-ferronor/01-Decreto-470-110225-Promulga-Enmienda-N1-PRC-Terrenos-Ex-Maestranza-Ferronor.pdf" },
+            { nombre: "FeatureServer · zonificación", url: "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Coquimbo/FeatureServer/3" }
+          ]
+        }
+      ]
     },
     acciones_sig: [
       {
         id: "COQ-SIG-01",
         prioridad: "crítica",
-        accion: "REEMPLAZAR_GEOMETRIA",
-        objeto: "Zonificación base del PRC",
+        accion: "VALIDAR_FUENTE_VECTORIAL",
+        objeto: "Fuente vectorial base del PRC 2026",
         capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
         ambito: "Coquimbo, Tongoy y Guanaqueros",
-        instruccion: "Sustituir la zonificación 2019 por los polígonos oficiales del PRC 2026. Mantener la versión 2019 en la capa histórica y no mezclar ambas vigencias.",
+        instruccion: "Usar el FeatureServer GeoIDE como fuente operativa preferida, congelar una copia fechada y validarla contra los planos, la ordenanza y la rectificación N.º 031. Mantener el PRC 2019 solo como histórico.",
         cambios_normativos: ["coq-vigencia-2026"],
-        estado: "bloqueada_por_planos",
-        dependencia: "Vectorizar y controlar las trece láminas oficiales 2026.",
-        resultado_esperado: "Una única zonificación base vigente con fecha normativa 2026-01-05."
+        estado: "en_revision",
+        dependencia: "Resolver diferencias de catálogo, rectificación y QA geométrica.",
+        resultado_esperado: "Copia vectorial 2026 acreditada, versionada y reproducible, con enlace a su fuente y fecha de descarga."
       },
       {
         id: "COQ-SIG-02",
@@ -293,29 +432,29 @@
       },
       {
         id: "COQ-SIG-03",
-        prioridad: "alta",
-        accion: "AGREGAR_Y_RECODIFICAR_POLIGONOS",
-        objeto: "Nuevas subzonas residenciales",
+        prioridad: "crítica",
+        accion: "CONTROLAR_CODIGO_FALTANTE",
+        objeto: "Zona ZU15-A ausente en el vector",
         capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
-        ambito: "Polígonos ZU3-A y ZU5-A a ZU5-D",
-        instruccion: "Digitalizar las nuevas subzonas y asignar sus códigos y parámetros 2026. No aplicar los parámetros de ZU3 o ZU5 base a estos polígonos.",
-        cambios_normativos: ["coq-zu3a-densidad", "coq-zu5-subzonas"],
-        estado: "bloqueada_por_planos",
-        dependencia: "Delimitación oficial en láminas 2026.",
-        resultado_esperado: "Subzonas residenciales individualizadas con normativa propia."
+        ambito: "Polígonos identificados como ZU15-A en las láminas oficiales",
+        instruccion: "Localizar ZU15-A en las láminas, comprobar si fue omitida o recodificada en el servicio y corregir la capa o documentar la equivalencia.",
+        cambios_normativos: ["coq-incentivos"],
+        estado: "bloqueada_por_diferencia",
+        dependencia: "Comparación dirigida entre láminas firmadas, ordenanza y FeatureServer.",
+        resultado_esperado: "Todos los polígonos ZU15-A representados y vinculados con su norma e incentivo urbanístico."
       },
       {
         id: "COQ-SIG-04",
         prioridad: "alta",
-        accion: "AGREGAR_POLIGONOS",
-        objeto: "Zonas nuevas productivas, patrimoniales y de parques",
-        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
-        ambito: "ZP3, AVP2-A, ZCH3, ZCH4, ZCH5, ZCH5-A, ZAVPC y ZAVPC-A",
-        instruccion: "Incorporar los polígonos nuevos y vincularlos con sus artículos y parámetros. Las protecciones patrimoniales que operen por superposición deben conservarse también en una capa temática.",
-        cambios_normativos: ["coq-zp3-productiva", "coq-patrimonio", "coq-parques"],
-        estado: "bloqueada_por_planos",
-        dependencia: "Delimitación oficial y definición del modelo de superposición patrimonial.",
-        resultado_esperado: "Nuevas zonas visibles y consultables sin perder su condición temática."
+        accion: "CORREGIR_QA_GEOMETRICA",
+        objeto: "Geometrías vacías, inválidas y duplicadas",
+        capa_objetivo: "ZONIFICACION_PRC_COQUIMBO / RIESGOS_PRC_COQUIMBO",
+        ambito: "OBJECTID 656, 892; riesgos 117, 218, 327, 352, 38 y 72",
+        instruccion: "Controlar cada entidad contra el plano, reparar las geometrías justificadas y eliminar duplicados solo cuando se confirme que representan el mismo objeto normativo.",
+        cambios_normativos: ["coq-vigencia-2026"],
+        estado: "definida",
+        dependencia: "Control visual y topológico sobre la copia descargada.",
+        resultado_esperado: "Cero geometrías vacías, inválidas o duplicadas sin justificación documentada."
       },
       {
         id: "COQ-SIG-05",
@@ -345,16 +484,16 @@
       },
       {
         id: "COQ-SIG-07",
-        prioridad: "crítica",
-        accion: "VERIFICAR_E_INTEGRAR_ENMIENDA",
+        prioridad: "alta",
+        accion: "DOCUMENTAR_ENMIENDA_INCORPORADA",
         objeto: "Ex Maestranza Ferronor",
         capa_objetivo: "ZONIFICACION_PRC_COQUIMBO",
         ambito: "Fajas ferroviarias desafectadas y área del Plan Urbano Habitacional Ferronor",
-        instruccion: "Comparar la Enmienda N.º 1 con el PRC 2026 y determinar si ZU3 fue incorporada, modificada o reemplazada. Aplicar solo la solución normativa final vigente.",
+        instruccion: "Registrar que la Enmienda N.º 1 ZU3 fue absorbida principalmente como ZU3-A por el PRC 2026 y conservar la relación entre el acto anterior y la solución normativa final.",
         cambios_normativos: ["coq-ferronor"],
-        estado: "pendiente_revision",
-        dependencia: "Polígono oficial de la enmienda y lámina 2026 correspondiente.",
-        resultado_esperado: "Ferronor representado una sola vez con su normativa vigente final."
+        estado: "verificada",
+        dependencia: "Control final de bordes curvos que intersectan ZU4.",
+        resultado_esperado: "Ferronor representado una sola vez como normativa vigente, con trazabilidad ZU3 → ZU3-A."
       },
       {
         id: "COQ-SIG-08",
@@ -372,20 +511,24 @@
     ],
     flujo_validacion: [
       { id: "normativa", nombre: "Normativa identificada", estado: "completo" },
-      { id: "comparacion", nombre: "Cambio normativo validado", estado: "en_progreso" },
-      { id: "accion", nombre: "Acción SIG definida", estado: "en_progreso" },
+      { id: "fuente", nombre: "Fuente vectorial identificada", estado: "completo" },
+      { id: "comparacion", nombre: "Correspondencia cartográfica", estado: "en_progreso" },
+      { id: "accion", nombre: "Controles y acciones definidos", estado: "completo" },
       { id: "ejecucion", nombre: "Cambio aplicado", estado: "pendiente" },
-      { id: "geometria", nombre: "Geometría validada", estado: "pendiente" },
+      { id: "geometria", nombre: "QA geométrica", estado: "en_progreso" },
       { id: "atributos", nombre: "Atributos validados", estado: "pendiente" },
       { id: "visor", nombre: "Listo para visor", estado: "pendiente" }
     ],
     pendientes: [
-      "Vectorizar y comparar las trece láminas oficiales del PRC 2026.",
+      "Resolver el alcance del Decreto Exento N.º 031.",
+      "Resolver la ausencia de ZU15-A en el servicio vectorial.",
+      "Corregir o justificar geometrías vacías, inválidas y duplicadas.",
+      "Acreditar la continuidad de los ICH 2019–2026.",
+      "Normalizar nombres de localidad y campos con valores nulos.",
+      "Comparar de forma dirigida las trece láminas oficiales con las capas descargadas.",
       "Construir correspondencia poligonal entre códigos de zona 2019 y 2026.",
       "Completar comparación de parámetros para todas las zonas equivalentes.",
-      "Comparar límite urbano, vialidad, riesgos e inmuebles de conservación histórica.",
-      "Verificar la incorporación de la Enmienda Ferronor.",
-      "Identificar fecha y versión efectiva de las capas GeoIDE."
+      "Comparar límite urbano, vialidad y capas temáticas restantes."
     ]
   };
 })();

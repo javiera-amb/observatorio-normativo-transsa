@@ -1,18 +1,14 @@
 # Documentación — Transsa Urban Intelligence
 
-## Documentos fundacionales
+## Inventario verificado
 
-1. [Visión y principios](01_VISION_Y_PRINCIPIOS.md)
-2. [Arquitectura](02_ARQUITECTURA.md)
-3. [Modelo de datos](03_MODELO_DE_DATOS.md)
-4. [Roadmap](04_ROADMAP.md)
-5. [Diagnóstico del repositorio actual](05_DIAGNOSTICO_REPOSITORIO_ACTUAL.md)
+- [Índice real de documentación TUI](00_INDICE_DOCUMENTACION_TUI.md)
+- Los documentos 01–04 estaban mencionados en este README, pero no existen en el repositorio ni en su historial Git disponible.
+- [Diagnóstico del repositorio actual](05_DIAGNOSTICO_REPOSITORIO_ACTUAL.md)
 
 ## Decisiones de arquitectura
 
-- [ADR-001: Evento como unidad central](adr/ADR-001-evento-como-unidad-central.md)
-- [ADR-002: Almacenamiento híbrido](adr/ADR-002-almacenamiento-hibrido.md)
-- [ADR-003: IA preliminar y validación humana](adr/ADR-003-ia-preliminar-validacion-humana.md)
+Los ADR que estaban enlazados desde una versión anterior de este README tampoco están presentes en el historial Git disponible. Las decisiones vigentes se encuentran en los documentos 15, 18 y 19.
 
 ## Sprints técnicos
 
@@ -23,3 +19,5 @@
 - [Sprint 4: Diario Oficial local](11_SPRINT_4_DIARIO_OFICIAL_LOCAL.md)
 - [Sprint 5: base de Noticias y Mercado](12_SPRINT_5_NOTICIAS_BASE.md)
 - [Regla nacional: reemplazos integrales y fuentes multifuente](17_REEMPLAZOS_INTEGRALES_Y_FUENTES_MULTIFUENTE.md)
+- [Plataforma operativa: usuarios, auditoría y QGIS](18_PLATAFORMA_OPERATIVA_USUARIOS_QGIS.md)
+- [Seguimiento Propiteq e inventario de capas territoriales](19_SEGUIMIENTO_PROPITEQ_Y_CAPAS_TERRITORIALES.md)

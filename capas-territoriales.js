@@ -1,0 +1,211 @@
+(() => {
+  "use strict";
+
+  const state = { commune: "Coquimbo", search: "", coverage: "" };
+  const $ = id => document.getElementById(id);
+  const escape = value => String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+  const normalize = value => String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+  const layersSource = () => window.CAPAS_TERRITORIALES || { capas: [] };
+  const coverageSource = () => window.COBERTURA_CAPAS_COMUNAL || { capas: {} };
+  const communeSource = () => window.SEGUIMIENTO_NORMATIVO?.comunas || [];
+  const iptSource = () => window.VIGENCIA_CARTOGRAFICA?.instrumentos || [];
+
+  function communeRows() {
+    const rows = communeSource();
+    if (rows.length) return rows.map(row => ({ comuna: row.comuna, region: row.region }));
+    return iptSource().map(row => ({ comuna: row.comuna, region: row.region }));
+  }
+
+  function selectedCommune() {
+    const wanted = normalize(state.commune);
+    return communeRows().find(row => normalize(row.comuna) === wanted) || { comuna: state.commune, region: "" };
+  }
+
+  function selectedIptGroup() {
+    const commune = selectedCommune();
+    return iptSource().find(row => normalize(row.comuna) === normalize(commune.comuna)
+      && (!commune.region || normalize(row.region) === normalize(commune.region))) || null;
+  }
+
+  function populateCommunes() {
+    const select = $("capasCommuneSelect");
+    if (!select || select.options.length) return;
+    const byRegion = new Map();
+    communeRows().forEach(row => {
+      if (!byRegion.has(row.region)) byRegion.set(row.region, []);
+      byRegion.get(row.region).push(row.comuna);
+    });
+    [...byRegion.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, "es"))
+      .forEach(([region, communes]) => {
+        const group = document.createElement("optgroup");
+        group.label = region;
+        [...new Set(communes)].sort((a, b) => a.localeCompare(b, "es")).forEach(commune => {
+          const option = document.createElement("option");
+          option.value = commune;
+          option.textContent = commune;
+          option.selected = normalize(commune) === normalize(state.commune);
+          group.appendChild(option);
+        });
+        select.appendChild(group);
+      });
+  }
+
+  function latestByType(instruments) {
+    const latest = new Map();
+    instruments.forEach(item => {
+      const current = latest.get(item.tipo_ipt);
+      if (!current || String(item.fecha || "").localeCompare(String(current.fecha || "")) > 0) latest.set(item.tipo_ipt, item);
+    });
+    return latest;
+  }
+
+  function iptCard(instrument, latest) {
+    const isLatest = latest.get(instrument.tipo_ipt) === instrument;
+    return `
+      <article class="capas-ipt-card ${isLatest ? "latest" : "historical"}">
+        <div><span class="capas-ipt-type">${escape(instrument.tipo_ipt || "IPT")}</span><span class="capas-ipt-state">${isLatest ? "Último registrado" : "Versión anterior"}</span></div>
+        <h4>${escape(instrument.nombre || "Instrumento sin nombre")}</h4>
+        <dl><div><dt>Escala</dt><dd>${escape(instrument.nivel_planificacion || "Sin dato")}</dd></div><div><dt>Fecha normativa</dt><dd>${escape(instrument.fecha || "Sin fecha")}</dd></div></dl>
+        <a href="${escape(instrument.fuente || "https://portalipt.minvu.cl/instrumentos")}" target="_blank" rel="noopener noreferrer">Abrir Portal IPT ↗</a>
+      </article>`;
+  }
+
+  function renderIpt() {
+    const group = selectedIptGroup();
+    const instruments = group?.instrumentos || [];
+    const latest = latestByType(instruments);
+    $("capasIptGrid").innerHTML = instruments
+      .slice()
+      .sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")))
+      .map(item => iptCard(item, latest)).join("");
+    $("capasIptEmpty").hidden = instruments.length > 0;
+    $("capasIptGrid").hidden = instruments.length === 0;
+    $("capasIptCount").textContent = `${instruments.length} ${instruments.length === 1 ? "registro" : "registros"} · ${latest.size} ${latest.size === 1 ? "tipo" : "tipos"}`;
+    return { instruments, latest };
+  }
+
+  function versionCoverage(meta, commune) {
+    for (const version of meta.versiones || []) {
+      if ((version.comunas || []).some(name => normalize(name) === normalize(commune.comuna))) {
+        return {
+          state: "declarada",
+          label: `Incluida en versión ${version.version}`,
+          detail: [version.fecha_archivo ? `Archivo ${version.fecha_archivo}` : `Versión ${version.fecha}`, version.observacion].filter(Boolean).join(" · "),
+          dataDate: version.fecha_archivo || version.fecha
+        };
+      }
+    }
+    return { state: "pendiente", label: "No declarada en el consolidado", detail: "No significa que la comuna no tenga PRC; solo que no está nombrada en las versiones del GeoPackage consolidado.", dataDate: meta.fecha_dato };
+  }
+
+  function territorialCoverage(layer, commune) {
+    const meta = coverageSource().capas[layer.nombre] || { modo: "por_confirmar", fecha_dato: "Sin fecha del dato", detalle: "La ficha no declara cobertura comunal." };
+    const regionMatch = (meta.regiones || []).some(region => normalize(region) === normalize(commune.region));
+    const communeMatch = (meta.comunas || []).some(name => normalize(name) === normalize(commune.comuna));
+    let result;
+    switch (meta.modo) {
+      case "nacional_declarada":
+        result = { state: "declarada", label: "Cobertura nacional declarada", detail: "Falta verificar presencia o cantidad de elementos en la comuna." };
+        break;
+      case "comunas_versionadas":
+        result = versionCoverage(meta, commune);
+        break;
+      case "comunas_declaradas":
+        result = communeMatch
+          ? { state: "declarada", label: "Comuna declarada en la ficha", detail: meta.detalle }
+          : { state: "pendiente", label: "Cobertura no acreditada", detail: "La ficha solo enumera otras comunas." };
+        break;
+      case "regiones_y_comunas":
+        result = regionMatch || communeMatch
+          ? { state: "declarada", label: regionMatch ? "Región declarada en la ficha" : "Comuna declarada en la ficha", detail: meta.detalle }
+          : { state: "pendiente", label: "Cobertura no acreditada", detail: "La comuna no aparece en el alcance documentado." };
+        break;
+      case "region_exclusiva_por_confirmar":
+        result = regionMatch
+          ? { state: "pendiente", label: "Dentro del ámbito; falta cruce", detail: meta.detalle }
+          : { state: "no_aplica", label: "Fuera del ámbito territorial", detail: `La ficha restringe la capa a ${meta.regiones.join(", ")}.` };
+        break;
+      case "proceso":
+        result = { state: "proceso", label: "Proceso, no capa consumible", detail: meta.detalle };
+        break;
+      default:
+        result = { state: "pendiente", label: "Por confirmar con archivo", detail: meta.detalle || "La ficha no enumera cobertura comunal." };
+    }
+    return { ...result, dataDate: result.dataDate || meta.fecha_dato || "Sin fecha del dato", dateLabel: meta.fecha_etiqueta || "Fecha del dato" };
+  }
+
+  function coverageRow(layer, result) {
+    const formats = layer.formatos?.length ? layer.formatos.join(" · ") : "Revisar ficha";
+    const categories = layer.categorias?.length ? layer.categorias.join(" · ") : "Sin categoría";
+    return `
+      <tr>
+        <td><span class="capas-table-category">${escape(categories)}</span><strong>${escape(layer.nombre)}</strong><small>${escape(layer.owner || "Sin responsable")}</small></td>
+        <td><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small></td>
+        <td><strong>${escape(result.dataDate)}</strong><small>${escape(result.dateLabel)}</small></td>
+        <td><strong>${escape(layer.ultima_edicion || "Sin fecha")}</strong><small>Última edición de la ficha</small></td>
+        <td><strong>${escape(formats)}</strong><a href="${escape(layer.url)}" target="_blank" rel="noopener noreferrer">Ver evidencia en Notion ↗</a></td>
+      </tr>`;
+  }
+
+  function filteredTerritorial() {
+    const commune = selectedCommune();
+    const query = normalize(state.search);
+    return layersSource().capas.map(layer => ({ layer, result: territorialCoverage(layer, commune) }))
+      .filter(item => !state.coverage || item.result.state === state.coverage)
+      .filter(item => !query || normalize([item.layer.nombre, ...(item.layer.categorias || []), item.layer.owner].join(" ")).includes(query));
+  }
+
+  function renderTerritorial() {
+    const all = layersSource().capas.map(layer => ({ layer, result: territorialCoverage(layer, selectedCommune()) }));
+    const rows = filteredTerritorial();
+    $("capasCoverageBody").innerHTML = rows.map(item => coverageRow(item.layer, item.result)).join("");
+    $("capasTerritorialCount").textContent = `${rows.length} de ${all.length} capas`;
+    $("capasCoverageEmpty").hidden = rows.length > 0;
+    $("capasCoverageBody").closest(".capas-table-scroll").hidden = rows.length === 0;
+    return all;
+  }
+
+  function renderMetrics(ipt, territorial) {
+    const types = [...ipt.latest.keys()].sort((a, b) => a.localeCompare(b, "es"));
+    $("capasMetricIpt").textContent = ipt.instruments.length;
+    $("capasMetricIptTypes").textContent = types.length ? types.join(" · ") : "Sin registros";
+    $("capasMetricCovered").textContent = territorial.filter(item => item.result.state === "declarada").length;
+    $("capasMetricPending").textContent = territorial.filter(item => item.result.state === "pendiente").length;
+    $("capasMetricNotApplicable").textContent = territorial.filter(item => ["no_aplica", "proceso"].includes(item.result.state)).length;
+  }
+
+  function render() {
+    const commune = selectedCommune();
+    state.commune = commune.comuna;
+    $("capasSelectedTitle").textContent = `Cobertura de ${commune.comuna}`;
+    const ipt = renderIpt();
+    const territorial = renderTerritorial();
+    renderMetrics(ipt, territorial);
+  }
+
+  function bind() {
+    $("capasCommuneSelect")?.addEventListener("change", event => { state.commune = event.target.value; render(); });
+    $("capasSearch")?.addEventListener("input", event => { state.search = event.target.value; renderTerritorial(); });
+    $("capasCoverageFilter")?.addEventListener("change", event => { state.coverage = event.target.value; renderTerritorial(); });
+  }
+
+  window.renderCapasTerritoriales = function renderCapasTerritoriales() {
+    populateCommunes();
+    render();
+  };
+
+  bind();
+  window.renderCapasTerritoriales();
+})();

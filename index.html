@@ -22,6 +22,8 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-seguimiento-1">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-cobertura-2">
 </head>
 <body>
   <header class="topbar">
@@ -37,6 +39,8 @@
 
     <nav class="module-nav" aria-label="Módulos de Transsa Urban Intelligence">
       <button class="module-tab active" data-module="diario">Cambios recientes</button>
+      <button class="module-tab" data-module="seguimiento">Seguimiento PRC</button>
+      <button class="module-tab" data-module="capas">Cobertura comunal</button>
       <button class="module-tab" data-module="vigencia">IPT y vigencia</button>
       <button class="module-tab" data-module="ipt">Reportes IPT</button>
       <button class="module-tab" data-module="mapa">Mapa</button>
@@ -478,6 +482,155 @@
       </section>
     </section>
 
+    <section id="module-seguimiento" class="module-panel">
+      <div class="module-header seguimiento-header">
+        <div>
+          <p class="eyebrow">ESTADO NACIONAL · VISTA PARA PROPITEQ</p>
+          <h2>Seguimiento consolidado de normativa</h2>
+          <p>Una fila por comuna para saber qué PRC está disponible, qué debe revisarse y qué puede consumir Propiteq.</p>
+        </div>
+        <div class="seguimiento-header-actions">
+          <span class="seguimiento-readonly-badge">Solo lectura</span>
+          <button id="seguimientoDownloadCsv" class="secondary-button" type="button">Descargar CSV</button>
+        </div>
+      </div>
+
+      <section class="seguimiento-kpis" aria-label="Resumen nacional de seguimiento normativo">
+        <article><span>Comunas</span><strong id="seguimientoMetricTotal">0</strong><small>Cobertura nacional</small></article>
+        <article class="available"><span>Disponible</span><strong id="seguimientoMetricAvailable">0</strong><small>Consumo habilitado</small></article>
+        <article class="review"><span>Usar con revisión</span><strong id="seguimientoMetricReview">0</strong><small>Con alertas o controles</small></article>
+        <article class="unavailable"><span>No disponible</span><strong id="seguimientoMetricUnavailable">0</strong><small>Sin capa o sin información</small></article>
+      </section>
+
+      <section class="seguimiento-filter-panel">
+        <div class="seguimiento-filter-heading">
+          <div>
+            <p class="eyebrow">CONSULTA CONSOLIDADA</p>
+            <h3>Estado por comuna</h3>
+          </div>
+          <span id="seguimientoResultCount" class="result-count"></span>
+        </div>
+        <div class="seguimiento-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="seguimientoSearch" type="search" placeholder="Comuna, región, PRC o motivo…">
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="seguimientoRegion"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Disponibilidad Propiteq</span>
+            <select id="seguimientoConsumption">
+              <option value="">Todas</option>
+              <option value="disponible">Disponible</option>
+              <option value="usar_con_revision">Usar con revisión</option>
+              <option value="no_disponible">No disponible</option>
+            </select>
+          </label>
+          <label>
+            <span>Auditoría</span>
+            <select id="seguimientoAudit">
+              <option value="">Todas</option>
+              <option value="auditoria_avanzada">Auditoría avanzada</option>
+              <option value="control_preliminar">Control preliminar</option>
+              <option value="pendiente_revision">Pendiente de revisión</option>
+              <option value="sin_cartografia">Sin cartografía</option>
+              <option value="sin_iniciar">Sin iniciar</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="seguimiento-table-section">
+        <div class="seguimiento-table-scroll">
+          <table class="seguimiento-table">
+            <thead>
+              <tr>
+                <th>Región / comuna</th>
+                <th>IPT vigente identificado</th>
+                <th>Estado de fuente</th>
+                <th>Auditoría</th>
+                <th>Propiteq</th>
+                <th>Alertas</th>
+                <th>Última revisión</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="seguimientoTableBody"></tbody>
+          </table>
+        </div>
+        <div id="seguimientoEmpty" class="empty-state" hidden>
+          <div>IPT</div>
+          <h3>No hay comunas para estos filtros</h3>
+          <p>Prueba con otra región o estado de disponibilidad.</p>
+        </div>
+      </section>
+
+      <section class="seguimiento-interpretation">
+        <div><span class="seguimiento-dot available"></span><strong>Disponible</strong><p>Existe una capa recomendada para consumo. Mantiene control preliminar hasta completar auditoría avanzada.</p></div>
+        <div><span class="seguimiento-dot review"></span><strong>Usar con revisión</strong><p>La capa existe, pero tiene cambios, vínculos o controles pendientes.</p></div>
+        <div><span class="seguimiento-dot unavailable"></span><strong>No disponible</strong><p>No hay cartografía vinculada o la comuna todavía no fue consolidada.</p></div>
+      </section>
+    </section>
+
+    <section id="module-capas" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">COBERTURA DE DATOS · IPT + CAPAS TERRITORIALES</p>
+          <h2>Qué información tiene cada comuna</h2>
+          <p>Consulta los IPT aplicables y las capas territoriales disponibles, con la fecha normativa, fecha del dato y última edición del catálogo.</p>
+        </div>
+        <div class="capas-header-actions">
+          <span class="seguimiento-readonly-badge">Inventario de cobertura</span>
+          <a class="capas-source-link" href="https://app.notion.com/p/1ee631a6d38f80e9a55cc8115fcf4069?pvs=204" target="_blank" rel="noopener noreferrer">Abrir Diccionario de Datos ↗</a>
+        </div>
+      </div>
+
+      <section class="capas-commune-picker">
+        <div>
+          <p class="eyebrow">SELECCIONA UNA COMUNA</p>
+          <h3 id="capasSelectedTitle">Cobertura de Coquimbo</h3>
+          <p>La cobertura territorial es documental hasta ejecutar el cruce espacial del archivo. No modifica el estado de auditoría del PRC.</p>
+        </div>
+        <label><span>Comuna</span><select id="capasCommuneSelect"></select></label>
+      </section>
+
+      <section class="capas-kpis" aria-label="Resumen de cobertura de la comuna seleccionada">
+        <article><span>IPT aplicables</span><strong id="capasMetricIpt">0</strong><small id="capasMetricIptTypes">Sin registros</small></article>
+        <article class="verified"><span>Capas declaradas</span><strong id="capasMetricCovered">0</strong><small>Incluidas o de alcance nacional</small></article>
+        <article class="review"><span>Cruce pendiente</span><strong id="capasMetricPending">0</strong><small>Falta revisar geometría por comuna</small></article>
+        <article class="alert"><span>No aplica / proceso</span><strong id="capasMetricNotApplicable">0</strong><small>Fuera de alcance o no es capa</small></article>
+      </section>
+
+      <section class="capas-coverage-section">
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 1 · NORMATIVA</p><h3>IPT aplicables a la comuna</h3><p>Instrumentos registrados en Portal IPT. La versión más reciente de cada tipo se identifica sin trasladar aquí su estado de auditoría.</p></div><span id="capasIptCount" class="result-count"></span></div>
+        <div id="capasIptGrid" class="capas-ipt-grid"></div>
+        <div id="capasIptEmpty" class="empty-state" hidden><div>IPT</div><h3>Sin IPT registrado</h3><p>La comuna no aparece en el consolidado actual de Portal IPT.</p></div>
+      </section>
+
+      <section class="capas-coverage-section">
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 2 · INFORMACIÓN ESPACIAL</p><h3>Capas territoriales para la comuna</h3><p>Se muestran por separado la fecha del dato y la fecha en que se editó su ficha de Notion.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
+        <div class="capas-coverage-filters">
+          <label><span>Buscar capa</span><input id="capasSearch" type="search" placeholder="Metro, predios, riesgos, establecimientos…"></label>
+          <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="declarada">Cobertura declarada</option><option value="pendiente">Por confirmar</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option></select></label>
+        </div>
+        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Fecha del dato</th><th>Ficha Notion</th><th>Formato / evidencia</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
+        <div id="capasCoverageEmpty" class="empty-state" hidden><div>GIS</div><h3>Sin capas para este filtro</h3><p>Prueba con otro estado o término de búsqueda.</p></div>
+      </section>
+
+      <section class="capas-method">
+        <div><p class="eyebrow">CÓMO LEER ESTA PÁGINA</p><h3>Disponibilidad no es validación</h3></div>
+        <ol>
+          <li>Los IPT provienen del consolidado de Portal IPT y se ordenan por tipo y fecha normativa.</li>
+          <li>Las capas provienen del Diccionario de Datos de Notion.</li>
+          <li>“Declarada” significa que la ficha nombra la comuna o afirma alcance nacional; todavía puede faltar el cruce geométrico.</li>
+          <li>“Por confirmar” significa que existe un archivo, pero la ficha no acredita si contiene la comuna.</li>
+          <li>La auditoría y validación del PRC se consulta exclusivamente en “Seguimiento PRC” e “IPT y vigencia”.</li>
+        </ol>
+      </section>
+    </section>
+
     <section id="module-vigencia" class="module-panel">
       <div class="module-header">
         <div>
@@ -627,12 +780,17 @@
   <script src="data/ipt_reportes.js"></script>
   <script src="data/historicos.js"></script>
   <script src="data/vigencia_cartografica.js"></script>
+  <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
+  <script src="seguimiento-consolidado.js?v=20260811-seguimiento-1"></script>
+  <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
+  <script src="data/cobertura_capas_comunal.js?v=20260811-cobertura-1"></script>
+  <script src="capas-territoriales.js?v=20260811-cobertura-2"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
   <script src="app.js"></script>
-  <script src="ux-refresh.js?v=20260811-sig-visual-3"></script>
+  <script src="ux-refresh.js?v=20260811-cobertura-comunal-4"></script>
 </body>
 </html>

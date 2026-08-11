@@ -202,7 +202,7 @@
 
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
-    const vigenciaRelease = "20260811-sig-visual-3";
+    const vigenciaRelease = "20260811-cobertura-comunal-4";
 
     try {
       await loadScript("data/noticias.js", "data-noticias");
@@ -226,7 +226,7 @@
       await loadScript(`vigencia-pilotos-v2.js?v=${vigenciaRelease}`, "vigencia-pilotos");
       await loadScript("vigencia-estrategica.js", "vigencia-estrategica");
       await loadScript("vigencia-nacional-ui.js", "vigencia-nacional-ui");
-      await loadScript(`vigencia-comparacion-detallada-v2.js?v=${vigenciaRelease}`, "vigencia-comparacion-detallada");
+      await loadScript(`vigencia-comparacion-detallada.js?v=${vigenciaRelease}`, "vigencia-comparacion-detallada");
       await loadScript(`vigencia-refundidos-fuentes.js?v=${vigenciaRelease}`, "vigencia-refundidos-fuentes");
       if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
