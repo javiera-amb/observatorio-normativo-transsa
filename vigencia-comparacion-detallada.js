@@ -65,9 +65,13 @@
       .sig-diagnosis{margin-bottom:14px;padding:14px;border-left:4px solid #d7951f;border-radius:0 11px 11px 0;background:#fff7e8}
       .sig-diagnosis strong{display:block;color:#72531b;font-size:.8rem}
       .sig-diagnosis p{margin:5px 0 0;color:#6a5125;font-size:.72rem;line-height:1.5}
-      .sig-action-list{display:grid;gap:10px}
-      .sig-action-card{padding:15px;border:1px solid var(--line);border-radius:13px;background:var(--surface-soft)}
+      .sig-action-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .sig-action-card{padding:15px;border:1px solid var(--line);border-left:4px solid var(--transsa-blue);border-radius:13px;background:#fff}
+      .sig-action-card.definida,.sig-action-card.definida_parcial{border-left-color:#2b7a5a}
+      .sig-action-card.bloqueada_por_planos{border-left-color:#c75b64}
+      .sig-action-card.pendiente_revision{border-left-color:#d7951f}
       .sig-action-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+      .sig-action-identity{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
       .sig-action-code{display:inline-flex;margin-right:7px;padding:4px 7px;border-radius:7px;background:var(--transsa-navy);color:#fff;font-size:.62rem;font-weight:700}
       .sig-action-type{color:var(--transsa-blue);font-size:.66rem;font-weight:700}
       .sig-action-status{padding:5px 8px;border-radius:999px;font-size:.62rem;font-weight:700;white-space:nowrap}
@@ -76,12 +80,17 @@
       .sig-action-status.pendiente_revision{color:#735110;background:#fff3cf}
       .sig-action-card h5{margin:10px 0 4px;color:var(--transsa-navy);font-size:.86rem}
       .sig-action-instruction{margin:0;color:#424a59;font-size:.74rem;line-height:1.52}
+      .sig-action-details{margin-top:11px;border-top:1px solid var(--line)}
+      .sig-action-details summary{padding-top:9px;cursor:pointer;color:var(--transsa-blue);font-size:.67rem;font-weight:700;list-style:none}
+      .sig-action-details summary::-webkit-details-marker{display:none}
+      .sig-action-details summary::after{content:" +"}
+      .sig-action-details[open] summary::after{content:" −"}
       .sig-action-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
-      .sig-action-meta div{padding:9px;border-radius:9px;background:#fff;border:1px solid var(--line)}
+      .sig-action-meta div{padding:9px;border-radius:9px;background:var(--surface-soft);border:1px solid var(--line)}
       .sig-action-meta span,.sig-action-meta strong{display:block}
       .sig-action-meta span{color:var(--muted);font-size:.58rem;text-transform:uppercase}
       .sig-action-meta strong{margin-top:3px;color:#404858;font-size:.68rem;line-height:1.4}
-      .sig-action-result{margin:10px 0 0;color:#303747;font-size:.7rem;line-height:1.45}
+      .sig-action-result{margin:9px 0 0;padding:9px;border-radius:9px;background:#f5f5ff;color:#303747;font-size:.7rem;line-height:1.45}
       .validation-flow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
       .validation-step{position:relative;padding:11px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);text-align:center}
       .validation-step::before{content:"";display:block;width:9px;height:9px;margin:0 auto 7px;border-radius:50%;background:#b9bbc5}
@@ -97,6 +106,9 @@
         .detailed-comparison-heading{display:block}
         .detailed-comparison-status{display:inline-flex;margin-top:8px}
         .before-after-grid{grid-template-columns:1fr}
+        .sig-work-summary{align-items:flex-start;flex-direction:column}
+        .sig-action-list{grid-template-columns:1fr}
+        .sig-action-meta{grid-template-columns:1fr}
       }
     `;
     document.head.appendChild(style);
@@ -218,9 +230,9 @@
         </div>
         <div class="sig-action-list">
           ${actions.map(action => `
-            <article class="sig-action-card">
+            <article class="sig-action-card ${escape(action.estado || "pendiente_revision")}">
               <div class="sig-action-head">
-                <div>
+                <div class="sig-action-identity">
                   <span class="sig-action-code">${escape(action.id)}</span>
                   <span class="sig-action-type">${escape(actionLabel(action.accion))}</span>
                 </div>
@@ -228,13 +240,16 @@
               </div>
               <h5>${escape(action.objeto)}</h5>
               <p class="sig-action-instruction">${escape(action.instruccion)}</p>
-              <div class="sig-action-meta">
-                <div><span>Capa objetivo</span><strong>${escape(action.capa_objetivo)}</strong></div>
-                <div><span>Ámbito</span><strong>${escape(action.ambito)}</strong></div>
-                <div><span>Dependencia</span><strong>${escape(action.dependencia)}</strong></div>
-                <div><span>Prioridad</span><strong>${escape(action.prioridad)}</strong></div>
-              </div>
-              <p class="sig-action-result"><strong>Resultado esperado:</strong> ${escape(action.resultado_esperado)}</p>
+              <details class="sig-action-details">
+                <summary>Ver trazabilidad técnica</summary>
+                <div class="sig-action-meta">
+                  <div><span>Capa objetivo</span><strong>${escape(action.capa_objetivo)}</strong></div>
+                  <div><span>Ámbito</span><strong>${escape(action.ambito)}</strong></div>
+                  <div><span>Dependencia</span><strong>${escape(action.dependencia)}</strong></div>
+                  <div><span>Prioridad</span><strong>${escape(action.prioridad)}</strong></div>
+                </div>
+                <p class="sig-action-result"><strong>Resultado esperado:</strong> ${escape(action.resultado_esperado)}</p>
+              </details>
             </article>
           `).join("")}
         </div>
