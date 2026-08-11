@@ -6,6 +6,8 @@
     region: "",
     consumption: "",
     audit: "",
+    publication: "",
+    qa: "",
   };
 
   const $ = id => document.getElementById(id);
@@ -17,6 +19,7 @@
     .replaceAll("'", "&#039;");
 
   const data = () => window.SEGUIMIENTO_NORMATIVO || { resumen: {}, comunas: [] };
+  const operationalData = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {} };
 
   const consumptionLabels = {
     disponible: "Disponible",
@@ -31,6 +34,40 @@
     sin_cartografia: "Sin cartografía",
     sin_iniciar: "Sin iniciar",
   };
+
+  const publicationLabels = {
+    publicada: "Publicada",
+    en_preparacion: "En preparación",
+    no_registrada: "No registrada",
+  };
+
+  const qaLabels = {
+    completo: "QA completo",
+    en_proceso: "QA en proceso",
+    pendiente: "QA pendiente",
+  };
+
+  function operationalStatus(row) {
+    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
+    let qa = override.qa;
+    if (!qa && Number.isFinite(row.controles_totales) && Number.isFinite(row.controles_pendientes)) {
+      qa = row.controles_pendientes === 0 && row.controles_totales > 0
+        ? "completo"
+        : row.controles_pendientes < row.controles_totales ? "en_proceso" : "pendiente";
+    }
+    if (!qa && ["auditoria_avanzada", "control_preliminar"].includes(row.estado_auditoria)) qa = "en_proceso";
+    return {
+      cartography: hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
+      publication: override.publicacion || "no_registrada",
+      qa: qa || "pendiente",
+      publicationDate: override.fecha_publicacion || "",
+      qaDate: override.fecha_qa || "",
+      responsible: override.responsable || "Sin responsable registrado",
+      evidence: override.evidencia || "",
+      note: override.nota || "",
+    };
+  }
 
   function populateRegions() {
     const select = $("seguimientoRegion");
@@ -47,13 +84,16 @@
   function filteredRows() {
     const query = state.search.trim().toLocaleLowerCase("es");
     return data().comunas.filter(row => {
+      const operational = operationalStatus(row);
       const haystack = [row.region, row.comuna, row.prc_nombre, row.estado_fuente, row.motivo]
         .join(" ")
         .toLocaleLowerCase("es");
       return (!query || haystack.includes(query))
         && (!state.region || row.region === state.region)
         && (!state.consumption || row.consumo_propieteq === state.consumption)
-        && (!state.audit || row.estado_auditoria === state.audit);
+        && (!state.audit || row.estado_auditoria === state.audit)
+        && (!state.publication || operational.publication === state.publication)
+        && (!state.qa || operational.qa === state.qa);
     });
   }
 
@@ -71,6 +111,12 @@
     const consumption = row.consumo_propieteq || "no_disponible";
     const audit = row.estado_auditoria || "sin_iniciar";
     const sourceDetail = [row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ");
+    const operational = operationalStatus(row);
+    const cartographyLabels = {
+      encontrada: "Archivo encontrado",
+      no_encontrada: "No encontrada",
+      no_verificada: "No verificada",
+    };
     return `
       <tr>
         <td>
@@ -82,11 +128,19 @@
           <span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span>
         </td>
         <td>
-          <span class="seguimiento-source-state" title="${escape(sourceDetail)}">${escape(row.estado_fuente)}</span>
-          <small>${escape(row.motivo)}</small>
+          <span class="seguimiento-operational-pill cartography ${escape(operational.cartography)}">${escape(cartographyLabels[operational.cartography])}</span>
+          <small title="${escape(sourceDetail)}">${escape(sourceDetail || "Sin archivo o servicio vinculado")}</small>
         </td>
-        <td><span class="seguimiento-audit-pill ${escape(audit)}">${escape(auditLabels[audit] || audit)}</span></td>
-        <td><span class="seguimiento-consumption-pill ${escape(consumption)}">${escape(consumptionLabels[consumption] || consumption)}</span></td>
+        <td>
+          <span class="seguimiento-operational-pill publication ${escape(operational.publication)}">${escape(publicationLabels[operational.publication])}</span>
+          <small>${escape(operational.publicationDate ? `Publicada: ${operational.publicationDate}` : operational.responsible)}</small>
+          <small>${escape(consumptionLabels[consumption] || consumption)} para consumo</small>
+        </td>
+        <td>
+          <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaLabels[operational.qa])}</span>
+          <small>${escape(operational.qaDate ? `Cierre: ${operational.qaDate}` : auditLabels[audit] || audit)}</small>
+          ${Number.isFinite(row.controles_pendientes) ? `<small>${escape(`${row.controles_pendientes} de ${row.controles_totales} controles pendientes`)}</small>` : ""}
+        </td>
         <td>
           <strong class="seguimiento-alert-count">${escape(alertText(row))}</strong>
           ${row.ultimo_acto_posterior ? `<small>Último acto: ${escape(row.ultimo_acto_posterior)}</small>` : ""}
@@ -126,14 +180,18 @@
   function downloadCsv() {
     const headers = [
       "region", "comuna", "prc_nombre", "prc_fecha", "estado_fuente",
-      "estado_auditoria", "disponibilidad_propieteq", "motivo",
+      "cartografia_estado", "publicacion_estado", "fecha_publicacion",
+      "qa_estado", "fecha_qa", "responsable", "estado_auditoria", "disponibilidad_propieteq", "motivo",
       "actos_posteriores", "controles_pendientes", "controles_totales",
       "ultima_revision", "archivo_recomendado", "capa_recomendada",
     ];
     const lines = [headers.join(";")];
     data().comunas.forEach(row => {
+      const operational = operationalStatus(row);
       const values = [
         row.region, row.comuna, row.prc_nombre, row.prc_fecha, row.estado_fuente,
+        operational.cartography, operational.publication, operational.publicationDate,
+        operational.qa, operational.qaDate, operational.responsible,
         auditLabels[row.estado_auditoria] || row.estado_auditoria,
         consumptionLabels[row.consumo_propieteq] || row.consumo_propieteq,
         row.motivo, row.actos_posteriores, row.controles_pendientes,
@@ -182,6 +240,14 @@
     });
     $("seguimientoAudit")?.addEventListener("change", event => {
       state.audit = event.target.value;
+      renderTable();
+    });
+    $("seguimientoPublication")?.addEventListener("change", event => {
+      state.publication = event.target.value;
+      renderTable();
+    });
+    $("seguimientoQa")?.addEventListener("change", event => {
+      state.qa = event.target.value;
       renderTable();
     });
     $("seguimientoDownloadCsv")?.addEventListener("click", downloadCsv);

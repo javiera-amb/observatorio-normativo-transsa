@@ -22,8 +22,8 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-seguimiento-1">
-  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-cobertura-2">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260811-estado-operativo-2">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-estado-operativo-2">
 </head>
 <body>
   <header class="topbar">
@@ -490,7 +490,8 @@
           <p>Una fila por comuna para saber qué PRC está disponible, qué debe revisarse y qué puede consumir Propiteq.</p>
         </div>
         <div class="seguimiento-header-actions">
-          <span class="seguimiento-readonly-badge">Solo lectura</span>
+          <span class="seguimiento-readonly-badge">Estado operativo controlado</span>
+          <a class="secondary-button" href="https://github.com/javiera-amb/observatorio-normativo-transsa/edit/main/data/estado_operativo_datos.js" target="_blank" rel="noopener noreferrer">Actualizar estados ↗</a>
           <button id="seguimientoDownloadCsv" class="secondary-button" type="button">Descargar CSV</button>
         </div>
       </div>
@@ -539,6 +540,24 @@
               <option value="sin_iniciar">Sin iniciar</option>
             </select>
           </label>
+          <label>
+            <span>Publicación</span>
+            <select id="seguimientoPublication">
+              <option value="">Todas</option>
+              <option value="publicada">Publicada</option>
+              <option value="en_preparacion">En preparación</option>
+              <option value="no_registrada">No registrada</option>
+            </select>
+          </label>
+          <label>
+            <span>QA</span>
+            <select id="seguimientoQa">
+              <option value="">Todos</option>
+              <option value="completo">QA completo</option>
+              <option value="en_proceso">QA en proceso</option>
+              <option value="pendiente">QA pendiente</option>
+            </select>
+          </label>
         </div>
       </section>
 
@@ -549,9 +568,9 @@
               <tr>
                 <th>Región / comuna</th>
                 <th>IPT vigente identificado</th>
-                <th>Estado de fuente</th>
-                <th>Auditoría</th>
-                <th>Propiteq</th>
+                <th>Cartografía</th>
+                <th>Publicación</th>
+                <th>QA</th>
                 <th>Alertas</th>
                 <th>Última revisión</th>
                 <th></th>
@@ -582,7 +601,8 @@
           <p>Consulta los IPT aplicables y las capas territoriales disponibles, con la fecha normativa, fecha del dato y última edición del catálogo.</p>
         </div>
         <div class="capas-header-actions">
-          <span class="seguimiento-readonly-badge">Inventario de cobertura</span>
+          <span class="seguimiento-readonly-badge">Inventario + control operativo</span>
+          <a class="capas-source-link" href="https://github.com/javiera-amb/observatorio-normativo-transsa/edit/main/data/estado_operativo_datos.js" target="_blank" rel="noopener noreferrer">Actualizar estados ↗</a>
           <a class="capas-source-link" href="https://app.notion.com/p/1ee631a6d38f80e9a55cc8115fcf4069?pvs=204" target="_blank" rel="noopener noreferrer">Abrir Diccionario de Datos ↗</a>
         </div>
       </div>
@@ -604,7 +624,7 @@
       </section>
 
       <section class="capas-coverage-section">
-        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 1 · NORMATIVA</p><h3>IPT aplicables a la comuna</h3><p>Instrumentos registrados en Portal IPT. La versión más reciente de cada tipo se identifica sin trasladar aquí su estado de auditoría.</p></div><span id="capasIptCount" class="result-count"></span></div>
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 1 · NORMATIVA</p><h3>IPT normativos identificados</h3><p>Cada instrumento distingue existencia normativa, cartografía encontrada, publicación en Transsa/Propiteq y QA. Ningún estado se completa por inferencia.</p></div><span id="capasIptCount" class="result-count"></span></div>
         <div id="capasIptGrid" class="capas-ipt-grid"></div>
         <div id="capasIptEmpty" class="empty-state" hidden><div>IPT</div><h3>Sin IPT registrado</h3><p>La comuna no aparece en el consolidado actual de Portal IPT.</p></div>
       </section>
@@ -615,7 +635,7 @@
           <label><span>Buscar capa</span><input id="capasSearch" type="search" placeholder="Metro, predios, riesgos, establecimientos…"></label>
           <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="declarada">Cobertura declarada</option><option value="pendiente">Por confirmar</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option></select></label>
         </div>
-        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Fecha del dato</th><th>Ficha Notion</th><th>Formato / evidencia</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
+        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Cartografía</th><th>Publicación</th><th>QA</th><th>Fecha del dato</th><th>Ficha / evidencia</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
         <div id="capasCoverageEmpty" class="empty-state" hidden><div>GIS</div><h3>Sin capas para este filtro</h3><p>Prueba con otro estado o término de búsqueda.</p></div>
       </section>
 
@@ -626,7 +646,9 @@
           <li>Las capas provienen del Diccionario de Datos de Notion.</li>
           <li>“Declarada” significa que la ficha nombra la comuna o afirma alcance nacional; todavía puede faltar el cruce geométrico.</li>
           <li>“Por confirmar” significa que existe un archivo, pero la ficha no acredita si contiene la comuna.</li>
-          <li>La auditoría y validación del PRC se consulta exclusivamente en “Seguimiento PRC” e “IPT y vigencia”.</li>
+          <li>“Publicada” exige registro explícito del destino y fecha de carga; encontrar un archivo no basta.</li>
+          <li>“QA completo” exige que no queden controles pendientes y que exista fecha o evidencia del cierre.</li>
+          <li>La auditoría normativa detallada se consulta en “Seguimiento PRC” e “IPT y vigencia”.</li>
         </ol>
       </section>
     </section>
@@ -781,10 +803,11 @@
   <script src="data/historicos.js"></script>
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
-  <script src="seguimiento-consolidado.js?v=20260811-seguimiento-1"></script>
+  <script src="data/estado_operativo_datos.js?v=20260811-estado-operativo-1"></script>
+  <script src="seguimiento-consolidado.js?v=20260811-estado-operativo-2"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-cobertura-1"></script>
-  <script src="capas-territoriales.js?v=20260811-cobertura-2"></script>
+  <script src="capas-territoriales.js?v=20260811-estado-operativo-2"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
