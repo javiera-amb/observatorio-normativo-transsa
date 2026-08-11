@@ -202,7 +202,7 @@
 
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
-    const vigenciaRelease = "20260811-refundidos-1";
+    const vigenciaRelease = "20260811-refundidos-2";
 
     try {
       await loadScript("data/noticias.js", "data-noticias");
@@ -219,11 +219,11 @@
     }
 
     try {
-      await loadScript(`vigencia-comunal.js?v=${vigenciaRelease}`, "vigencia-comunal");
+      await loadScript(`vigencia-comunal-v2.js?v=${vigenciaRelease}`, "vigencia-comunal");
       await loadScript("data/comparaciones_ipt.js", "comparaciones-ipt");
-      await loadScript(`data/comparacion_coquimbo_detallada.js?v=${vigenciaRelease}`, "comparacion-coquimbo-detallada");
+      await loadScript(`data/comparacion_coquimbo_detallada_v2.js?v=${vigenciaRelease}`, "comparacion-coquimbo-detallada");
       await loadScript(`data/fuentes_multifuente_ipt.js?v=${vigenciaRelease}`, "fuentes-multifuente-ipt");
-      await loadScript(`vigencia-pilotos.js?v=${vigenciaRelease}`, "vigencia-pilotos");
+      await loadScript(`vigencia-pilotos-v2.js?v=${vigenciaRelease}`, "vigencia-pilotos");
       await loadScript("vigencia-estrategica.js", "vigencia-estrategica");
       await loadScript("vigencia-nacional-ui.js", "vigencia-nacional-ui");
       await loadScript("vigencia-comparacion-detallada.js", "vigencia-comparacion-detallada");
