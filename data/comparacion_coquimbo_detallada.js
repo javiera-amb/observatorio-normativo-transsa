@@ -15,6 +15,39 @@
     estado_sig: "pendiente_revision",
     nivel_evidencia: "comparacion_ordenanzas_parcial",
     fecha_revision: "2026-08-06",
+    naturaleza_transicion: "reemplazo_integral_confirmado",
+    etiqueta_transicion: "Nuevo PRC base · reemplazo integral",
+    paquete_refundido: {
+      estado: "confirmado_documentalmente",
+      base_anterior: "PRC Coquimbo 2019",
+      base_vigente: "PRC Coquimbo 2026",
+      consolida: [
+        "Un único instrumento base vigente para Coquimbo, Tongoy y Guanaqueros."
+      ],
+      incorpora: [],
+      incorpora_estado: "pendiente_validar_actos_anteriores",
+      cambia: [
+        "Intensidad y parámetros de ZU3.",
+        "Nuevas subzonas ZU3-A y ZU5-A a ZU5-D.",
+        "Incentivos urbanísticos en ZU8, ZU15-A y ZE4.",
+        "Nueva zona productiva ZP3.",
+        "Protección patrimonial, parques e infraestructura."
+      ],
+      reemplaza: [
+        "El PRC 2019 queda como versión histórica.",
+        "Los códigos ZI1, ZI4 y ZI5 requieren correspondencia 2019–2026.",
+        "ZU18 y la familia ZU19 requieren identificar su zona sucesora."
+      ],
+      sin_cambio: [
+        "Límite urbano: la Municipalidad informó que la actualización no lo modifica."
+      ],
+      pendientes: [
+        "Determinar qué actos y enmiendas anteriores quedaron efectivamente incorporados.",
+        "Resolver la incorporación o reemplazo de la Enmienda Ferronor.",
+        "Comparar y controlar espacialmente las trece láminas 2026.",
+        "Acreditar la versión efectiva de cada servicio vectorial utilizado."
+      ]
+    },
     instrumento_anterior: {
       registro: 282,
       fecha: "2019-07-10",
