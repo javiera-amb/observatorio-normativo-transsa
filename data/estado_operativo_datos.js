@@ -1,5 +1,5 @@
 window.ESTADO_OPERATIVO_DATOS = {
-  corte: "2026-08-11",
+  corte: "2026-08-12",
   destino_publicacion: "Transsa / Propiteq",
   criterio: "El equipo actualiza el estado de producción. El QA se registra de forma independiente después de comparar cartografía, normativa y cambios aplicables.",
   valores_permitidos: {
@@ -20,9 +20,9 @@ window.ESTADO_OPERATIVO_DATOS = {
     "Chiguayante", "Chillán", "Chillán Viejo", "Colina", "Concepción", "Coquimbo", "Coyhaique", "Estación Central", "Frutillar", "Hualpén", "Huechuraba", "Independencia", "Iquique", "La Cisterna", "La Florida", "La Reina", "La Serena", "Las Condes", "Lo Barnechea", "Macul", "Maipú", "Melipilla", "Ñuñoa", "Osorno", "Peñalolén", "Providencia", "Pudahuel", "Puente Alto", "Puerto Montt", "Puerto Octay", "Puerto Varas", "Quinta Normal", "Rancagua", "Recoleta", "Renca", "San Joaquín", "San Miguel", "San Pedro de la Paz", "Santiago", "Talca", "Temuco", "Valdivia", "Viña del Mar", "Vitacura"
   ],
   fuente_publicacion_propiteq: {
-    tipo: "tabla_drive",
-    url: "",
-    descripcion: "Tabla administrada por el equipo con comuna, arriba_en_propiteq (Sí/No), fecha de publicación y enlace de evidencia."
+    tipo: "tabla_sharepoint",
+    url: "https://transsa.sharepoint.com/:x:/s/DEI/IQCb9mHRTxIRTrh2zci6DE4ZAa-AHtxnXz_E1IxSIq9FHWg?e=IAoqb9",
+    descripcion: "Tabla SharePoint del equipo DEI con comuna, arriba_en_propiteq (Sí/No), fecha de publicación y enlace de evidencia."
   },
   // Clave: "Región|Comuna". Solo registrar hechos confirmados por el equipo.
   // Ejemplo:

@@ -309,7 +309,7 @@
     if (trackerLink && tracker.url) {
       trackerLink.href = tracker.url;
       trackerLink.removeAttribute("aria-disabled");
-      trackerLink.textContent = "Abrir tabla Drive ↗";
+      trackerLink.textContent = "Abrir tabla SharePoint ↗";
       if ($("seguimientoDriveStatus")) $("seguimientoDriveStatus").textContent = tracker.descripcion || "Tabla de publicación efectiva.";
     }
   }
