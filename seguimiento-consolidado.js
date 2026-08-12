@@ -40,11 +40,7 @@
   };
   const qaPlatformState = row => {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
-    if (override.qa_plataforma) return override.qa_plataforma;
-    if (Number.isFinite(row.controles_totales) && Number.isFinite(row.controles_pendientes)) {
-      return row.controles_pendientes === 0 && row.controles_totales > 0 ? "aprobado" : "observaciones";
-    }
-    return "pendiente";
+    return override.qa_plataforma || override.qa_propiteq || "pendiente";
   };
   const qaSharepointState = row => {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
@@ -121,7 +117,7 @@
       qa,
       qaSharepoint: qaSharepointState(row),
       statusDate: override.fecha_estado || "",
-      qaDate: override.fecha_qa_plataforma || row.ultima_revision || "",
+      qaDate: override.fecha_qa_plataforma || override.fecha_qa_propiteq || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || "",
       note: override.nota || (production === "enviado"
