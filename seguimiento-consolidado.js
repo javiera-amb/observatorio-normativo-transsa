@@ -285,9 +285,12 @@
     return data().comunas.map(row => ({ row, internal: internalStatus(row) })).filter(({ row, internal }) => {
       const haystack = [row.region, row.comuna, row.prc_nombre, internal.responsible, stageLabels[internal.stage], internal.blocking, internal.nextAction]
         .join(" ").toLocaleLowerCase("es");
+      const ownerMatches = !state.internalOwner
+        || (state.internalOwner === "__sin_asignar__" && internal.responsible === "Sin asignar")
+        || (state.internalOwner !== "__sin_asignar__" && (internal.responsible === state.internalOwner || internal.responsible === "Sin asignar"));
       return (!query || haystack.includes(query))
         && (!state.internalRegion || row.region === state.internalRegion)
-        && (!state.internalOwner || (state.internalOwner === "__sin_asignar__" ? internal.responsible === "Sin asignar" : internal.responsible === state.internalOwner))
+        && ownerMatches
         && (!state.internalStage || internal.stage === state.internalStage)
         && (!state.internalPriority || internal.priority === state.internalPriority);
     });
@@ -532,6 +535,25 @@
     renderTable();
   }
 
+  function downloadLocalChanges() {
+    const headers = ["region", "comuna", "responsable", "estado_produccion", "fecha_estado"];
+    const lines = [headers.join(";")];
+    Object.entries(localChanges).forEach(([key, change]) => {
+      const [region, ...communeParts] = key.split("|");
+      lines.push([region, communeParts.join("|"), change.responsable || "", change.estado_produccion || "", change.fecha_estado || ""]
+        .map(csvCell).join(";"));
+    });
+    const blob = new Blob(["\ufeff", lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "borradores_seguimiento_prc.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function csvCell(value) {
     const text = String(value ?? "");
     return `"${text.replaceAll('"', '""')}"`;
@@ -603,6 +625,7 @@
       if ($("seguimientoInternalOwner")) $("seguimientoInternalOwner").value = value;
       renderInternalTable();
     });
+    $("seguimientoDownloadLocalChanges")?.addEventListener("click", downloadLocalChanges);
     $("seguimientoSearch")?.addEventListener("input", event => {
       state.search = event.target.value;
       renderTable();
