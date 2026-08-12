@@ -26,7 +26,8 @@
 
   const data = () => window.SEGUIMIENTO_NORMATIVO || { resumen: {}, comunas: [] };
   const operationalData = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {} };
-  const isPrepublished = row => (operationalData().prc_publicados_sin_qa || []).some(name => name.toLocaleLowerCase("es") === String(row.comuna || "").toLocaleLowerCase("es"));
+  const normalizeCommune = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
+  const isPrepublished = row => (operationalData().prc_publicados_sin_qa || []).some(name => normalizeCommune(name) === normalizeCommune(row.comuna));
 
   const consumptionLabels = {
     disponible: "Disponible",
