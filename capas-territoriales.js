@@ -121,7 +121,6 @@
 
   function inferredQa(row, override) {
     if (override.qa_plataforma) return override.qa_plataforma;
-    if (override.qa) return override.qa;
     if (Number.isFinite(row?.controles_totales) && Number.isFinite(row?.controles_pendientes)) {
       if (row.controles_pendientes === 0 && row.controles_totales > 0) return "aprobado";
       return "observaciones";
