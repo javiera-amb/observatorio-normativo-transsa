@@ -72,11 +72,12 @@ Las clases permitidas son:
 - `oficial_directa`: descarga o servicio de un organismo público;
 - `oficial_interoperable`: ArcGIS REST, WFS o API oficial;
 - `scraping_publico`: extracción de un visor o sitio abierto;
-- `scraping_publico_corregida_transsa`: extracción pública que Transsa corrigió, limpió u homologó;
 - `dato_interno_transsa`: producto propio o base interna (por ejemplo, predios consolidado);
 - `normativa_municipal`: plano, ordenanza o archivo entregado por una municipalidad;
 - `fuente_abierta_complementaria`: OSM, Overture u otra fuente abierta no normativa;
 - `referencia_documental`: PDF, JPG o ficha que sirve como evidencia, pero no como capa consumible.
+
+El tratamiento se registra por separado: `sin_transformacion`, `correccion_transsa`, `homologacion_atributos` o `digitalizacion_manual`. Así, el caso de predios queda exactamente como **fuente: `scraping_publico` + tratamiento: `correccion_transsa`**, y la interfaz puede mostrar “Scraping público · corrección Transsa”.
 
 La fuente original nunca se reemplaza por el archivo corregido: ambos se conservan y se calcula SHA-256 para cada versión.
 
