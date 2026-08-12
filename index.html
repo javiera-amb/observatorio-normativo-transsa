@@ -22,7 +22,7 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260812-publicacion-1">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260812-estados-1">
   <link rel="stylesheet" href="capas-territoriales.css?v=20260811-fuentes-1">
 </head>
 <body>
@@ -503,8 +503,8 @@
       <section class="seguimiento-kpis production-kpis" aria-label="Estado de producción informado por el equipo">
         <article class="pending"><span>Pendiente</span><strong id="seguimientoMetricPending">0</strong><small>No iniciado o no informado</small></article>
         <article class="development"><span>En desarrollo</span><strong id="seguimientoMetricDevelopment">0</strong><small>El equipo está construyendo la capa</small></article>
-        <article class="ready"><span>Listo</span><strong id="seguimientoMetricReady">0</strong><small>Producción terminada y QA aprobado</small></article>
-        <article class="platform"><span>En la plataforma</span><strong id="seguimientoMetricPlatform">0</strong><small>Publicado y visible para Propiteq</small></article>
+        <article class="ready"><span>Actualizado</span><strong id="seguimientoMetricUpdated">0</strong><small>Listo para pasar a producción</small></article>
+        <article class="platform"><span>Enviado</span><strong id="seguimientoMetricSent">0</strong><small>La carga al visor queda a cargo de Propiteq</small></article>
       </section>
 
       <section class="seguimiento-filter-panel">
@@ -541,8 +541,8 @@
               <option value="">Todas</option>
               <option value="pendiente">Pendiente</option>
               <option value="en_desarrollo">En desarrollo</option>
-              <option value="listo">Listo</option>
-              <option value="en_plataforma">En la plataforma</option>
+              <option value="actualizado">Actualizado</option>
+              <option value="enviado">Enviado</option>
             </select>
           </label>
           <label>
@@ -565,9 +565,9 @@
                 <th>Región / comuna</th>
                 <th>IPT vigente identificado</th>
                 <th>Cartografía</th>
-                <th>Estado del equipo</th>
+                <th>Estado de producción</th>
                 <th>Propiteq</th>
-                <th>QA</th>
+                <th>QA plataforma</th>
                 <th>Cambios / controles</th>
                 <th>Último QA</th>
                 <th></th>
@@ -586,8 +586,8 @@
       <section class="seguimiento-interpretation">
         <div><span class="seguimiento-dot pending"></span><strong>Pendiente</strong><p>El equipo aún no comienza o no ha informado avance.</p></div>
         <div><span class="seguimiento-dot development"></span><strong>En desarrollo</strong><p>La cartografía está siendo construida, corregida o consolidada.</p></div>
-        <div><span class="seguimiento-dot ready"></span><strong>Listo</strong><p>Producción terminada y QA aprobado; falta publicar.</p></div>
-        <div><span class="seguimiento-dot platform"></span><strong>En la plataforma</strong><p>La versión aprobada está visible para Propiteq.</p></div>
+        <div><span class="seguimiento-dot ready"></span><strong>Actualizado</strong><p>Tabla de usos homologada y archivo listo para enviar a Propiteq.</p></div>
+        <div><span class="seguimiento-dot platform"></span><strong>Enviado</strong><p>La producción queda fuera de las manos del equipo y la carga al visor la realiza Propiteq.</p></div>
       </section>
       <section class="capas-audit-banner seguimiento-definitions">
         <h3>Cómo leer “cambios / controles” y “último QA”</h3>
@@ -597,7 +597,7 @@
 
       <div id="seguimientoInternalView" hidden>
         <section class="seguimiento-internal-intro">
-          <div><span>USO INTERNO</span><h3>Panel de trabajo del equipo</h3><p>Responsables, etapa técnica, avance informado, controles abiertos y próxima acción. El estado de producción lo actualiza el equipo; el QA se mantiene independiente.</p></div>
+          <div><span>USO INTERNO</span><h3>Panel de trabajo del equipo</h3><p>Responsables, etapa técnica, avance informado, controles abiertos y próxima acción. El equipo actualiza el estado y registra su QA en SharePoint; el QA de Propiteq se muestra solo en la vista pública.</p></div>
           <span class="seguimiento-readonly-badge">Sin edición en línea todavía</span>
         </section>
 
@@ -613,20 +613,26 @@
 
         <section class="seguimiento-workflow-panel">
           <div><p class="eyebrow">FLUJO DE ACTUALIZACIÓN</p><h3>Qué ocurre cuando se sube un PRC consolidado</h3><p>Subir el archivo inicia la revisión; no cambia por sí solo el estado de producción ni aprueba el QA.</p></div>
-          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso</strong><small>Se sube el GPKG/GeoPackage a la carpeta IPT con comuna, fecha y versión.</small></li><li><span>2</span><strong>Detección</strong><small>La plataforma identifica el PRC y contrasta su fecha con la línea normativa.</small></li><li><span>3</span><strong>Comparación</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores.</small></li><li><span>4</span><strong>QA SIG</strong><small>Se controlan zonas, atributos, nomenclatura, geometría, topología y cobertura.</small></li><li><span>5</span><strong>Publicación</strong><small>Con QA aprobado se marca “listo”; el equipo registra el envío a Propiteq.</small></li></ol>
+          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso</strong><small>Se sube el GPKG/GeoPackage a la carpeta IPT con comuna, fecha y versión.</small></li><li><span>2</span><strong>Detección</strong><small>La plataforma identifica el PRC y contrasta su fecha con la línea normativa.</small></li><li><span>3</span><strong>Comparación</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores.</small></li><li><span>4</span><strong>QA SharePoint</strong><small>El equipo controla zonas, atributos, nomenclatura, geometría, topología y usos.</small></li><li><span>5</span><strong>Envío</strong><small>Se marca “enviado” y Propiteq queda a cargo de cargarlo al visor y ejecutar su QA.</small></li></ol>
         </section>
 
         <section class="seguimiento-legacy-panel">
           <div><p class="eyebrow">PRC YA PUBLICADOS</p><h3>44 PRC identificados sin QA formal</h3><p>El inventario actual contiene 44 comunas construidas (versiones 1.1–2.1). Se reconocen como publicados de forma provisional; el posible PRC número 45 se confirma con la tabla SharePoint antes de cerrar el total.</p></div>
-          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">44</strong><small>PRC identificados en inventario</small></span><span><strong id="seguimientoPrepublishedQa">44</strong><small>con QA pendiente</small></span><span><strong id="seguimientoPropiteqSent">1</strong><small>enviados a Propiteq</small></span><span><strong id="seguimientoPropiteqVisible">43</strong><small>visibles en Propiteq</small></span></div>
+          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">44</strong><small>PRC identificados en inventario</small></span><span><strong id="seguimientoPrepublishedQa">44</strong><small>con QA SharePoint pendiente</small></span><span><strong id="seguimientoPropiteqSent">44</strong><small>enviados o históricos Propiteq</small></span><span><strong id="seguimientoDirectCount">62</strong><small>candidatos a actualización directa</small></span></div>
           <div class="seguimiento-drive-row"><span>Publicación efectiva</span><a id="seguimientoDriveLink" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Vincular tabla SharePoint</a><small id="seguimientoDriveStatus">Tabla SharePoint DEI pendiente de lectura automática; abrir para actualizar la evidencia de Propiteq.</small></div>
+        </section>
+
+        <section class="seguimiento-direct-panel">
+          <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>La base identifica estos casos como candidatos para pasar directamente a producción. Antes de marcar “Actualizado” en SharePoint hay que homologar la columna de usos al lenguaje Transsa.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
+          <div class="seguimiento-direct-note">Criterio automático: PRC identificado + archivo vinculado + apto preliminarmente para visor + 0 actos posteriores detectados. No es un QA aprobado; es una cola priorizada de homologación.</div>
+          <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>QA SharePoint</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
         </section>
 
         <section class="seguimiento-kpis internal-kpis" aria-label="Resumen interno de trabajo PRC">
           <article class="unassigned"><span>Sin responsable</span><strong id="seguimientoInternalUnassigned">0</strong><small>Requieren asignación del equipo</small></article>
           <article class="development"><span>Trabajo activo</span><strong id="seguimientoInternalActive">0</strong><small>En desarrollo, QA o corrección</small></article>
           <article class="review"><span>Con bloqueos</span><strong id="seguimientoInternalBlocked">0</strong><small>Falta fuente, comparación o control</small></article>
-          <article class="ready"><span>QA aprobado</span><strong id="seguimientoInternalApproved">0</strong><small>Listos o publicados</small></article>
+          <article class="ready"><span>QA SharePoint aprobado</span><strong id="seguimientoInternalApproved">0</strong><small>Listos para enviar</small></article>
         </section>
 
         <section class="seguimiento-filter-panel internal-filter-panel">
@@ -643,7 +649,7 @@
         <section class="seguimiento-table-section internal-table-section">
           <div class="seguimiento-table-scroll">
             <table class="seguimiento-table internal-table">
-              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
+              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA SharePoint</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
               <tbody id="seguimientoInternalBody"></tbody>
             </table>
           </div>
@@ -651,8 +657,9 @@
         </section>
 
         <section class="seguimiento-internal-legend">
-          <div><strong>Estado de producción</strong><p>Lo informa el equipo: pendiente, en desarrollo, listo o en la plataforma. No cuenta el envío como trabajo activo.</p></div>
-          <div><strong>Estado Propiteq</strong><p>Reemplaza el Sí/No: pendiente, enviado, visible u observado. “Enviado” todavía requiere confirmar que la versión aparezca en el visor.</p></div>
+          <div><strong>Estado de producción</strong><p>Lo informa el equipo: pendiente, en desarrollo, actualizado o enviado. “Enviado” significa que Propiteq asume la carga al visor.</p></div>
+          <div><strong>QA SharePoint</strong><p>Control interno realizado por Javiera. No se muestra en la vista pública.</p></div>
+          <div><strong>QA plataforma</strong><p>Control realizado por Propiteq. Es el único QA mostrado en la vista pública.</p></div>
           <div><strong>Etapa técnica</strong><p>Indica dónde está el trabajo: fuentes, comparación normativa, actualización SIG, QA o publicación.</p></div>
           <div><strong>QA</strong><p>Lo registra la auditoría después de revisar normativa, geometría, atributos, topología y publicación.</p></div>
         </section>
@@ -722,8 +729,8 @@
           <li>“Cobertura confirmada” significa que el archivo vigente intersecta la comuna y se registró la cantidad de elementos.</li>
           <li>“Sin elementos” es un resultado válido: el archivo fue procesado y el cruce dio cero para esa comuna.</li>
           <li>“Cruce bloqueado” significa que Notion puede nombrar el archivo, pero la geometría todavía no está disponible para el proceso.</li>
-          <li>El equipo actualiza uno de cuatro estados: pendiente, en desarrollo, listo o en la plataforma.</li>
-          <li>El QA es independiente: pendiente, con observaciones o aprobado.</li>
+          <li>El equipo actualiza uno de cuatro estados: pendiente, en desarrollo, actualizado o enviado.</li>
+          <li>La vista pública muestra solo el QA de Propiteq; el QA SharePoint queda en la vista interna.</li>
           <li>La auditoría normativa detallada se consulta en “Seguimiento PRC” e “IPT y vigencia”.</li>
         </ol>
       </section>
@@ -879,8 +886,8 @@
   <script src="data/historicos.js"></script>
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
-  <script src="data/estado_operativo_datos.js?v=20260812-equipo-3"></script>
-  <script src="seguimiento-consolidado.js?v=20260812-publicacion-1"></script>
+  <script src="data/estado_operativo_datos.js?v=20260812-estados-1"></script>
+  <script src="seguimiento-consolidado.js?v=20260812-estados-1"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
   <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>

@@ -28,15 +28,41 @@
   const operationalData = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {} };
   const normalizeCommune = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
   const isPrepublished = row => (operationalData().prc_publicados_sin_qa || []).some(name => normalizeCommune(name) === normalizeCommune(row.comuna));
-  const publicationStatus = row => {
+  const normalizeProductionState = value => ({
+    listo: "actualizado",
+    en_plataforma: "enviado",
+    visible: "enviado",
+    observado: "en_desarrollo",
+  }[value] || value || "pendiente");
+  const productionState = row => {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
-    const state = override.estado_publicacion_propiteq || (isPrepublished(row) ? "visible" : "pendiente");
-    return {
-      state,
-      date: override.fecha_publicacion_propiteq || "",
-      note: override.nota_propiteq || "Sin registro de envío o visibilidad en Propiteq.",
-    };
+    return normalizeProductionState(override.estado_produccion || override.estado_publicacion_propiteq || (isPrepublished(row) ? "enviado" : "pendiente"));
   };
+  const qaPlatformState = row => {
+    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    if (override.qa_plataforma) return override.qa_plataforma;
+    if (Number.isFinite(row.controles_totales) && Number.isFinite(row.controles_pendientes)) {
+      return row.controles_pendientes === 0 && row.controles_totales > 0 ? "aprobado" : "observaciones";
+    }
+    return "pendiente";
+  };
+  const qaSharepointState = row => {
+    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    return override.qa_sharepoint || override.qa || "pendiente";
+  };
+  const isDirectProductionCandidate = row => Boolean(
+    row.prc_nombre
+    && Number(row.actos_posteriores || 0) === 0
+    && row.archivo_recomendado
+    && row.apto_para_visor === "SI"
+    && String(row.estado_fuente || "").includes("sin cambios posteriores detectados")
+  );
+  const directProductionCandidates = () => data().comunas.filter(isDirectProductionCandidate);
+  const publicationStatus = row => ({
+    state: productionState(row),
+    date: operationalData().comunas?.[`${row.region}|${row.comuna}`]?.fecha_estado || "",
+    note: operationalData().comunas?.[`${row.region}|${row.comuna}`]?.nota_propiteq || "El envío deja la carga posterior a cargo de Propiteq.",
+  });
 
   const consumptionLabels = {
     disponible: "Disponible",
@@ -55,16 +81,11 @@
   const productionLabels = {
     pendiente: "Pendiente",
     en_desarrollo: "En desarrollo",
-    listo: "Listo",
-    en_plataforma: "En la plataforma",
+    actualizado: "Actualizado",
+    enviado: "Enviado",
   };
 
-  const publicationLabels = {
-    pendiente: "Pendiente de envío",
-    enviado: "Enviado a Propiteq",
-    visible: "Visible en Propiteq",
-    observado: "Observado por Propiteq",
-  };
+  const publicationLabels = productionLabels;
 
   const qaLabels = {
     pendiente: "QA pendiente",
@@ -92,31 +113,23 @@
     const prepublished = isPrepublished(row);
     const publication = publicationStatus(row);
     const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
-    let qa = override.qa;
-    if (!qa && Number.isFinite(row.controles_totales) && Number.isFinite(row.controles_pendientes)) {
-      qa = row.controles_pendientes === 0 && row.controles_totales > 0 ? "aprobado" : "observaciones";
-    }
-    // Un envío a Propiteq aún no es visibilidad confirmada. Se mantiene como
-    // producción lista y aparece separado en la columna de publicación.
-    const production = override.estado_produccion || (
-      publication.state === "enviado" ? "listo"
-      : publication.state === "observado" ? "en_desarrollo"
-      : prepublished ? "en_plataforma" : "pendiente"
-    );
+    const qa = qaPlatformState(row);
+    const production = productionState(row);
     return {
       cartography: hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
       production,
-      qa: qa || "pendiente",
+      qa,
+      qaSharepoint: qaSharepointState(row),
       statusDate: override.fecha_estado || "",
-      qaDate: override.fecha_qa || row.ultima_revision || "",
+      qaDate: override.fecha_qa_plataforma || row.ultima_revision || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || "",
-      note: override.nota || (publication.state === "enviado"
-        ? "Versión enviada a Propiteq; falta confirmar visibilidad en el visor."
-        : prepublished ? "PRC ya publicado en Propiteq; QA pendiente de la versión que se construyó." : ""),
+      note: override.nota || (production === "enviado"
+        ? "Enviado a Propiteq; la carga al visor queda fuera del control del equipo."
+        : prepublished ? "PRC incluido en el inventario histórico enviado a Propiteq; QA plataforma pendiente." : ""),
       publication,
       prepublished,
-      inconsistency: ["listo", "en_plataforma"].includes(production) && qa !== "aprobado",
+      inconsistency: ["actualizado", "enviado"].includes(production) && qa === "observaciones",
     };
   }
 
@@ -132,16 +145,16 @@
     const acts = Number(row.actos_posteriores || 0);
     let stage = internal.etapa;
     if (!stage) {
-      if (["listo", "en_plataforma"].includes(operational.production)) stage = "publicacion";
+      if (["actualizado", "enviado"].includes(operational.production)) stage = "publicacion";
       else if (operational.production === "en_desarrollo") stage = "actualizacion_sig";
-      else if (operational.qa === "observaciones" || pendingControls !== null || row.estado_auditoria === "auditoria_avanzada") stage = "qa";
+      else if (operational.qaSharepoint === "observaciones" || pendingControls !== null || row.estado_auditoria === "auditoria_avanzada") stage = "qa";
       else if (acts > 0 && hasCartography) stage = "comparacion";
       else if (hasCartography && acts === 0) stage = "qa";
       else stage = "levantamiento";
     }
     let progress = Number.isFinite(internal.avance) ? Math.max(0, Math.min(100, internal.avance)) : null;
     if (progress === null && totalControls > 0 && pendingControls !== null) progress = Math.round(((totalControls - pendingControls) / totalControls) * 100);
-    if (progress === null) progress = ({ pendiente: 0, en_desarrollo: 50, listo: 90, en_plataforma: 100 })[operational.production] || 0;
+    if (progress === null) progress = ({ pendiente: 0, en_desarrollo: 50, actualizado: 90, enviado: 100 })[operational.production] || 0;
     const responsible = override.responsable && !override.responsable.toLocaleLowerCase("es").includes("sin responsable")
       ? override.responsable : "Sin asignar";
     let blocking = internal.bloqueo || "";
@@ -157,11 +170,13 @@
     else if (!nextAction && !hasPrc) nextAction = "Confirmar el instrumento vigente y su fuente oficial.";
     else if (!nextAction && !hasCartography) nextAction = "Localizar, descargar y vincular la cartografía vigente.";
     else if (!nextAction && operational.prepublished && acts === 0) nextAction = "Revisar tabla, nomenclatura y consistencia de campos antes de cerrar QA.";
-    else if (!nextAction && operational.qa !== "aprobado") nextAction = "Ejecutar QA de normativa, geometría, atributos y topología.";
-    else if (!nextAction && operational.production !== "en_plataforma") nextAction = "Publicar la versión aprobada y registrar evidencia.";
+    else if (!nextAction && operational.qaSharepoint !== "aprobado") nextAction = "Ejecutar QA SharePoint de normativa, geometría, atributos y topología.";
+    else if (!nextAction && operational.production !== "enviado") nextAction = "Homologar la tabla de usos, marcar actualizado y preparar el envío a Propiteq.";
     else if (!nextAction) nextAction = "Monitorear nuevas modificaciones o enmiendas.";
     return {
       ...operational,
+      qa: operational.qaSharepoint,
+      qaDate: override.fecha_qa_sharepoint || internal.fecha_qa || "",
       responsible,
       stage,
       progress,
@@ -273,12 +288,8 @@
         <td>
           <span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span>
           <small>${escape(operational.statusDate ? `Actualizado: ${operational.statusDate}` : operational.responsible)}</small>
-          <small>${escape(operational.production === "en_plataforma" ? "Visible para Propiteq" : "Aún no acreditado en plataforma")}</small>
-          ${operational.inconsistency ? `<small class="seguimiento-state-warning">Estado incompatible: requiere QA aprobado.</small>` : ""}
-        </td>
-        <td>
-          <span class="seguimiento-operational-pill publication ${escape(operational.publication.state)}">${escape(publicationLabels[operational.publication.state] || operational.publication.state)}</span>
-          <small>${escape(operational.publication.date || operational.publication.note)}</small>
+          <small>${escape(operational.production === "enviado" ? "Responsabilidad de Propiteq" : operational.production === "actualizado" ? "Listo para enviar" : operational.production === "en_desarrollo" ? "Trabajo en curso" : "Aún no trabajado")}</small>
+          ${operational.inconsistency ? `<small class="seguimiento-state-warning">QA plataforma con observaciones.</small>` : ""}
         </td>
         <td>
           <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaLabels[operational.qa])}</span>
@@ -320,8 +331,8 @@
     const statuses = data().comunas.map(operationalStatus);
     if ($("seguimientoMetricPending")) $("seguimientoMetricPending").textContent = statuses.filter(item => item.production === "pendiente").length;
     if ($("seguimientoMetricDevelopment")) $("seguimientoMetricDevelopment").textContent = statuses.filter(item => item.production === "en_desarrollo").length;
-    if ($("seguimientoMetricReady")) $("seguimientoMetricReady").textContent = statuses.filter(item => item.production === "listo").length;
-    if ($("seguimientoMetricPlatform")) $("seguimientoMetricPlatform").textContent = statuses.filter(item => item.production === "en_plataforma").length;
+    if ($("seguimientoMetricUpdated")) $("seguimientoMetricUpdated").textContent = statuses.filter(item => item.production === "actualizado").length;
+    if ($("seguimientoMetricSent")) $("seguimientoMetricSent").textContent = statuses.filter(item => item.production === "enviado").length;
   }
 
   function renderInternalMetrics() {
@@ -333,9 +344,9 @@
     const prepublished = rows.filter(item => item.prepublished);
     if ($("seguimientoPrepublishedCount")) $("seguimientoPrepublishedCount").textContent = prepublished.length;
     if ($("seguimientoPrepublishedQa")) $("seguimientoPrepublishedQa").textContent = prepublished.filter(item => item.qa !== "aprobado").length;
-    if ($("seguimientoPrepublishedReady")) $("seguimientoPrepublishedReady").textContent = rows.filter(item => item.production === "listo").length;
-    if ($("seguimientoPropiteqSent")) $("seguimientoPropiteqSent").textContent = rows.filter(item => item.publication.state === "enviado").length;
-    if ($("seguimientoPropiteqVisible")) $("seguimientoPropiteqVisible").textContent = rows.filter(item => item.publication.state === "visible").length;
+    if ($("seguimientoPrepublishedReady")) $("seguimientoPrepublishedReady").textContent = rows.filter(item => item.production === "actualizado").length;
+    if ($("seguimientoPropiteqSent")) $("seguimientoPropiteqSent").textContent = rows.filter(item => item.production === "enviado").length;
+    if ($("seguimientoDirectCount")) $("seguimientoDirectCount").textContent = directProductionCandidates().length;
     const tracker = operationalData().fuente_publicacion_propiteq || {};
     const trackerLink = $("seguimientoDriveLink");
     if (trackerLink && tracker.url) {
@@ -344,6 +355,46 @@
       trackerLink.textContent = "Abrir tabla SharePoint ↗";
       if ($("seguimientoDriveStatus")) $("seguimientoDriveStatus").textContent = tracker.descripcion || "Tabla de publicación efectiva.";
     }
+  }
+
+  function directCandidateTemplate(row) {
+    const operational = operationalStatus(row);
+    const qaSharepoint = qaSharepointState(row);
+    return `<tr>
+      <td><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong></td>
+      <td><strong class="seguimiento-ipt-name">${escape(row.prc_nombre)}</strong><span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span></td>
+      <td><span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.production === "actualizado" ? "Homologación pendiente de registrar" : "Marcar actualizado después de homologar usos")}</small></td>
+      <td><strong>${escape(row.capa_recomendada || "Sin capa")}</strong><small>${escape(row.archivo_recomendado)}</small></td>
+      <td><span class="seguimiento-operational-pill qa ${escape(qaSharepoint)}">${escape(qaLabels[qaSharepoint])}</span><small>QA interno SharePoint</small></td>
+      <td><strong>Homologar usos</strong><small>Comparar la columna de usos con el lenguaje Transsa, guardar evidencia y marcar “Actualizado”.</small></td>
+    </tr>`;
+  }
+
+  function renderDirectCandidates() {
+    const body = $("seguimientoDirectBody");
+    if (!body) return;
+    const rows = directProductionCandidates();
+    body.innerHTML = rows.map(directCandidateTemplate).join("");
+    if ($("seguimientoDirectCount")) $("seguimientoDirectCount").textContent = rows.length;
+  }
+
+  function downloadDirectCandidates() {
+    const headers = ["region", "comuna", "prc_fecha", "capa_recomendada", "archivo_recomendado", "estado_produccion", "qa_sharepoint", "accion"];
+    const lines = [headers.join(";")];
+    directProductionCandidates().forEach(row => {
+      const operational = operationalStatus(row);
+      lines.push([
+        row.region, row.comuna, row.prc_fecha, row.capa_recomendada, row.archivo_recomendado,
+        operational.production, qaSharepointState(row), "Homologar columna de usos y marcar actualizado"
+      ].map(csvCell).join(";"));
+    });
+    const blob = new Blob(["\\ufeff" + lines.join("\\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "PRC_candidatos_produccion_directa.csv";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   function renderTable() {
@@ -385,8 +436,8 @@
   function downloadCsv() {
     const headers = [
       "region", "comuna", "prc_nombre", "prc_fecha", "estado_fuente",
-      "cartografia_estado", "estado_produccion", "fecha_estado", "estado_publicacion_propiteq", "fecha_publicacion_propiteq",
-      "qa_estado", "fecha_qa", "responsable", "estado_auditoria", "disponibilidad_propieteq", "motivo",
+      "cartografia_estado", "estado_produccion", "fecha_estado",
+      "qa_plataforma", "fecha_qa_plataforma", "responsable", "estado_auditoria", "disponibilidad_propieteq", "motivo",
       "actos_posteriores", "controles_pendientes", "controles_totales",
       "ultima_revision", "archivo_recomendado", "capa_recomendada",
     ];
@@ -395,7 +446,7 @@
       const operational = operationalStatus(row);
       const values = [
         row.region, row.comuna, row.prc_nombre, row.prc_fecha, row.estado_fuente,
-        operational.cartography, operational.production, operational.statusDate, operational.publication.state, operational.publication.date,
+        operational.cartography, operational.production, operational.statusDate,
         operational.qa, operational.qaDate, operational.responsible,
         auditLabels[row.estado_auditoria] || row.estado_auditoria,
         consumptionLabels[row.consumo_propieteq] || row.consumo_propieteq,
@@ -464,6 +515,7 @@
       renderTable();
     });
     $("seguimientoDownloadCsv")?.addEventListener("click", downloadCsv);
+    $("seguimientoDirectDownload")?.addEventListener("click", downloadDirectCandidates);
     $("seguimientoTableBody")?.addEventListener("click", event => {
       const button = event.target.closest("[data-seguimiento-commune]");
       if (button) openCommune(button.dataset.seguimientoCommune);
@@ -486,6 +538,7 @@
     renderTable();
     renderInternalMetrics();
     renderInternalTable();
+    renderDirectCandidates();
     renderView();
   };
 
