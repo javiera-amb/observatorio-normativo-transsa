@@ -82,9 +82,14 @@
     en_plataforma: "En la plataforma",
   };
   const qaLabels = {
-    aprobado: "QA aprobado",
-    observaciones: "QA con observaciones",
-    pendiente: "QA pendiente",
+    aprobado: "QA de capa aprobado",
+    observaciones: "QA de capa con observaciones",
+    pendiente: "QA de capa pendiente",
+  };
+  const iptQaLabels = {
+    aprobado: "QA automático aprobado",
+    observaciones: "QA automático con diferencias",
+    pendiente: "QA automático pendiente",
   };
   const cartographyLabels = {
     encontrada: "Encontrada",
@@ -115,6 +120,7 @@
   }
 
   function inferredQa(row, override) {
+    if (override.qa_plataforma) return override.qa_plataforma;
     if (override.qa) return override.qa;
     if (Number.isFinite(row?.controles_totales) && Number.isFinite(row?.controles_pendientes)) {
       if (row.controles_pendientes === 0 && row.controles_totales > 0) return "aprobado";
@@ -161,7 +167,7 @@
           <div><span>Normativa</span><strong class="capas-status-pill identified">Identificada</strong><small>Registro Portal IPT ${escape(instrument.registro || "")}</small></div>
           <div><span>Cartografía</span><strong class="capas-status-pill ${escape(operational.cartography)}">${escape(cartographyLabels[operational.cartography])}</strong><small>${escape(operational.cartographyDetail)}</small></div>
           <div><span>Estado del equipo</span><strong class="capas-status-pill ${escape(operational.production)}">${escape(productionLabels[operational.production])}</strong><small>${escape(operational.productionDetail)}</small></div>
-          <div><span>Control de calidad</span><strong class="capas-status-pill ${escape(operational.qa)}">${escape(qaLabels[operational.qa])}</strong><small>${escape(operational.qaDetail)}</small></div>
+          <div><span>QA automático de la plataforma</span><strong class="capas-status-pill ${escape(operational.qa)}">${escape(iptQaLabels[operational.qa])}</strong><small>${escape(operational.qaDetail)}</small></div>
         </div>
         <a href="${escape(instrument.fuente || "https://portalipt.minvu.cl/instrumentos")}" target="_blank" rel="noopener noreferrer">Abrir Portal IPT ↗</a>
       </article>`;
@@ -256,13 +262,12 @@
     const qa = override.qa || "pendiente";
     return `
       <tr>
-        <td><span class="capas-table-category">${escape(categories)}</span><strong>${escape(layer.nombre)}</strong><small>${escape(layer.owner || "Sin responsable")}</small></td>
-        <td><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small>${result.documentaryScope ? `<small class="capas-documentary-note">${escape(result.documentaryScope)}</small>` : ""}</td>
-        <td><span class="capas-status-pill ${escape(cartography)}">${escape(cartographyLabels[cartography] || "Sin archivo")}</span><small>${escape(sourceFiles)}</small>${external?.fecha_fuente ? `<small>Fecha/referencia: ${escape(external.fecha_fuente)}</small>` : ""}${external?.url ? `<a href="${escape(external.url)}" target="_blank" rel="noopener noreferrer">Abrir fuente ${escape(external.nivel)} ↗</a>` : ""}</td>
-        <td><span class="capas-status-pill ${escape(production)}">${escape(productionLabels[production])}</span><small>${escape(override.fecha_estado || "Sin actualización del equipo")}</small></td>
-        <td><span class="capas-status-pill ${escape(qa)}">${escape(qaLabels[qa])}</span><small>${escape(override.fecha_qa || `Catálogo: ${layer.verificacion || "sin verificar"}`)}</small></td>
-        <td><strong>${escape(result.dataDate)}</strong><small>${escape(result.dateLabel)}</small></td>
-        <td><strong>${escape(layer.ultima_edicion || "Sin fecha")}</strong><small>Última edición de la ficha</small><a href="${escape(layer.url)}" target="_blank" rel="noopener noreferrer">Ver evidencia en Notion ↗</a></td>
+        <td data-label="Capa"><span class="capas-table-category">${escape(categories)}</span><strong>${escape(layer.nombre)}</strong><small>${escape(layer.owner || "Sin responsable")}</small>${layer.url ? `<a href="${escape(layer.url)}" target="_blank" rel="noopener noreferrer">Ver ficha y evidencia ↗</a>` : ""}</td>
+        <td data-label="Cobertura en la comuna"><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small>${result.documentaryScope ? `<small class="capas-documentary-note">${escape(result.documentaryScope)}</small>` : ""}</td>
+        <td data-label="Fuente / archivo espacial"><span class="capas-status-pill ${escape(cartography)}">${escape(cartographyLabels[cartography] || "Sin archivo")}</span><small>${escape(sourceFiles)}</small>${external?.fecha_fuente ? `<small>Fecha/referencia: ${escape(external.fecha_fuente)}</small>` : ""}${external?.url ? `<a href="${escape(external.url)}" target="_blank" rel="noopener noreferrer">Abrir fuente ${escape(external.nivel)} ↗</a>` : ""}</td>
+        <td data-label="Estado del equipo"><span class="capas-status-pill ${escape(production)}">${escape(productionLabels[production])}</span><small>${escape(override.fecha_estado || "Sin actualización del equipo")}</small></td>
+        <td data-label="QA de la capa"><span class="capas-status-pill ${escape(qa)}">${escape(qaLabels[qa])}</span><small>${escape(override.fecha_qa || `Catálogo: ${layer.verificacion || "sin verificar"}`)}</small></td>
+        <td data-label="Fecha del dato"><strong>${escape(result.dataDate)}</strong><small>${escape(result.dateLabel)}</small></td>
       </tr>`;
   }
 

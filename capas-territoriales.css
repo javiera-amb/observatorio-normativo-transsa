@@ -29,3 +29,25 @@
 .capas-candidate-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.capas-candidate-card{padding:16px;border:1px solid #e0e2e8;border-radius:14px;background:#fafbfc}.capas-candidate-card>div:first-child{display:flex;gap:7px;flex-wrap:wrap}.capas-candidate-priority,.capas-candidate-level{display:inline-flex;padding:5px 7px;border-radius:999px;font-size:.55rem;font-weight:750}.capas-candidate-priority{background:#edf0f4;color:#56616f}.capas-candidate-priority.alta{background:#fde8ea;color:#922f38}.capas-candidate-priority.media{background:#fff3cf;color:#735110}.capas-candidate-level{background:#e7f0fa;color:#285d80}.capas-candidate-card h4{margin:11px 0 5px;color:var(--transsa-navy);font-size:.82rem}.capas-candidate-card p{margin:0;color:#596170;font-size:.66rem;line-height:1.45}.capas-candidate-card dl{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:13px 0}.capas-candidate-card dl div{padding:8px;border:1px solid #e3e5eb;border-radius:8px;background:#fff}.capas-candidate-card dt{color:#7b8390;font-size:.52rem;text-transform:uppercase}.capas-candidate-card dd{margin:3px 0 0;color:#37404d;font-size:.61rem;font-weight:650}.capas-candidate-card a{color:var(--transsa-blue);font-size:.61rem;font-weight:700}
 @media(max-width:680px){.capas-operational-grid{grid-template-columns:1fr}}
 @media(max-width:680px){.capas-candidate-grid,.capas-candidate-card dl{grid-template-columns:1fr}}
+
+/* La matriz de capas usa el ancho completo de la página. La evidencia vive
+   dentro de la ficha de la capa; la tabla no necesita una séptima columna ni
+   un scroll horizontal anidado. */
+.capas-table-scroll{overflow:visible;overflow-x:visible;max-height:none;width:100%}
+.capas-coverage-table{width:100%;min-width:0!important;table-layout:fixed}
+.capas-coverage-table th,.capas-coverage-table td{min-width:0;width:auto!important;overflow-wrap:anywhere;word-break:break-word}
+.capas-coverage-table th{white-space:normal}
+
+@media(max-width:1200px){
+  .capas-coverage-table,.capas-coverage-table tbody,.capas-coverage-table tr,.capas-coverage-table td{display:block}
+  .capas-coverage-table thead{display:none}
+  .capas-coverage-table tr{margin:0 0 14px;padding:7px 13px;border:1px solid #e1e3e8;border-radius:14px;background:#fff}
+  .capas-coverage-table td{display:grid;grid-template-columns:minmax(140px,28%) minmax(0,1fr);column-gap:14px;align-items:start;padding:10px 0;border-bottom:1px solid #e8e9ed}
+  .capas-coverage-table td::before{content:attr(data-label);color:#697180;font-size:.57rem;font-weight:750;line-height:1.35;text-transform:uppercase;letter-spacing:.02em}
+  .capas-coverage-table td:last-child{border-bottom:0}
+}
+
+@media(max-width:680px){
+  .capas-coverage-table td{grid-template-columns:1fr;row-gap:5px}
+  .capas-coverage-table td::before{font-size:.56rem}
+}

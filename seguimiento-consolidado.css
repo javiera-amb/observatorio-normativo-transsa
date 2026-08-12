@@ -84,3 +84,27 @@
 .seguimiento-team-panel,.seguimiento-workflow-panel,.seguimiento-legacy-panel{margin-bottom:16px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fff}.seguimiento-team-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:18px}.seguimiento-team-heading h3,.seguimiento-workflow-panel h3,.seguimiento-legacy-panel h3{margin:3px 0 5px;color:var(--transsa-navy)}.seguimiento-team-heading p:not(.eyebrow),.seguimiento-workflow-panel>div>p:last-child,.seguimiento-legacy-panel>div:first-child p:last-child{margin:0;color:var(--muted);font-size:.68rem;line-height:1.45}.seguimiento-team-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.seguimiento-team-grid article{padding:12px;border:1px solid #e1e3e9;border-top:3px solid var(--transsa-blue);border-radius:11px;background:#fafbfc}.seguimiento-team-grid strong,.seguimiento-team-grid span{display:block}.seguimiento-team-grid strong{color:var(--transsa-navy);font-size:.75rem}.seguimiento-team-grid span{margin-top:4px;color:var(--muted);font-size:.6rem}.seguimiento-workflow-panel{background:#f8f8ff}.seguimiento-workflow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:15px 0 0;padding:0;list-style:none}.seguimiento-workflow li{padding:12px;border:1px solid #dfe1f4;border-radius:11px;background:#fff}.seguimiento-workflow li>span{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:50%;background:var(--transsa-blue);color:#fff;font-size:.62rem;font-weight:800}.seguimiento-workflow strong,.seguimiento-workflow small{display:block}.seguimiento-workflow strong{margin-top:8px;color:var(--transsa-navy);font-size:.68rem}.seguimiento-workflow small{margin-top:4px;color:var(--muted);font-size:.58rem;line-height:1.4}.seguimiento-legacy-panel{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:center;background:#fff9ed;border-color:#f0d6a8}.seguimiento-legacy-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.seguimiento-legacy-kpis span{padding:11px;border:1px solid #f0d6a8;border-radius:10px;background:#fff}.seguimiento-legacy-kpis strong,.seguimiento-legacy-kpis small{display:block}.seguimiento-legacy-kpis strong{color:var(--transsa-navy);font-size:1.25rem}.seguimiento-legacy-kpis small{margin-top:4px;color:#785f34;font-size:.57rem;line-height:1.35}.seguimiento-drive-row{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid #f0d6a8;color:#724a00;font-size:.65rem}.seguimiento-drive-row small{color:#785f34;font-size:.59rem}.seguimiento-drive-row a[aria-disabled="true"]{opacity:.55;pointer-events:none}
 @media(max-width:1050px){.seguimiento-team-grid,.seguimiento-workflow{grid-template-columns:1fr 1fr}.seguimiento-legacy-panel{grid-template-columns:1fr}}
 @media(max-width:680px){.seguimiento-team-grid,.seguimiento-workflow{grid-template-columns:1fr}.seguimiento-drive-row{align-items:flex-start;flex-direction:column}}
+
+/* Las tablas de seguimiento deben crecer hacia abajo, nunca crear un
+   segundo lienzo horizontal. En escritorio se distribuyen en todo el
+   ancho disponible y en pantallas estrechas se convierten en fichas. */
+.seguimiento-table-scroll{overflow:visible;overflow-x:visible;max-height:none;width:100%}
+.seguimiento-table,.seguimiento-direct-table,.internal-table{width:100%;min-width:0!important;table-layout:fixed}
+.seguimiento-table th,.seguimiento-table td{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.seguimiento-table td{width:auto!important}
+.seguimiento-table th{white-space:normal}
+
+@media(max-width:1200px){
+  .seguimiento-table,.seguimiento-table tbody,.seguimiento-table tr,.seguimiento-table td{display:block}
+  .seguimiento-table thead{display:none}
+  .seguimiento-table tr{margin:0 0 14px;padding:7px 13px;border:1px solid var(--line);border-radius:14px;background:#fff}
+  .seguimiento-table td{display:grid;grid-template-columns:minmax(125px,29%) minmax(0,1fr);column-gap:14px;align-items:start;padding:10px 0;border-bottom:1px solid #e7e8ed}
+  .seguimiento-table td::before{content:attr(data-label);color:#697180;font-size:.58rem;font-weight:750;line-height:1.35;text-transform:uppercase;letter-spacing:.02em}
+  .seguimiento-table td:last-child{border-bottom:0}
+  .seguimiento-table td:first-child,.seguimiento-table td:nth-child(n){width:auto!important}
+}
+
+@media(max-width:680px){
+  .seguimiento-table td{grid-template-columns:1fr;row-gap:5px}
+  .seguimiento-table td::before{font-size:.57rem}
+}

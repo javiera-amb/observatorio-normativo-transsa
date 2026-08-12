@@ -22,8 +22,8 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260812-estados-2">
-  <link rel="stylesheet" href="capas-territoriales.css?v=20260811-fuentes-1">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260812-responsive-2">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260812-responsive-2">
 </head>
 <body>
   <header class="topbar">
@@ -567,7 +567,7 @@
                 <th>Cartografía</th>
                 <th>Estado de producción</th>
                 <th>Traspaso a Propiteq</th>
-                <th>QA plataforma</th>
+                <th>QA automático de la plataforma</th>
                 <th>Cambios / controles</th>
                 <th>Último QA</th>
                 <th></th>
@@ -712,7 +712,7 @@
           <label><span>Buscar capa</span><input id="capasSearch" type="search" placeholder="Metro, predios, riesgos, establecimientos…"></label>
           <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="confirmada">Cobertura confirmada</option><option value="sin_elementos">Sin elementos</option><option value="bloqueada">Cruce bloqueado</option><option value="pendiente">Cruce pendiente</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option><option value="error">Error de cruce</option></select></label>
         </div>
-        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Fuente / archivo espacial</th><th>Estado del equipo</th><th>QA</th><th>Fecha del dato</th><th>Ficha / evidencia</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
+        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Fuente / archivo espacial</th><th>Estado del equipo</th><th>QA de la capa</th><th>Fecha del dato</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
         <div id="capasCoverageEmpty" class="empty-state" hidden><div>GIS</div><h3>Sin capas para este filtro</h3><p>Prueba con otro estado o término de búsqueda.</p></div>
       </section>
 
@@ -887,12 +887,12 @@
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
   <script src="data/estado_operativo_datos.js?v=20260812-estados-2"></script>
-  <script src="seguimiento-consolidado.js?v=20260812-estados-2"></script>
+  <script src="seguimiento-consolidado.js?v=20260812-responsive-2"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
   <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
   <script src="data/fuentes_capas_externas.js?v=20260811-fuentes-1"></script>
-  <script src="capas-territoriales.js?v=20260811-fuentes-1"></script>
+  <script src="capas-territoriales.js?v=20260812-responsive-2"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

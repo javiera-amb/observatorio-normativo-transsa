@@ -292,41 +292,41 @@
     };
     return `
       <tr>
-        <td>
+        <td data-label="Región / comuna">
           <span class="seguimiento-region">${escape(row.region)}</span>
           <strong class="seguimiento-comuna">${escape(row.comuna)}</strong>
         </td>
-        <td>
+        <td data-label="IPT vigente identificado">
           <strong class="seguimiento-ipt-name">${escape(row.prc_nombre || "No identificado")}</strong>
           <span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span>
         </td>
-        <td>
+        <td data-label="Cartografía">
           <span class="seguimiento-operational-pill cartography ${escape(operational.cartography)}">${escape(cartographyLabels[operational.cartography])}</span>
           <small title="${escape(sourceDetail)}">${escape(sourceDetail || "Sin archivo o servicio vinculado")}</small>
         </td>
-        <td>
+        <td data-label="Estado de producción">
           <span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span>
           <small>${escape(operational.statusDate ? `Actualizado: ${operational.statusDate}` : operational.responsible)}</small>
           <small>${escape(operational.production === "enviado" ? "La carga al visor queda fuera del equipo." : operational.production === "actualizado" ? "Tabla homologada: listo para envío." : operational.production === "en_desarrollo" ? "Trabajo en curso." : "Aún no trabajado.")}</small>
           ${operational.inconsistency ? `<small class="seguimiento-state-warning">QA automático con diferencias.</small>` : ""}
         </td>
-        <td>
+        <td data-label="Traspaso a Propiteq">
           <span class="seguimiento-operational-pill publication ${escape(operational.production)}">${escape(publicationLabels[operational.production])}</span>
           <small>${escape(operational.production === "enviado" ? (operational.publication.note || "Propiteq debe cargar la versión al visor.") : "La carga aún permanece en manos del equipo.")}</small>
         </td>
-        <td>
+        <td data-label="QA automático de la plataforma">
           <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaPlatformLabels[operational.qa])}</span>
           <small>${escape(qaPlatformNote(row))}</small>
           <small>${escape(operational.qaDate ? `Último QA: ${operational.qaDate}` : "Sin fecha de QA")}</small>
           ${Number.isFinite(row.controles_pendientes) ? `<small>${escape(`${row.controles_pendientes} de ${row.controles_totales} controles pendientes`)}</small>` : ""}
         </td>
-        <td>
+        <td data-label="Cambios / controles">
           <strong class="seguimiento-alert-count">${escape(alertText(row))}</strong>
           ${row.actos_posteriores ? `<small>Cambios normativos que deben comprobarse en la cartografía.</small>` : ""}
           ${row.ultimo_acto_posterior ? `<small>Último acto: ${escape(row.ultimo_acto_posterior)}</small>` : ""}
         </td>
-        <td>${escape(operational.qaDate || row.ultima_revision || "Sin QA registrado")}</td>
-        <td>
+        <td data-label="Último QA">${escape(operational.qaDate || row.ultima_revision || "Sin QA registrado")}</td>
+        <td data-label="Ficha"> 
           ${row.ficha_disponible ? `<button class="seguimiento-detail-button" type="button" data-seguimiento-commune="${escape(row.comuna)}">Ver ficha</button>` : ""}
         </td>
       </tr>
@@ -339,15 +339,15 @@
       : row.actos_posteriores ? `${row.actos_posteriores} ${row.actos_posteriores === 1 ? "acto posterior" : "actos posteriores"}` : "Sin alertas normativas abiertas";
     return `
       <tr>
-        <td><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong><small>${escape(row.prc_fecha || "PRC sin fecha")}</small></td>
-        <td><span class="seguimiento-owner ${internal.responsible === "Sin asignar" ? "unassigned" : ""}">${escape(internal.responsible)}</span></td>
-        <td><span class="seguimiento-stage ${escape(internal.stage)}">${escape(stageLabels[internal.stage] || internal.stage)}</span><small class="seguimiento-priority ${escape(internal.priority)}">Prioridad ${escape(priorityLabels[internal.priority] || internal.priority)}</small></td>
-        <td><span class="seguimiento-operational-pill production ${escape(internal.production)}">${escape(productionLabels[internal.production])}</span><div class="seguimiento-progress" aria-label="${escape(`${internal.progress}% de avance`)}"><span style="width:${internal.progress}%"></span></div><small>${escape(`${internal.progress}% informado/calculado`)}</small></td>
-        <td><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaSharepointLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Último QA manual: ${internal.qaDate}` : "Sin fecha de QA manual")}</small></td>
-        <td><strong class="seguimiento-alert-count">${escape(alerts)}</strong><small class="${internal.blocking ? "seguimiento-blocking" : ""}">${escape(internal.blocking || "Sin bloqueo técnico registrado")}</small></td>
-        <td><p class="seguimiento-next-action">${escape(internal.nextAction)}</p></td>
-        <td>${escape(internal.lastActivity)}</td>
-        <td><button class="seguimiento-detail-button" type="button" data-seguimiento-commune="${escape(row.comuna)}">Abrir auditoría</button></td>
+        <td data-label="Comuna"><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong><small>${escape(row.prc_fecha || "PRC sin fecha")}</small></td>
+        <td data-label="Responsable"><span class="seguimiento-owner ${internal.responsible === "Sin asignar" ? "unassigned" : ""}">${escape(internal.responsible)}</span></td>
+        <td data-label="Etapa técnica"><span class="seguimiento-stage ${escape(internal.stage)}">${escape(stageLabels[internal.stage] || internal.stage)}</span><small class="seguimiento-priority ${escape(internal.priority)}">Prioridad ${escape(priorityLabels[internal.priority] || internal.priority)}</small></td>
+        <td data-label="Estado / avance"><span class="seguimiento-operational-pill production ${escape(internal.production)}">${escape(productionLabels[internal.production])}</span><div class="seguimiento-progress" aria-label="${escape(`${internal.progress}% de avance`)}"><span style="width:${internal.progress}%"></span></div><small>${escape(`${internal.progress}% informado/calculado`)}</small></td>
+        <td data-label="QA manual (SharePoint)"><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaSharepointLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Último QA manual: ${internal.qaDate}` : "Sin fecha de QA manual")}</small></td>
+        <td data-label="Alertas y bloqueos"><strong class="seguimiento-alert-count">${escape(alerts)}</strong><small class="${internal.blocking ? "seguimiento-blocking" : ""}">${escape(internal.blocking || "Sin bloqueo técnico registrado")}</small></td>
+        <td data-label="Próxima acción"><p class="seguimiento-next-action">${escape(internal.nextAction)}</p></td>
+        <td data-label="Última actividad">${escape(internal.lastActivity)}</td>
+        <td data-label="Auditoría"><button class="seguimiento-detail-button" type="button" data-seguimiento-commune="${escape(row.comuna)}">Abrir auditoría</button></td>
       </tr>`;
   }
 
@@ -385,12 +385,12 @@
     const operational = operationalStatus(row);
     const qaSharepoint = qaSharepointState(row);
     return `<tr>
-      <td><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong></td>
-      <td><strong class="seguimiento-ipt-name">${escape(row.prc_nombre)}</strong><span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span></td>
-      <td><span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.production === "actualizado" ? "Homologación pendiente de registrar" : "Marcar actualizado después de homologar usos")}</small></td>
-      <td><strong>${escape(row.capa_recomendada || "Sin capa")}</strong><small>${escape(row.archivo_recomendado)}</small></td>
-      <td><span class="seguimiento-operational-pill qa ${escape(qaSharepoint)}">${escape(qaSharepointLabels[qaSharepoint])}</span><small>Control manual de Javiera registrado en SharePoint.</small></td>
-      <td><strong>Homologar usos</strong><small>Comparar la columna de usos con el lenguaje Transsa, guardar evidencia y marcar “Actualizado”.</small></td>
+      <td data-label="Región / comuna"><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong></td>
+      <td data-label="IPT"><strong class="seguimiento-ipt-name">${escape(row.prc_nombre)}</strong><span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span></td>
+      <td data-label="Estado"><span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.production === "actualizado" ? "Homologación pendiente de registrar" : "Marcar actualizado después de homologar usos")}</small></td>
+      <td data-label="Capa / archivo"><strong>${escape(row.capa_recomendada || "Sin capa")}</strong><small>${escape(row.archivo_recomendado)}</small></td>
+      <td data-label="QA manual (SharePoint)"><span class="seguimiento-operational-pill qa ${escape(qaSharepoint)}">${escape(qaSharepointLabels[qaSharepoint])}</span><small>Control manual de Javiera registrado en SharePoint.</small></td>
+      <td data-label="Acción obligatoria"><strong>Homologar usos</strong><small>Comparar la columna de usos con el lenguaje Transsa, guardar evidencia y marcar “Actualizado”.</small></td>
     </tr>`;
   }
 
