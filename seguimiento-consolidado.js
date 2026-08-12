@@ -28,6 +28,15 @@
   const operationalData = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {} };
   const normalizeCommune = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
   const isPrepublished = row => (operationalData().prc_publicados_sin_qa || []).some(name => normalizeCommune(name) === normalizeCommune(row.comuna));
+  const publicationStatus = row => {
+    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const state = override.estado_publicacion_propiteq || (isPrepublished(row) ? "visible" : "pendiente");
+    return {
+      state,
+      date: override.fecha_publicacion_propiteq || "",
+      note: override.nota_propiteq || "Sin registro de envío o visibilidad en Propiteq.",
+    };
+  };
 
   const consumptionLabels = {
     disponible: "Disponible",
@@ -48,6 +57,13 @@
     en_desarrollo: "En desarrollo",
     listo: "Listo",
     en_plataforma: "En la plataforma",
+  };
+
+  const publicationLabels = {
+    pendiente: "Pendiente de envío",
+    enviado: "Enviado a Propiteq",
+    visible: "Visible en Propiteq",
+    observado: "Observado por Propiteq",
   };
 
   const qaLabels = {
@@ -74,12 +90,19 @@
   function operationalStatus(row) {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
     const prepublished = isPrepublished(row);
+    const publication = publicationStatus(row);
     const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
     let qa = override.qa;
     if (!qa && Number.isFinite(row.controles_totales) && Number.isFinite(row.controles_pendientes)) {
       qa = row.controles_pendientes === 0 && row.controles_totales > 0 ? "aprobado" : "observaciones";
     }
-    const production = override.estado_produccion || (prepublished ? "en_plataforma" : "pendiente");
+    // Un envío a Propiteq aún no es visibilidad confirmada. Se mantiene como
+    // producción lista y aparece separado en la columna de publicación.
+    const production = override.estado_produccion || (
+      publication.state === "enviado" ? "listo"
+      : publication.state === "observado" ? "en_desarrollo"
+      : prepublished ? "en_plataforma" : "pendiente"
+    );
     return {
       cartography: hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
       production,
@@ -88,7 +111,10 @@
       qaDate: override.fecha_qa || row.ultima_revision || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || "",
-      note: override.nota || (prepublished ? "PRC ya publicado en Propiteq; QA pendiente de la versión que se construyó." : ""),
+      note: override.nota || (publication.state === "enviado"
+        ? "Versión enviada a Propiteq; falta confirmar visibilidad en el visor."
+        : prepublished ? "PRC ya publicado en Propiteq; QA pendiente de la versión que se construyó." : ""),
+      publication,
       prepublished,
       inconsistency: ["listo", "en_plataforma"].includes(production) && qa !== "aprobado",
     };
@@ -251,6 +277,10 @@
           ${operational.inconsistency ? `<small class="seguimiento-state-warning">Estado incompatible: requiere QA aprobado.</small>` : ""}
         </td>
         <td>
+          <span class="seguimiento-operational-pill publication ${escape(operational.publication.state)}">${escape(publicationLabels[operational.publication.state] || operational.publication.state)}</span>
+          <small>${escape(operational.publication.date || operational.publication.note)}</small>
+        </td>
+        <td>
           <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaLabels[operational.qa])}</span>
           <small>${escape(operational.qaDate ? `Último QA: ${operational.qaDate}` : "Sin fecha de QA")}</small>
           ${Number.isFinite(row.controles_pendientes) ? `<small>${escape(`${row.controles_pendientes} de ${row.controles_totales} controles pendientes`)}</small>` : ""}
@@ -304,6 +334,8 @@
     if ($("seguimientoPrepublishedCount")) $("seguimientoPrepublishedCount").textContent = prepublished.length;
     if ($("seguimientoPrepublishedQa")) $("seguimientoPrepublishedQa").textContent = prepublished.filter(item => item.qa !== "aprobado").length;
     if ($("seguimientoPrepublishedReady")) $("seguimientoPrepublishedReady").textContent = rows.filter(item => item.production === "listo").length;
+    if ($("seguimientoPropiteqSent")) $("seguimientoPropiteqSent").textContent = rows.filter(item => item.publication.state === "enviado").length;
+    if ($("seguimientoPropiteqVisible")) $("seguimientoPropiteqVisible").textContent = rows.filter(item => item.publication.state === "visible").length;
     const tracker = operationalData().fuente_publicacion_propiteq || {};
     const trackerLink = $("seguimientoDriveLink");
     if (trackerLink && tracker.url) {
@@ -353,7 +385,7 @@
   function downloadCsv() {
     const headers = [
       "region", "comuna", "prc_nombre", "prc_fecha", "estado_fuente",
-      "cartografia_estado", "estado_produccion", "fecha_estado",
+      "cartografia_estado", "estado_produccion", "fecha_estado", "estado_publicacion_propiteq", "fecha_publicacion_propiteq",
       "qa_estado", "fecha_qa", "responsable", "estado_auditoria", "disponibilidad_propieteq", "motivo",
       "actos_posteriores", "controles_pendientes", "controles_totales",
       "ultima_revision", "archivo_recomendado", "capa_recomendada",
@@ -363,7 +395,7 @@
       const operational = operationalStatus(row);
       const values = [
         row.region, row.comuna, row.prc_nombre, row.prc_fecha, row.estado_fuente,
-        operational.cartography, operational.production, operational.statusDate,
+        operational.cartography, operational.production, operational.statusDate, operational.publication.state, operational.publication.date,
         operational.qa, operational.qaDate, operational.responsible,
         auditLabels[row.estado_auditoria] || row.estado_auditoria,
         consumptionLabels[row.consumo_propieteq] || row.consumo_propieteq,
