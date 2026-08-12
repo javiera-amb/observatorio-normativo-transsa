@@ -11,7 +11,7 @@ window.ESTADO_OPERATIVO_DATOS = {
   equipo: [
     { nombre: "Cristóbal", rol: "Producción SIG" },
     { nombre: "Annabel", rol: "Producción SIG" },
-    { nombre: "Fernanda", rol: "Coordinación y revisión" },
+    { nombre: "Fernanda", rol: "Producción SIG" },
     { nombre: "Javiera", rol: "Administración y QA" }
   ],
   // Son los 44 PRC que ya estaban construidos y visibles en Propiteq al corte.
