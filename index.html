@@ -22,7 +22,7 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260812-responsive-2">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260812-paneles-1">
   <link rel="stylesheet" href="capas-territoriales.css?v=20260812-responsive-2">
 </head>
 <body>
@@ -597,11 +597,21 @@
 
       <div id="seguimientoInternalView" hidden>
         <section class="seguimiento-internal-intro">
-          <div><span>USO INTERNO</span><h3>Panel de trabajo del equipo</h3><p>Responsables, etapa técnica, avance informado, controles abiertos y próxima acción. El equipo actualiza el estado y registra su QA manual en SharePoint; el QA automático de esta plataforma se muestra en la vista pública.</p></div>
-          <span class="seguimiento-readonly-badge">Sin edición en línea todavía</span>
+          <div>
+            <span>USO INTERNO</span>
+            <h3 id="seguimientoInternalTitle">Mi tablero de tareas</h3>
+            <p id="seguimientoInternalDescription">Selecciona tu nombre, filtra tus comunas y marca el estado de producción. El cambio se guarda en este navegador como borrador y debe registrarse en SharePoint para que sea compartido con el equipo.</p>
+            <div class="seguimiento-internal-switch" role="tablist" aria-label="Panel interno">
+              <button class="active" type="button" data-internal-view="equipo">Mi trabajo</button>
+              <button type="button" data-internal-view="javiera">Control Javiera</button>
+            </div>
+            <label class="seguimiento-current-user"><span>Estoy trabajando como</span><select id="seguimientoCurrentUser"><option value="">Todo el equipo</option><option value="Cristóbal">Cristóbal</option><option value="Annabel">Annabel</option><option value="Fernanda">Fernanda</option><option value="Javiera">Javiera</option></select></label>
+            <p id="seguimientoLocalSaveNote" class="seguimiento-local-save-note">Los estados marcados aquí son un borrador local; el registro oficial sigue siendo la tabla SharePoint.</p>
+          </div>
+          <span id="seguimientoInternalBadge" class="seguimiento-readonly-badge">Tablero del equipo</span>
         </section>
 
-        <section class="seguimiento-team-panel">
+        <section class="seguimiento-team-panel" data-internal-scope="equipo">
           <div class="seguimiento-team-heading"><div><p class="eyebrow">EQUIPO AUTORIZADO</p><h3>Personas que pueden actualizar el seguimiento</h3><p>La asignación de comunas se carga en los datos operativos. No se crean responsables automáticamente.</p></div><span class="seguimiento-readonly-badge">4 integrantes</span></div>
           <div class="seguimiento-team-grid">
             <article><strong>Cristóbal</strong><span>Producción SIG</span></article>
@@ -611,31 +621,31 @@
           </div>
         </section>
 
-        <section class="seguimiento-workflow-panel">
+        <section class="seguimiento-workflow-panel" data-internal-scope="equipo">
           <div><p class="eyebrow">FLUJO DE ACTUALIZACIÓN</p><h3>Qué ocurre cuando se sube un PRC consolidado</h3><p>Subir el archivo inicia la revisión; no cambia por sí solo el estado de producción ni aprueba el QA.</p></div>
           <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso</strong><small>Se sube el GPKG/GeoPackage a la carpeta IPT con comuna, fecha y versión.</small></li><li><span>2</span><strong>Detección</strong><small>La plataforma identifica el PRC y contrasta su fecha con la línea normativa.</small></li><li><span>3</span><strong>Comparación</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma compara el PRC actualizado con las correcciones detectadas. Si un control no es automatizable, queda QA pendiente para Javiera, quien registra el control manual en SharePoint.</small></li><li><span>5</span><strong>Envío</strong><small>El equipo marca “enviado”; Propiteq queda a cargo de cargar la versión al visor.</small></li></ol>
         </section>
 
-        <section class="seguimiento-legacy-panel">
+        <section class="seguimiento-legacy-panel" data-internal-scope="equipo,javiera">
           <div><p class="eyebrow">PRC YA PUBLICADOS</p><h3>44 PRC identificados sin QA formal</h3><p>El inventario actual contiene 44 comunas construidas (versiones 1.1–2.1). Se reconocen como publicados de forma provisional; el posible PRC número 45 se confirma con la tabla SharePoint antes de cerrar el total.</p></div>
           <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">44</strong><small>PRC identificados en inventario</small></span><span><strong id="seguimientoPrepublishedQa">44</strong><small>con QA manual pendiente</small></span><span><strong id="seguimientoPropiteqSent">44</strong><small>enviados: carga pendiente de Propiteq</small></span><span><strong id="seguimientoDirectCount">62</strong><small>candidatos a actualización directa</small></span></div>
           <div class="seguimiento-drive-row"><span>Publicación efectiva</span><a id="seguimientoDriveLink" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Vincular tabla SharePoint</a><small id="seguimientoDriveStatus">Tabla SharePoint DEI pendiente de lectura automática; abrir para actualizar la evidencia de Propiteq.</small></div>
         </section>
 
-        <section class="seguimiento-direct-panel">
+        <section class="seguimiento-direct-panel" data-internal-scope="equipo,javiera">
           <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>La base identifica estos casos como candidatos para pasar directamente a producción. Antes de marcar “Actualizado” en SharePoint hay que homologar la columna de usos al lenguaje Transsa.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
           <div class="seguimiento-direct-note">Criterio automático: PRC identificado + archivo vinculado + apto preliminarmente para visor + 0 actos posteriores detectados. No es un QA aprobado; es una cola priorizada de homologación. Pemuco y Pinto quedan fuera porque tienen archivo, pero no un PRC identificado en la base.</div>
           <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>QA manual (SharePoint)</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
         </section>
 
-        <section class="seguimiento-kpis internal-kpis" aria-label="Resumen interno de trabajo PRC">
+        <section class="seguimiento-kpis internal-kpis" data-internal-scope="equipo,javiera" aria-label="Resumen interno de trabajo PRC">
           <article class="unassigned"><span>Sin responsable</span><strong id="seguimientoInternalUnassigned">0</strong><small>Requieren asignación del equipo</small></article>
           <article class="development"><span>Trabajo activo</span><strong id="seguimientoInternalActive">0</strong><small>En desarrollo, QA o corrección</small></article>
           <article class="review"><span>Con bloqueos</span><strong id="seguimientoInternalBlocked">0</strong><small>Falta fuente, comparación o control</small></article>
           <article class="ready"><span>QA manual aprobado</span><strong id="seguimientoInternalApproved">0</strong><small>Listos para enviar</small></article>
         </section>
 
-        <section class="seguimiento-filter-panel internal-filter-panel">
+        <section class="seguimiento-filter-panel internal-filter-panel" data-internal-scope="equipo,javiera">
           <div class="seguimiento-filter-heading"><div><p class="eyebrow">GESTIÓN OPERATIVA</p><h3>Cola nacional de trabajo</h3></div><span id="seguimientoInternalCount" class="result-count"></span></div>
           <div class="seguimiento-filters internal-filters">
             <label><span>Buscar</span><input id="seguimientoInternalSearch" type="search" placeholder="Comuna, responsable, etapa o tarea…"></label>
@@ -646,17 +656,17 @@
           </div>
         </section>
 
-        <section class="seguimiento-table-section internal-table-section">
+        <section class="seguimiento-table-section internal-table-section" data-internal-scope="equipo,javiera">
           <div class="seguimiento-table-scroll">
             <table class="seguimiento-table internal-table">
-              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA manual (SharePoint)</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
+              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA automático de la plataforma</th><th>QA manual (SharePoint)</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
               <tbody id="seguimientoInternalBody"></tbody>
             </table>
           </div>
           <div id="seguimientoInternalEmpty" class="empty-state" hidden><div>PRC</div><h3>No hay trabajo para estos filtros</h3><p>Prueba con otra etapa, prioridad o responsable.</p></div>
         </section>
 
-        <section class="seguimiento-internal-legend">
+        <section class="seguimiento-internal-legend" data-internal-scope="equipo,javiera">
           <div><strong>Estado de producción</strong><p>Lo informa el equipo: pendiente, en desarrollo, actualizado o enviado. “Enviado” significa que Propiteq asume la carga al visor.</p></div>
           <div><strong>QA manual (SharePoint)</strong><p>Control interno que realiza Javiera cuando la plataforma no puede comprobar un control o requiere revisión interpretativa. No se muestra en la vista pública.</p></div>
           <div><strong>QA automático de la plataforma</strong><p>Comparación que ejecuta esta plataforma entre el PRC actualizado y las correcciones detectadas. Es el único QA mostrado en la vista pública: aprobado, con diferencias o pendiente de revisión de Javiera.</p></div>
@@ -752,7 +762,7 @@
 
       <section class="vigencia-summary">
         <article class="ipt-kpi">
-          <span>Instrumentos evaluados</span>
+          <span>Comunas evaluadas</span>
           <strong id="vigenciaMetricTotal">0</strong>
         </article>
         <article class="ipt-kpi">
@@ -760,13 +770,18 @@
           <strong id="vigenciaMetricOk">0</strong>
         </article>
         <article class="ipt-kpi">
-          <span>Revisión necesaria</span>
+          <span>Revisión normativa o espacial</span>
           <strong id="vigenciaMetricReview">0</strong>
         </article>
         <article class="ipt-kpi">
-          <span>Desactualizados / sin shape</span>
+          <span>Sin cartografía o IPT identificado</span>
           <strong id="vigenciaMetricAlert">0</strong>
         </article>
+      </section>
+
+      <section class="vigencia-source-note">
+        <strong>Indicadores sincronizados con Seguimiento PRC.</strong>
+        <span>“Actualizado o probable” no reemplaza el QA: los casos probables todavía requieren comprobar geometría y atributos. “Sin cartografía o IPT identificado” agrupa los registros que no tienen una fuente SIG/PRC vinculada.</span>
       </section>
 
       <section class="search-panel">
@@ -887,7 +902,7 @@
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
   <script src="data/estado_operativo_datos.js?v=20260812-estados-2"></script>
-  <script src="seguimiento-consolidado.js?v=20260812-responsive-2"></script>
+  <script src="seguimiento-consolidado.js?v=20260812-paneles-1"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
   <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
@@ -898,7 +913,7 @@
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="app.js?v=20260811-cobertura-comunal-5"></script>
+  <script src="app.js?v=20260812-paneles-1"></script>
   <script src="ux-refresh.js?v=20260811-cobertura-comunal-4"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@
     internalOwner: "",
     internalStage: "",
     internalPriority: "",
+    internalView: new URLSearchParams(window.location.search).get("panel") === "javiera" ? "javiera" : "equipo",
   };
 
   const $ = id => document.getElementById(id);
@@ -26,6 +27,28 @@
 
   const data = () => window.SEGUIMIENTO_NORMATIVO || { resumen: {}, comunas: [] };
   const operationalData = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {} };
+  const localStorageKey = "tui-seguimiento-borradores-v1";
+  let localChanges = (() => {
+    try {
+      const parsed = JSON.parse(window.localStorage?.getItem(localStorageKey) || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  })();
+  const rowKey = row => `${row.region}|${row.comuna}`;
+  const localOverride = row => localChanges[rowKey(row)] || {};
+  const mergedOverride = row => ({
+    ...(operationalData().comunas?.[rowKey(row)] || {}),
+    ...localOverride(row),
+  });
+  const saveLocalChanges = () => {
+    try {
+      window.localStorage?.setItem(localStorageKey, JSON.stringify(localChanges));
+    } catch (error) {
+      // Private browsing or a locked-down browser can disable localStorage.
+    }
+  };
   const normalizeCommune = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
   const isPrepublished = row => (operationalData().prc_publicados_sin_qa || []).some(name => normalizeCommune(name) === normalizeCommune(row.comuna));
   const normalizeProductionState = value => ({
@@ -35,15 +58,15 @@
     observado: "en_desarrollo",
   }[value] || value || "pendiente");
   const productionState = row => {
-    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const override = mergedOverride(row);
     return normalizeProductionState(override.estado_produccion || (isPrepublished(row) ? "enviado" : "pendiente"));
   };
   const qaPlatformState = row => {
-    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const override = mergedOverride(row);
     return override.qa_plataforma || "pendiente";
   };
   const qaSharepointState = row => {
-    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const override = mergedOverride(row);
     return override.qa_sharepoint || override.qa || "pendiente";
   };
   const isDirectProductionCandidate = row => Boolean(
@@ -56,8 +79,8 @@
   const directProductionCandidates = () => data().comunas.filter(isDirectProductionCandidate);
   const publicationStatus = row => ({
     state: productionState(row),
-    date: operationalData().comunas?.[`${row.region}|${row.comuna}`]?.fecha_estado || "",
-    note: operationalData().comunas?.[`${row.region}|${row.comuna}`]?.nota_propiteq || "El envío deja la carga posterior a cargo de Propiteq.",
+    date: mergedOverride(row).fecha_estado || "",
+    note: mergedOverride(row).nota_propiteq || "El envío deja la carga posterior a cargo de Propiteq.",
   });
 
   const consumptionLabels = {
@@ -102,7 +125,7 @@
 
   const qaPlatformNote = row => {
     const operational = operationalStatus(row);
-    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const override = mergedOverride(row);
     if (override.qa_plataforma_motivo) return override.qa_plataforma_motivo;
     if (operational.qa === "pendiente" && ["actualizado", "enviado"].includes(operational.production)) {
       return "La plataforma no puede comprobar este control; revisión de Javiera requerida.";
@@ -128,7 +151,7 @@
   };
 
   function operationalStatus(row) {
-    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const override = mergedOverride(row);
     const prepublished = isPrepublished(row);
     const publication = publicationStatus(row);
     const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
@@ -153,8 +176,7 @@
   }
 
   function internalStatus(row) {
-    const key = `${row.region}|${row.comuna}`;
-    const override = operationalData().comunas?.[key] || {};
+    const override = mergedOverride(row);
     const internal = override.interno || {};
     const operational = operationalStatus(row);
     const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
@@ -195,6 +217,7 @@
     return {
       ...operational,
       qa: operational.qaSharepoint,
+      qaPlatform: operational.qa,
       qaDate: override.fecha_qa_sharepoint || internal.fecha_qa || "",
       responsible,
       stage,
@@ -337,12 +360,16 @@
     const alerts = Number.isFinite(row.controles_pendientes)
       ? `${row.controles_pendientes} de ${row.controles_totales} controles abiertos`
       : row.actos_posteriores ? `${row.actos_posteriores} ${row.actos_posteriores === 1 ? "acto posterior" : "actos posteriores"}` : "Sin alertas normativas abiertas";
+    const statusControl = state.internalView === "equipo"
+      ? `<label class="seguimiento-inline-status"><span>Marcar avance</span><select data-update-production="${escape(rowKey(row))}" aria-label="Marcar estado de ${escape(row.comuna)}">${Object.entries(productionLabels).map(([value, label]) => `<option value="${value}" ${internal.production === value ? "selected" : ""}>${escape(label)}</option>`).join("")}</select></label>`
+      : "";
     return `
       <tr>
         <td data-label="Comuna"><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong><small>${escape(row.prc_fecha || "PRC sin fecha")}</small></td>
         <td data-label="Responsable"><span class="seguimiento-owner ${internal.responsible === "Sin asignar" ? "unassigned" : ""}">${escape(internal.responsible)}</span></td>
         <td data-label="Etapa técnica"><span class="seguimiento-stage ${escape(internal.stage)}">${escape(stageLabels[internal.stage] || internal.stage)}</span><small class="seguimiento-priority ${escape(internal.priority)}">Prioridad ${escape(priorityLabels[internal.priority] || internal.priority)}</small></td>
-        <td data-label="Estado / avance"><span class="seguimiento-operational-pill production ${escape(internal.production)}">${escape(productionLabels[internal.production])}</span><div class="seguimiento-progress" aria-label="${escape(`${internal.progress}% de avance`)}"><span style="width:${internal.progress}%"></span></div><small>${escape(`${internal.progress}% informado/calculado`)}</small></td>
+        <td data-label="Estado / avance"><span class="seguimiento-operational-pill production ${escape(internal.production)}">${escape(productionLabels[internal.production])}</span>${statusControl}<div class="seguimiento-progress" aria-label="${escape(`${internal.progress}% de avance`)}"><span style="width:${internal.progress}%"></span></div><small>${escape(`${internal.progress}% informado/calculado`)}</small></td>
+        <td data-label="QA automático de la plataforma"><span class="seguimiento-operational-pill qa ${escape(internal.qaPlatform)}">${escape(qaPlatformLabels[internal.qaPlatform])}</span><small>${escape(qaPlatformNote(row))}</small></td>
         <td data-label="QA manual (SharePoint)"><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaSharepointLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Último QA manual: ${internal.qaDate}` : "Sin fecha de QA manual")}</small></td>
         <td data-label="Alertas y bloqueos"><strong class="seguimiento-alert-count">${escape(alerts)}</strong><small class="${internal.blocking ? "seguimiento-blocking" : ""}">${escape(internal.blocking || "Sin bloqueo técnico registrado")}</small></td>
         <td data-label="Próxima acción"><p class="seguimiento-next-action">${escape(internal.nextAction)}</p></td>
@@ -452,6 +479,59 @@
     });
   }
 
+  function renderInternalView() {
+    const isJaviera = state.internalView === "javiera";
+    document.querySelectorAll("[data-internal-view]").forEach(button => {
+      button.classList.toggle("active", button.dataset.internalView === state.internalView);
+    });
+    document.querySelectorAll("[data-internal-scope]").forEach(section => {
+      const scopes = section.dataset.internalScope.split(",").map(value => value.trim());
+      section.hidden = !scopes.includes(state.internalView);
+    });
+    if ($("seguimientoInternalTitle")) $("seguimientoInternalTitle").textContent = isJaviera ? "Control de Javiera" : "Mi tablero de tareas";
+    if ($("seguimientoInternalDescription")) $("seguimientoInternalDescription").textContent = isJaviera
+      ? "Revisa el avance nacional, los bloqueos y el QA automático. El QA manual se registra en SharePoint cuando la plataforma no puede comprobar un control."
+      : "Selecciona tu nombre, filtra tus comunas y marca el estado de producción. El cambio se guarda en este navegador como borrador y debe registrarse en SharePoint para que sea compartido con el equipo.";
+    if ($("seguimientoInternalBadge")) $("seguimientoInternalBadge").textContent = isJaviera ? "Panel de supervisión" : "Tablero del equipo";
+    if ($("seguimientoCurrentUser")) $("seguimientoCurrentUser").closest("label").hidden = isJaviera;
+    if ($("seguimientoLocalSaveNote")) $("seguimientoLocalSaveNote").textContent = isJaviera
+      ? "El QA automático lo calcula esta plataforma; las observaciones no automatizables quedan para revisión de Javiera en SharePoint."
+      : "Los estados marcados aquí son un borrador local; el registro oficial sigue siendo la tabla SharePoint.";
+  }
+
+  function setInternalView(view) {
+    state.internalView = view === "javiera" ? "javiera" : "equipo";
+    const url = new URL(window.location.href);
+    url.searchParams.set("vista", "equipo");
+    if (state.internalView === "javiera") url.searchParams.set("panel", "javiera");
+    else url.searchParams.delete("panel");
+    history.replaceState(null, "", `${url.pathname}${url.search}#seguimiento`);
+    renderInternalView();
+    renderInternalTable();
+  }
+
+  function updateProductionStatus(key, value) {
+    const [region, ...communeParts] = key.split("|");
+    const commune = communeParts.join("|");
+    const row = data().comunas.find(candidate => candidate.region === region && candidate.comuna === commune);
+    if (!row || !Object.prototype.hasOwnProperty.call(productionLabels, value)) return;
+    const current = localChanges[key] || {};
+    const currentUser = $("seguimientoCurrentUser")?.value || current.responsable || "";
+    localChanges[key] = {
+      ...current,
+      estado_produccion: value,
+      fecha_estado: new Date().toISOString().slice(0, 10),
+      ...(currentUser ? { responsable: currentUser } : {}),
+    };
+    saveLocalChanges();
+    const note = $("seguimientoLocalSaveNote");
+    if (note) note.textContent = `${commune}: estado “${productionLabels[value]}” guardado como borrador local. Registra el mismo valor en SharePoint para compartirlo con el equipo.`;
+    renderMetrics();
+    renderInternalMetrics();
+    renderInternalTable();
+    renderTable();
+  }
+
   function csvCell(value) {
     const text = String(value ?? "");
     return `"${text.replaceAll('"', '""')}"`;
@@ -514,6 +594,15 @@
       history.replaceState(null, "", `${url.pathname}${url.search}#seguimiento`);
       renderView();
     }));
+    document.querySelectorAll("[data-internal-view]").forEach(button => button.addEventListener("click", () => {
+      setInternalView(button.dataset.internalView);
+    }));
+    $("seguimientoCurrentUser")?.addEventListener("change", event => {
+      const value = event.target.value;
+      state.internalOwner = value;
+      if ($("seguimientoInternalOwner")) $("seguimientoInternalOwner").value = value;
+      renderInternalTable();
+    });
     $("seguimientoSearch")?.addEventListener("input", event => {
       state.search = event.target.value;
       renderTable();
@@ -549,6 +638,10 @@
     $("seguimientoInternalOwner")?.addEventListener("change", event => { state.internalOwner = event.target.value; renderInternalTable(); });
     $("seguimientoInternalStage")?.addEventListener("change", event => { state.internalStage = event.target.value; renderInternalTable(); });
     $("seguimientoInternalPriority")?.addEventListener("change", event => { state.internalPriority = event.target.value; renderInternalTable(); });
+    $("seguimientoInternalBody")?.addEventListener("change", event => {
+      const select = event.target.closest("[data-update-production]");
+      if (select) updateProductionStatus(select.dataset.updateProduction, select.value);
+    });
     $("seguimientoInternalBody")?.addEventListener("click", event => {
       const button = event.target.closest("[data-seguimiento-commune]");
       if (button) openCommune(button.dataset.seguimientoCommune);
@@ -564,6 +657,7 @@
     renderInternalTable();
     renderDirectCandidates();
     renderView();
+    renderInternalView();
   };
 
   bindEvents();

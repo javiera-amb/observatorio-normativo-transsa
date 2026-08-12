@@ -787,9 +787,37 @@ function populateMapFilters() {
 
 
 function vigenciaInstruments() {
-  return Array.isArray(vigenciaData.instrumentos)
-    ? [...vigenciaData.instrumentos]
+  const legacy = Array.isArray(vigenciaData.instrumentos) ? [...vigenciaData.instrumentos] : [];
+  const rows = Array.isArray(window.SEGUIMIENTO_NORMATIVO?.comunas)
+    ? window.SEGUIMIENTO_NORMATIVO.comunas
     : [];
+  if (!rows.length) return legacy;
+  const byCommune = new Map(legacy.map(item => [`${item.region}|${item.comuna}`, item]));
+  const statusFor = row => {
+    const source = String(row.estado_fuente || "");
+    if (source.includes("Sin cartografía") || source.includes("Sin información") || source.includes("Sin PRC/LU")) return "Sin cartografía";
+    if (source.includes("Vigente · sin cambios") || source.includes("Probablemente actualizado")) return "Probablemente actualizado";
+    return "Revisión necesaria";
+  };
+  return rows.map(row => {
+    const key = `${row.region}|${row.comuna}`;
+    const existing = byCommune.get(key) || {};
+    return {
+      ...existing,
+      id: existing.id || `seguimiento-${row.region}-${row.comuna}`,
+      region: row.region,
+      comuna: row.comuna,
+      tipo_ipt: existing.tipo_ipt || (row.prc_nombre ? "PRC" : "IPT sin identificar"),
+      nombre: row.prc_nombre || existing.nombre || "Instrumento no identificado",
+      estado_alerta: statusFor(row),
+      confianza: existing.confianza || (row.apto_para_visor === "SI" ? "preliminar" : "baja"),
+      resumen_alerta: row.motivo || existing.resumen_alerta || "La fuente comunal está pendiente de revisión.",
+      actos_posteriores_pendientes: Number(row.actos_posteriores || existing.actos_posteriores_pendientes || 0),
+      fecha_instrumento_base: row.prc_fecha || existing.fecha_instrumento_base || "",
+      archivo_geojson: existing.archivo_geojson || row.archivo_recomendado || "",
+      notas: existing.notas || "Estado derivado del consolidado nacional de Seguimiento PRC."
+    };
+  });
 }
 
 function vigenciaStatusClass(status = "") {
@@ -837,13 +865,36 @@ function filteredVigenciaInstruments() {
 }
 
 function renderVigenciaMetrics() {
-  const summary = vigenciaData.resumen || {};
+  /*
+   * The old vigencia builder has its own (and now stale) summary.  The
+   * national source of truth is the same one used by Seguimiento PRC, so the
+   * headline numbers must be derived from it here as well.  This prevents a
+   * valid zero in the legacy dataset from being shown as if the national
+   * audit had no records.
+   */
+  const rows = Array.isArray(window.SEGUIMIENTO_NORMATIVO?.comunas)
+    ? window.SEGUIMIENTO_NORMATIVO.comunas
+    : [];
+  const sourceSummary = window.SEGUIMIENTO_NORMATIVO?.resumen || {};
+  const isUpdatedOrProbable = row =>
+    String(row.estado_fuente || "").includes("Vigente · sin cambios posteriores detectados")
+    || String(row.estado_fuente || "").includes("Probablemente actualizado");
+  const isMissing = row =>
+    ["Sin cartografía SIG vinculada", "Sin información comunal consolidada", "Sin PRC/LU vigente identificado"]
+      .some(label => String(row.estado_fuente || "").includes(label));
+  const syncedSummary = {
+    instrumentos: rows.length || sourceSummary.total || 0,
+    actualizados: rows.filter(row => String(row.estado_fuente || "").includes("Vigente · sin cambios posteriores detectados")).length,
+    probablemente_actualizados: rows.filter(row => String(row.estado_fuente || "").includes("Probablemente actualizado")).length,
+    revision_necesaria: rows.filter(row => !isUpdatedOrProbable(row) && !isMissing(row)).length,
+    sin_cartografia: rows.filter(isMissing).length,
+  };
+  const summary = rows.length ? syncedSummary : (vigenciaData.resumen || {});
   $("vigenciaMetricTotal").textContent = summary.instrumentos || 0;
   $("vigenciaMetricOk").textContent =
     (summary.actualizados || 0) + (summary.probablemente_actualizados || 0);
   $("vigenciaMetricReview").textContent = summary.revision_necesaria || 0;
-  $("vigenciaMetricAlert").textContent =
-    (summary.desactualizados || 0) + (summary.sin_cartografia || 0);
+  $("vigenciaMetricAlert").textContent = summary.sin_cartografia || 0;
 
   const links = [];
   if (vigenciaData.word_url) {
