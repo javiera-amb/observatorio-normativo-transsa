@@ -1,7 +1,7 @@
 window.ESTADO_OPERATIVO_DATOS = {
   corte: "2026-08-12",
   destino_publicacion: "Transsa / Propiteq",
-  criterio: "El equipo actualiza el estado de producción. El QA se registra de forma independiente después de comparar cartografía, normativa y cambios aplicables.",
+  criterio: "El equipo actualiza el estado de producción. La plataforma ejecuta el QA automático al comparar un PRC actualizado con las correcciones detectadas; los controles no automatizables quedan como QA pendiente para Javiera y se registran manualmente en SharePoint.",
   valores_permitidos: {
     estado_produccion: ["pendiente", "en_desarrollo", "actualizado", "enviado"],
     qa_plataforma: ["pendiente", "observaciones", "aprobado"],
@@ -24,7 +24,7 @@ window.ESTADO_OPERATIVO_DATOS = {
     tipo: "tabla_sharepoint",
     url: "https://transsa.sharepoint.com/:x:/s/DEI/IQCb9mHRTxIRTrh2zci6DE4ZAa-AHtxnXz_E1IxSIq9FHWg?e=IAoqb9",
     columna_estado: "estado_produccion",
-    descripcion: "Tabla SharePoint del equipo DEI con comuna, estado_produccion, qa_sharepoint, fecha, observaciones y evidencia. Estados: pendiente, en desarrollo, actualizado o enviado. Reemplaza la columna Sí/No."
+    descripcion: "Tabla SharePoint del equipo DEI con comuna, estado_produccion, qa_sharepoint, fecha, observaciones y evidencia. Estados de producción: pendiente, en desarrollo, actualizado o enviado. Reemplaza la columna Sí/No; el qa_plataforma lo calcula esta plataforma."
   },
   criterio_produccion_directa: "PRC identificado, archivo vinculado, sin actos posteriores detectados y apto preliminarmente para visor. Antes de marcar actualizado se debe homologar la columna de usos al lenguaje Transsa.",
   // Clave: "Región|Comuna". Solo registrar hechos confirmados por el equipo.
@@ -36,7 +36,7 @@ window.ESTADO_OPERATIVO_DATOS = {
   //   fecha_qa_sharepoint: "2026-08-11",
   //   responsable: "Nombre Apellido",
   //   evidencia: "URL o identificador del dataset publicado",
-  //   nota: "QA aprobado y capa visible en Propiteq",
+  //   nota: "QA automático aprobado; versión enviada a Propiteq",
   //   interno: {
   //     etapa: "qa",
   //     prioridad: "alta",
@@ -54,7 +54,7 @@ window.ESTADO_OPERATIVO_DATOS = {
       interno: {
         etapa: "publicacion",
         prioridad: "alta",
-        proxima_accion: "Confirmar visibilidad en el visor Propiteq y registrar evidencia.",
+        proxima_accion: "Propiteq debe cargar la versión al visor; registrar el traspaso si se recibe evidencia.",
         fecha_actividad: "2026-08-12"
       }
     }

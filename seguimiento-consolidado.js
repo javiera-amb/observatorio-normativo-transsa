@@ -36,11 +36,11 @@
   }[value] || value || "pendiente");
   const productionState = row => {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
-    return normalizeProductionState(override.estado_produccion || override.estado_publicacion_propiteq || (isPrepublished(row) ? "enviado" : "pendiente"));
+    return normalizeProductionState(override.estado_produccion || (isPrepublished(row) ? "enviado" : "pendiente"));
   };
   const qaPlatformState = row => {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
-    return override.qa_plataforma || override.qa_propiteq || "pendiente";
+    return override.qa_plataforma || "pendiente";
   };
   const qaSharepointState = row => {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
@@ -81,12 +81,35 @@
     enviado: "Enviado",
   };
 
-  const publicationLabels = productionLabels;
+  const publicationLabels = {
+    pendiente: "Sin envío",
+    en_desarrollo: "En preparación",
+    actualizado: "Listo para enviar",
+    enviado: "A cargo de Propiteq",
+  };
 
-  const qaLabels = {
-    pendiente: "QA pendiente",
-    observaciones: "QA con observaciones",
-    aprobado: "QA aprobado",
+  const qaPlatformLabels = {
+    pendiente: "QA automático pendiente",
+    observaciones: "QA automático con diferencias",
+    aprobado: "QA automático aprobado",
+  };
+
+  const qaSharepointLabels = {
+    pendiente: "QA manual pendiente",
+    observaciones: "QA manual con observaciones",
+    aprobado: "QA manual aprobado",
+  };
+
+  const qaPlatformNote = row => {
+    const operational = operationalStatus(row);
+    const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    if (override.qa_plataforma_motivo) return override.qa_plataforma_motivo;
+    if (operational.qa === "pendiente" && ["actualizado", "enviado"].includes(operational.production)) {
+      return "La plataforma no puede comprobar este control; revisión de Javiera requerida.";
+    }
+    if (operational.qa === "pendiente") return "La comparación automática aún no está registrada.";
+    if (operational.qa === "observaciones") return "La comparación detectó diferencias que deben corregirse.";
+    return "La comparación automática no detectó diferencias bloqueantes.";
   };
 
   const stageLabels = {
@@ -117,12 +140,12 @@
       qa,
       qaSharepoint: qaSharepointState(row),
       statusDate: override.fecha_estado || "",
-      qaDate: override.fecha_qa_plataforma || override.fecha_qa_propiteq || "",
+      qaDate: override.fecha_qa_plataforma || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || "",
       note: override.nota || (production === "enviado"
         ? "Enviado a Propiteq; la carga al visor queda fuera del control del equipo."
-        : prepublished ? "PRC incluido en el inventario histórico enviado a Propiteq; QA plataforma pendiente." : ""),
+        : prepublished ? "PRC incluido en el inventario histórico enviado a Propiteq; QA automático pendiente." : ""),
       publication,
       prepublished,
       inconsistency: ["actualizado", "enviado"].includes(production) && qa === "observaciones",
@@ -166,7 +189,7 @@
     else if (!nextAction && !hasPrc) nextAction = "Confirmar el instrumento vigente y su fuente oficial.";
     else if (!nextAction && !hasCartography) nextAction = "Localizar, descargar y vincular la cartografía vigente.";
     else if (!nextAction && operational.prepublished && acts === 0) nextAction = "Revisar tabla, nomenclatura y consistencia de campos antes de cerrar QA.";
-    else if (!nextAction && operational.qaSharepoint !== "aprobado") nextAction = "Ejecutar QA SharePoint de normativa, geometría, atributos y topología.";
+    else if (!nextAction && operational.qaSharepoint !== "aprobado") nextAction = "Ejecutar QA manual de Javiera y registrar el resultado en SharePoint.";
     else if (!nextAction && operational.production !== "enviado") nextAction = "Homologar la tabla de usos, marcar actualizado y preparar el envío a Propiteq.";
     else if (!nextAction) nextAction = "Monitorear nuevas modificaciones o enmiendas.";
     return {
@@ -284,11 +307,16 @@
         <td>
           <span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span>
           <small>${escape(operational.statusDate ? `Actualizado: ${operational.statusDate}` : operational.responsible)}</small>
-          <small>${escape(operational.production === "enviado" ? "Responsabilidad de Propiteq" : operational.production === "actualizado" ? "Listo para enviar" : operational.production === "en_desarrollo" ? "Trabajo en curso" : "Aún no trabajado")}</small>
-          ${operational.inconsistency ? `<small class="seguimiento-state-warning">QA plataforma con observaciones.</small>` : ""}
+          <small>${escape(operational.production === "enviado" ? "La carga al visor queda fuera del equipo." : operational.production === "actualizado" ? "Tabla homologada: listo para envío." : operational.production === "en_desarrollo" ? "Trabajo en curso." : "Aún no trabajado.")}</small>
+          ${operational.inconsistency ? `<small class="seguimiento-state-warning">QA automático con diferencias.</small>` : ""}
         </td>
         <td>
-          <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaLabels[operational.qa])}</span>
+          <span class="seguimiento-operational-pill publication ${escape(operational.production)}">${escape(publicationLabels[operational.production])}</span>
+          <small>${escape(operational.production === "enviado" ? (operational.publication.note || "Propiteq debe cargar la versión al visor.") : "La carga aún permanece en manos del equipo.")}</small>
+        </td>
+        <td>
+          <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaPlatformLabels[operational.qa])}</span>
+          <small>${escape(qaPlatformNote(row))}</small>
           <small>${escape(operational.qaDate ? `Último QA: ${operational.qaDate}` : "Sin fecha de QA")}</small>
           ${Number.isFinite(row.controles_pendientes) ? `<small>${escape(`${row.controles_pendientes} de ${row.controles_totales} controles pendientes`)}</small>` : ""}
         </td>
@@ -315,7 +343,7 @@
         <td><span class="seguimiento-owner ${internal.responsible === "Sin asignar" ? "unassigned" : ""}">${escape(internal.responsible)}</span></td>
         <td><span class="seguimiento-stage ${escape(internal.stage)}">${escape(stageLabels[internal.stage] || internal.stage)}</span><small class="seguimiento-priority ${escape(internal.priority)}">Prioridad ${escape(priorityLabels[internal.priority] || internal.priority)}</small></td>
         <td><span class="seguimiento-operational-pill production ${escape(internal.production)}">${escape(productionLabels[internal.production])}</span><div class="seguimiento-progress" aria-label="${escape(`${internal.progress}% de avance`)}"><span style="width:${internal.progress}%"></span></div><small>${escape(`${internal.progress}% informado/calculado`)}</small></td>
-        <td><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Último QA: ${internal.qaDate}` : "Sin fecha de QA")}</small></td>
+        <td><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaSharepointLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Último QA manual: ${internal.qaDate}` : "Sin fecha de QA manual")}</small></td>
         <td><strong class="seguimiento-alert-count">${escape(alerts)}</strong><small class="${internal.blocking ? "seguimiento-blocking" : ""}">${escape(internal.blocking || "Sin bloqueo técnico registrado")}</small></td>
         <td><p class="seguimiento-next-action">${escape(internal.nextAction)}</p></td>
         <td>${escape(internal.lastActivity)}</td>
@@ -361,7 +389,7 @@
       <td><strong class="seguimiento-ipt-name">${escape(row.prc_nombre)}</strong><span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span></td>
       <td><span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.production === "actualizado" ? "Homologación pendiente de registrar" : "Marcar actualizado después de homologar usos")}</small></td>
       <td><strong>${escape(row.capa_recomendada || "Sin capa")}</strong><small>${escape(row.archivo_recomendado)}</small></td>
-      <td><span class="seguimiento-operational-pill qa ${escape(qaSharepoint)}">${escape(qaLabels[qaSharepoint])}</span><small>QA interno SharePoint</small></td>
+      <td><span class="seguimiento-operational-pill qa ${escape(qaSharepoint)}">${escape(qaSharepointLabels[qaSharepoint])}</span><small>Control manual de Javiera registrado en SharePoint.</small></td>
       <td><strong>Homologar usos</strong><small>Comparar la columna de usos con el lenguaje Transsa, guardar evidencia y marcar “Actualizado”.</small></td>
     </tr>`;
   }
