@@ -26,6 +26,7 @@
 
   const data = () => window.SEGUIMIENTO_NORMATIVO || { resumen: {}, comunas: [] };
   const operationalData = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {} };
+  const isPrepublished = row => (operationalData().prc_publicados_sin_qa || []).some(name => name.toLocaleLowerCase("es") === String(row.comuna || "").toLocaleLowerCase("es"));
 
   const consumptionLabels = {
     disponible: "Disponible",
@@ -71,12 +72,13 @@
 
   function operationalStatus(row) {
     const override = operationalData().comunas?.[`${row.region}|${row.comuna}`] || {};
+    const prepublished = isPrepublished(row);
     const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
     let qa = override.qa;
     if (!qa && Number.isFinite(row.controles_totales) && Number.isFinite(row.controles_pendientes)) {
       qa = row.controles_pendientes === 0 && row.controles_totales > 0 ? "aprobado" : "observaciones";
     }
-    const production = override.estado_produccion || "pendiente";
+    const production = override.estado_produccion || (prepublished ? "en_plataforma" : "pendiente");
     return {
       cartography: hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
       production,
@@ -85,7 +87,8 @@
       qaDate: override.fecha_qa || row.ultima_revision || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || "",
-      note: override.nota || "",
+      note: override.nota || (prepublished ? "PRC ya publicado en Propiteq; QA pendiente de la versión que se construyó." : ""),
+      prepublished,
       inconsistency: ["listo", "en_plataforma"].includes(production) && qa !== "aprobado",
     };
   }
@@ -119,12 +122,14 @@
     else if (!blocking && acts > 0) blocking = `${acts} ${acts === 1 ? "acto posterior por comparar" : "actos posteriores por comparar"}`;
     else if (!blocking && !hasCartography) blocking = "Falta cartografía vinculada";
     else if (!blocking && !hasPrc) blocking = "Falta confirmar IPT vigente";
+    else if (!blocking && operational.prepublished && acts === 0) blocking = "Revisar tabla de atributos y nomenclatura";
     const priority = internal.prioridad || (pendingControls > 0 || acts >= 10 ? "critica" : acts >= 4 || !hasCartography || !hasPrc ? "alta" : acts > 0 ? "media" : "baja");
     let nextAction = internal.proxima_accion || "";
     if (!nextAction && pendingControls > 0) nextAction = `Resolver y documentar ${pendingControls} controles antes de aprobar el QA.`;
     else if (!nextAction && acts > 0) nextAction = `Comparar ${acts} ${acts === 1 ? "acto posterior" : "actos posteriores"} con la cartografía SIG.`;
     else if (!nextAction && !hasPrc) nextAction = "Confirmar el instrumento vigente y su fuente oficial.";
     else if (!nextAction && !hasCartography) nextAction = "Localizar, descargar y vincular la cartografía vigente.";
+    else if (!nextAction && operational.prepublished && acts === 0) nextAction = "Revisar tabla, nomenclatura y consistencia de campos antes de cerrar QA.";
     else if (!nextAction && operational.qa !== "aprobado") nextAction = "Ejecutar QA de normativa, geometría, atributos y topología.";
     else if (!nextAction && operational.production !== "en_plataforma") nextAction = "Publicar la versión aprobada y registrar evidencia.";
     else if (!nextAction) nextAction = "Monitorear nuevas modificaciones o enmiendas.";
@@ -294,6 +299,18 @@
     $("seguimientoInternalActive").textContent = rows.filter(item => item.production === "en_desarrollo" || (item.stage === "qa" && item.qaDate)).length;
     $("seguimientoInternalBlocked").textContent = rows.filter(item => item.blocking).length;
     $("seguimientoInternalApproved").textContent = rows.filter(item => item.qa === "aprobado").length;
+    const prepublished = rows.filter(item => item.prepublished);
+    if ($("seguimientoPrepublishedCount")) $("seguimientoPrepublishedCount").textContent = prepublished.length;
+    if ($("seguimientoPrepublishedQa")) $("seguimientoPrepublishedQa").textContent = prepublished.filter(item => item.qa !== "aprobado").length;
+    if ($("seguimientoPrepublishedReady")) $("seguimientoPrepublishedReady").textContent = rows.filter(item => item.production === "listo").length;
+    const tracker = operationalData().fuente_publicacion_propiteq || {};
+    const trackerLink = $("seguimientoDriveLink");
+    if (trackerLink && tracker.url) {
+      trackerLink.href = tracker.url;
+      trackerLink.removeAttribute("aria-disabled");
+      trackerLink.textContent = "Abrir tabla Drive ↗";
+      if ($("seguimientoDriveStatus")) $("seguimientoDriveStatus").textContent = tracker.descripcion || "Tabla de publicación efectiva.";
+    }
   }
 
   function renderTable() {

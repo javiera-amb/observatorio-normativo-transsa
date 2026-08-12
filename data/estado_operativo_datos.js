@@ -8,6 +8,22 @@ window.ESTADO_OPERATIVO_DATOS = {
     etapa_interna: ["levantamiento", "comparacion", "actualizacion_sig", "qa", "publicacion"],
     prioridad: ["critica", "alta", "media", "baja"]
   },
+  equipo: [
+    { nombre: "Cristóbal", rol: "Producción SIG" },
+    { nombre: "Annabel", rol: "Producción SIG" },
+    { nombre: "Fernanda", rol: "Coordinación y revisión" },
+    { nombre: "Javiera", rol: "Administración y QA" }
+  ],
+  // Son los 44 PRC que ya estaban construidos y visibles en Propiteq al corte.
+  // Se cargan como "en la plataforma" porque existe publicación, pero con QA pendiente.
+  prc_publicados_sin_qa: [
+    "Chiguayante", "Chillán", "Chillán Viejo", "Colina", "Concepción", "Coquimbo", "Coyhaique", "Estación Central", "Frutillar", "Hualpén", "Huechuraba", "Independencia", "Iquique", "La Cisterna", "La Florida", "La Reina", "La Serena", "Las Condes", "Lo Barnechea", "Macul", "Maipú", "Melipilla", "Ñuñoa", "Osorno", "Peñalolén", "Providencia", "Pudahuel", "Puente Alto", "Puerto Montt", "Puerto Octay", "Puerto Varas", "Quinta Normal", "Rancagua", "Recoleta", "Renca", "San Joaquín", "San Miguel", "San Pedro de la Paz", "Santiago", "Talca", "Temuco", "Valdivia", "Viña del Mar", "Vitacura"
+  ],
+  fuente_publicacion_propiteq: {
+    tipo: "tabla_drive",
+    url: "",
+    descripcion: "Tabla administrada por el equipo con comuna, arriba_en_propiteq (Sí/No), fecha de publicación y enlace de evidencia."
+  },
   // Clave: "Región|Comuna". Solo registrar hechos confirmados por el equipo.
   // Ejemplo:
   // "Coquimbo|Coquimbo": {

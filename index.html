@@ -600,6 +600,27 @@
           <span class="seguimiento-readonly-badge">Sin edición en línea todavía</span>
         </section>
 
+        <section class="seguimiento-team-panel">
+          <div class="seguimiento-team-heading"><div><p class="eyebrow">EQUIPO AUTORIZADO</p><h3>Personas que pueden actualizar el seguimiento</h3><p>La asignación de comunas se carga en los datos operativos. No se crean responsables automáticamente.</p></div><span class="seguimiento-readonly-badge">4 integrantes</span></div>
+          <div class="seguimiento-team-grid">
+            <article><strong>Cristóbal</strong><span>Producción SIG</span></article>
+            <article><strong>Annabel</strong><span>Producción SIG</span></article>
+            <article><strong>Fernanda</strong><span>Coordinación y revisión</span></article>
+            <article><strong>Javiera</strong><span>Administración y QA</span></article>
+          </div>
+        </section>
+
+        <section class="seguimiento-workflow-panel">
+          <div><p class="eyebrow">FLUJO DE ACTUALIZACIÓN</p><h3>Qué ocurre cuando se sube un PRC consolidado</h3><p>Subir el archivo inicia la revisión; no cambia por sí solo el estado de producción ni aprueba el QA.</p></div>
+          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso</strong><small>Se sube el GPKG/GeoPackage a la carpeta IPT con comuna, fecha y versión.</small></li><li><span>2</span><strong>Detección</strong><small>La plataforma identifica el PRC y contrasta su fecha con la línea normativa.</small></li><li><span>3</span><strong>Comparación</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores.</small></li><li><span>4</span><strong>QA SIG</strong><small>Se controlan zonas, atributos, nomenclatura, geometría, topología y cobertura.</small></li><li><span>5</span><strong>Publicación</strong><small>Con QA aprobado se marca “listo”; el equipo registra el envío a Propiteq.</small></li></ol>
+        </section>
+
+        <section class="seguimiento-legacy-panel">
+          <div><p class="eyebrow">PRC YA PUBLICADOS</p><h3>44 PRC identificados sin QA formal</h3><p>El inventario actual contiene 44 comunas construidas (versiones 1.1–2.1). Se reconocen como publicados de forma provisional; el posible PRC número 45 se confirma con la tabla Drive antes de cerrar el total.</p></div>
+          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">44</strong><small>en Propiteq según inventario</small></span><span><strong id="seguimientoPrepublishedQa">44</strong><small>con QA pendiente</small></span><span><strong id="seguimientoPrepublishedReady">0</strong><small>listos para nueva publicación</small></span></div>
+          <div class="seguimiento-drive-row"><span>Publicación efectiva</span><a id="seguimientoDriveLink" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Vincular tabla Drive</a><small id="seguimientoDriveStatus">Pendiente: falta definir la URL de la tabla con Sí/No y evidencia de Propiteq.</small></div>
+        </section>
+
         <section class="seguimiento-kpis internal-kpis" aria-label="Resumen interno de trabajo PRC">
           <article class="unassigned"><span>Sin responsable</span><strong id="seguimientoInternalUnassigned">0</strong><small>Requieren asignación del equipo</small></article>
           <article class="development"><span>Trabajo activo</span><strong id="seguimientoInternalActive">0</strong><small>En desarrollo, QA o corrección</small></article>
@@ -612,7 +633,7 @@
           <div class="seguimiento-filters internal-filters">
             <label><span>Buscar</span><input id="seguimientoInternalSearch" type="search" placeholder="Comuna, responsable, etapa o tarea…"></label>
             <label><span>Región</span><select id="seguimientoInternalRegion"><option value="">Todas</option></select></label>
-            <label><span>Responsable</span><select id="seguimientoInternalOwner"><option value="">Todos</option><option value="__sin_asignar__">Sin asignar</option></select></label>
+            <label><span>Responsable</span><select id="seguimientoInternalOwner"><option value="">Todos</option><option value="__sin_asignar__">Sin asignar</option><option value="Cristóbal">Cristóbal</option><option value="Annabel">Annabel</option><option value="Fernanda">Fernanda</option><option value="Javiera">Javiera</option></select></label>
             <label><span>Etapa técnica</span><select id="seguimientoInternalStage"><option value="">Todas</option><option value="levantamiento">Levantamiento de fuentes</option><option value="comparacion">Comparación normativa</option><option value="actualizacion_sig">Actualización SIG</option><option value="qa">QA</option><option value="publicacion">Publicación</option></select></label>
             <label><span>Prioridad</span><select id="seguimientoInternalPriority"><option value="">Todas</option><option value="critica">Crítica</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></label>
           </div>
