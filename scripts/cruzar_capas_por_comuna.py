@@ -67,9 +67,21 @@ def cargar_geopandas():
 
 
 def indice_archivos(carpeta: Path) -> list[Path]:
+    """Indexa sólo archivos listos para cruce cuando existe la estructura TUI.
+
+    Las carpetas ``00_fuente_original`` y ``01_trabajo_transsa`` se conservan
+    para trazabilidad, pero no deben entrar por accidente al cruce nacional.
+    Si aún no existe ninguna carpeta ``03_para_cruce`` se mantiene el
+    comportamiento anterior y se indexa la carpeta completa, lo que permite
+    ejecutar el script con una carpeta plana durante la migración.
+    """
+    preparadas = [ruta for ruta in carpeta.rglob("03_para_cruce") if ruta.is_dir()]
+    raices = preparadas or [carpeta]
     return sorted(
-        ruta for ruta in carpeta.rglob("*")
-        if ruta.is_file() and ruta.suffix.lower() in EXTENSIONES
+        archivo
+        for directorio in raices
+        for archivo in directorio.rglob("*")
+        if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES
     )
 
 
