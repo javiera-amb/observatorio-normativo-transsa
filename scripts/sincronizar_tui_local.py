@@ -22,6 +22,40 @@ def ejecutar(*argumentos: str) -> None:
     subprocess.run([sys.executable, *argumentos], cwd=ROOT, check=True)
 
 
+def resolver_limite_comunal(capas_root: Path, configurado: str = "") -> Path:
+    carpeta = capas_root / "00_LIMITES Y ESCALAS" / "00_Comunas"
+    if configurado:
+        candidato = expandir(configurado)
+        if candidato.exists():
+            return candidato
+
+    preferido = carpeta / "Comunas_SII-Transsa.gpkg"
+    if preferido.exists():
+        return preferido
+
+    candidatos = sorted(carpeta.glob("*.gpkg"))
+    if len(candidatos) == 1:
+        return candidatos[0]
+
+    candidatos_comunales = [
+        archivo for archivo in candidatos
+        if "comun" in archivo.stem.casefold()
+    ]
+    if len(candidatos_comunales) == 1:
+        return candidatos_comunales[0]
+
+    if not candidatos:
+        raise SystemExit(
+            f"Falta un GeoPackage comunal dentro de {carpeta}. "
+            "No es necesario usar un nombre específico."
+        )
+    nombres = ", ".join(archivo.name for archivo in candidatos)
+    raise SystemExit(
+        f"Hay más de un GeoPackage posible en {carpeta}: {nombres}. "
+        "Defina 'limite_comunal' en _local/rutas_tui.json."
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Indexa PRC y cruza capas territoriales TUI.")
     parser.add_argument("--config", type=Path, default=ROOT / "_local" / "rutas_tui.json")
@@ -35,7 +69,6 @@ def main() -> int:
     config = json.loads(args.config.read_text(encoding="utf-8"))
     prc_root = expandir(config["prc_root"])
     capas_root = expandir(config["capas_root"])
-    limite = capas_root / "00_LIMITES Y ESCALAS" / "00_Comunas" / "Comunas_SII-Transsa.gpkg"
 
     if args.borradores:
         ejecutar("scripts/importar_borradores_seguimiento.py", str(args.borradores))
@@ -43,11 +76,8 @@ def main() -> int:
     ejecutar("scripts/indexar_prc_onedrive.py", "--root", str(prc_root))
     if args.solo_preparar:
         return 0
-    if not limite.exists():
-        raise SystemExit(
-            f"Falta el límite comunal para ejecutar cobertura: {limite}. "
-            "La estructura e inventario PRC sí quedaron preparados."
-        )
+    limite = resolver_limite_comunal(capas_root, config.get("limite_comunal", ""))
+    print(f"Límite comunal detectado: {limite}")
     ejecutar(
         "scripts/cruzar_capas_por_comuna.py",
         "--comunas", str(limite),

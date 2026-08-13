@@ -58,13 +58,15 @@ capa × comuna cuando el límite comunal está disponible. El sufijo del archivo
 se usa como señal inicial; el estado operativo compartido sigue versionado por
 la plataforma.
 
-La capa comunal maestra se lee exclusivamente desde:
+La capa comunal maestra se busca exclusivamente dentro de:
 
 ```text
-FUENTES_TUI\00_LIMITES Y ESCALAS\00_Comunas\Comunas_SII-Transsa.gpkg
+FUENTES_TUI\00_LIMITES Y ESCALAS\00_Comunas
 ```
 
-No se crea una carpeta alternativa para esta capa.
+Si hay un solo GeoPackage, se usa automáticamente sin exigir un nombre
+específico. Si existen varios, `limite_comunal` en `_local/rutas_tui.json`
+permite seleccionar el archivo. No se crea una carpeta alternativa.
 
 La estructura de cada capa es:
 
