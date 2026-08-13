@@ -112,12 +112,18 @@
   const inventoryIsTuiV2 = row => inventoryRecord(row).modelo_detectado === "tui_v2";
   const inventoryV2StructureOk = row => inventoryIsTuiV2(row)
     && inventoryRecord(row).qa_archivo?.estandar_tui_v2?.cumple_estructura === true;
-  const requiresV2 = row => historicalV1Sent(row) && !inventoryIsTuiV2(row);
+  // Una V1 histórica solo sale de la cola de reconstrucción cuando la TUI V2
+  // existe y aprueba la estructura mínima; detectar un archivo V2 incompleto
+  // no acredita que la reconstrucción haya terminado.
+  const requiresV2 = row => historicalV1Sent(row) && !inventoryV2StructureOk(row);
   const isPrepublished = row => historicalV1Sent(row);
   const productionState = row => {
     const override = mergedOverride(row);
     const reported = normalizeProductionState(override.estado_produccion || "pendiente");
-    if (requiresV2(row)) return reported === "en_desarrollo" ? "en_desarrollo" : "pendiente";
+    if (requiresV2(row)) {
+      if (inventoryIsTuiV2(row)) return "en_desarrollo";
+      return reported === "en_desarrollo" ? "en_desarrollo" : "pendiente";
+    }
     if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row) && ["actualizado", "enviado"].includes(reported)) {
       return "en_desarrollo";
     }
