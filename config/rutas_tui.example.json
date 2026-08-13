@@ -1,0 +1,5 @@
+{
+  "prc_root": "${USERPROFILE}/OneDrive - Transsa/DEI - Cartografía Transsa_GENERAL/00_PRC_Actualización Transsa_2026_S2",
+  "capas_root": "${USERPROFILE}/OneDrive - Transsa/DEI - Cartografía Transsa_GENERAL/01_Capas_Territoriales/FUENTES_TUI",
+  "limite_comunal": "${USERPROFILE}/OneDrive - Transsa/DEI - Cartografía Transsa_GENERAL/01_Capas_Territoriales/FUENTES_TUI/00_LIMITES Y ESCALAS/00_Comunas/Comunas_SII-Transsa.gpkg"
+}

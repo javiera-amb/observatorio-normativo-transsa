@@ -76,7 +76,8 @@ def indice_archivos(carpeta: Path) -> list[Path]:
     ejecutar el script con una carpeta plana durante la migración.
     """
     preparadas = [ruta for ruta in carpeta.rglob("03_para_cruce") if ruta.is_dir()]
-    raices = preparadas or [carpeta]
+    limites = [carpeta / "00_LIMITES Y ESCALAS" / "00_Comunas"]
+    raices = preparadas + [ruta for ruta in limites if ruta.is_dir()] or [carpeta]
     return sorted(
         archivo
         for directorio in raices

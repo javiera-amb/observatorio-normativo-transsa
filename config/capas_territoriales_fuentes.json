@@ -1,7 +1,20 @@
 {
   "version": 1,
-  "actualizado": "2026-08-11",
+  "actualizado": "2026-08-13",
   "nota": "Notion funciona como catalogo. El cruce solo se considera ejecutado cuando el archivo espacial fue materializado y procesado.",
+  "categorias": {
+    "00_LIMITES Y ESCALAS/00_Comunas": ["División Político Regional", "División Político Comunal"],
+    "00_LIMITES Y ESCALAS/02_Predios": ["Base predios", "Predios SII", "Áreas Homogéneas SII"],
+    "01_IPT": ["Inmuebles de Conservación Histórica", "Zonas de Conservación Histórica", "Plan Regulador Metropolitano de Santiago"],
+    "02_CAPAS_TERRITORIALES/01_NORMATIVA_RESTRICCIONES": ["Áreas Protegidas", "Sitios Prioritarios", "Antenas de Servicios Ley de Torres"],
+    "02_CAPAS_TERRITORIALES/02_MOVILIDAD_TRANSPORTE": ["Transporte Urbano (RED)", "Transporte Urbano", "Metro de Santiago", "Red Vial"],
+    "02_CAPAS_TERRITORIALES/03_EQUIPAMIENTO_SERVICIOS": ["Establecimientos Educacionales", "Unidades Operativas PDI", "Cuerpo de Bomberos", "Cuarteles de Carabineros", "Juntas Vecinales", "Infraestructura Deportiva"],
+    "02_CAPAS_TERRITORIALES/04_INFRAESTRUCTURA": ["Caletas Pesqueras", "Embalses"],
+    "02_CAPAS_TERRITORIALES/05_DEMOGRAFIA_TEJIDO_URBANO": ["Barrios Transsa", "EOD", "Censo 2024", "Campamentos Chile", "Catastro Pre Censal 2024", "Áreas Pobladas"],
+    "02_CAPAS_TERRITORIALES/06_MEDIO_AMBIENTE_RIESGOS": ["Amenaza de Tsunami", "Amenaza de Volcanes"],
+    "02_CAPAS_TERRITORIALES/08_COMPLEMENTARIAS_NO_NORMATIVAS": ["Sectores Oficinas"],
+    "90_RESULTADOS/01_catalogo": ["Scraping AH"]
+  },
   "capas": {
     "Áreas Protegidas": {"estado_fuente": "sin_archivo", "archivos": [], "patrones": ["areas protegidas", "snap"]},
     "Scraping AH": {"estado_fuente": "no_es_capa", "archivos": [], "patrones": []},

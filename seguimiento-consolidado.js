@@ -26,6 +26,9 @@
     .replaceAll("'", "&#039;");
 
   const data = () => window.SEGUIMIENTO_NORMATIVO || { resumen: {}, comunas: [] };
+  const initialData = () => window.AVANCE_BASES_DATOS || { comunas: {}, resumen: {} };
+  const prcInventory = () => window.INVENTARIO_PRC_ONEDRIVE || { comunas: {}, resumen: {} };
+  const versionedTeamData = () => window.ESTADO_EQUIPO_VERSIONADO || { comunas: {} };
   const operationalData = () => window.ESTADO_OPERATIVO_DATOS || { comunas: {} };
   const localStorageKey = "tui-seguimiento-borradores-v1";
   let localChanges = (() => {
@@ -37,8 +40,56 @@
     }
   })();
   const rowKey = row => `${row.region}|${row.comuna}`;
+  const normalizeCommune = value => {
+    const normalized = String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("es")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+    return ({
+      paiguano: "paihuano",
+      tiltil: "til til",
+      "alto biobio": "alto bio bio",
+      cholchol: "chol chol",
+      "cabo de hornos ex navarino": "cabo de hornos",
+    })[normalized] || normalized;
+  };
+  const initialRecord = row => {
+    const exact = initialData().comunas?.[rowKey(row)];
+    if (exact) return exact;
+    const commune = normalizeCommune(row.comuna);
+    const match = Object.values(initialData().comunas || {}).find(record => normalizeCommune(record.comuna) === commune);
+    return match || {};
+  };
+  const inventoryRecord = row => {
+    const exact = prcInventory().comunas?.[rowKey(row)];
+    if (exact) return exact;
+    const commune = normalizeCommune(row.comuna);
+    const match = Object.entries(prcInventory().comunas || {}).find(([key]) => normalizeCommune(key.split("|").at(-1)) === commune);
+    return match?.[1] || {};
+  };
+  const initialOverride = row => {
+    const prc = initialRecord(row).prc || {};
+    return {
+      ...(prc.estado_produccion ? { estado_produccion: prc.estado_produccion } : {}),
+      ...(prc.qa_revision_javiera ? { qa_revision_javiera: prc.qa_revision_javiera } : {}),
+      ...(prc.responsable ? { responsable: prc.responsable } : {}),
+      ...(prc.alerta_sin_modificaciones ? { alerta_sin_modificaciones: prc.alerta_sin_modificaciones } : {}),
+    };
+  };
+  const inventoryOverride = row => {
+    const record = inventoryRecord(row);
+    return {
+      ...(record.estado_detectado ? { estado_produccion: record.estado_detectado } : {}),
+      ...(record.ruta_relativa ? { evidencia: record.ruta_relativa } : {}),
+    };
+  };
   const localOverride = row => localChanges[rowKey(row)] || {};
   const mergedOverride = row => ({
+    ...initialOverride(row),
+    ...inventoryOverride(row),
+    ...(versionedTeamData().comunas?.[rowKey(row)] || {}),
     ...(operationalData().comunas?.[rowKey(row)] || {}),
     ...localOverride(row),
   });
@@ -49,14 +100,19 @@
       // Private browsing or a locked-down browser can disable localStorage.
     }
   };
-  const normalizeCommune = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
-  const isPrepublished = row => (operationalData().prc_publicados_sin_qa || []).some(name => normalizeCommune(name) === normalizeCommune(row.comuna));
   const normalizeProductionState = value => ({
     listo: "actualizado",
     en_plataforma: "enviado",
     visible: "enviado",
     observado: "en_desarrollo",
   }[value] || value || "pendiente");
+  const isPrepublished = row => normalizeProductionState(
+    localOverride(row).estado_produccion
+      || operationalData().comunas?.[rowKey(row)]?.estado_produccion
+      || versionedTeamData().comunas?.[rowKey(row)]?.estado_produccion
+      || inventoryRecord(row).estado_detectado
+      || initialRecord(row).prc?.estado_produccion
+  ) === "enviado";
   const productionState = row => {
     const override = mergedOverride(row);
     return normalizeProductionState(override.estado_produccion || (isPrepublished(row) ? "enviado" : "pendiente"));
@@ -65,9 +121,9 @@
     const override = mergedOverride(row);
     return override.qa_plataforma || "pendiente";
   };
-  const qaSharepointState = row => {
+  const qaManualState = row => {
     const override = mergedOverride(row);
-    return override.qa_sharepoint || override.qa || "pendiente";
+    return override.qa_revision_javiera || override.qa || "pendiente";
   };
   const isDirectProductionCandidate = row => Boolean(
     row.prc_nombre
@@ -117,10 +173,10 @@
     aprobado: "QA automático aprobado",
   };
 
-  const qaSharepointLabels = {
-    pendiente: "QA manual pendiente",
-    observaciones: "QA manual con observaciones",
-    aprobado: "QA manual aprobado",
+  const qaManualLabels = {
+    pendiente: "Revisión Javiera pendiente",
+    observaciones: "Revisión Javiera con observaciones",
+    aprobado: "Revisión Javiera aprobada",
   };
 
   const qaPlatformNote = row => {
@@ -154,18 +210,19 @@
     const override = mergedOverride(row);
     const prepublished = isPrepublished(row);
     const publication = publicationStatus(row);
-    const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
+    const inventory = inventoryRecord(row);
+    const hasCartography = Boolean(inventory.ruta_relativa || row.archivo_recomendado || row.capa_recomendada);
     const qa = qaPlatformState(row);
     const production = productionState(row);
     return {
       cartography: hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
       production,
       qa,
-      qaSharepoint: qaSharepointState(row),
+      qaManual: qaManualState(row),
       statusDate: override.fecha_estado || "",
       qaDate: override.fecha_qa_plataforma || "",
       responsible: override.responsable || "Sin responsable registrado",
-      evidence: override.evidencia || "",
+      evidence: override.evidencia || inventory.ruta_relativa || "",
       note: override.nota || (production === "enviado"
         ? "Enviado a Propiteq; la carga al visor queda fuera del control del equipo."
         : prepublished ? "PRC incluido en el inventario histórico enviado a Propiteq; QA automático pendiente." : ""),
@@ -179,7 +236,7 @@
     const override = mergedOverride(row);
     const internal = override.interno || {};
     const operational = operationalStatus(row);
-    const hasCartography = Boolean(row.archivo_recomendado || row.capa_recomendada);
+    const hasCartography = Boolean(inventoryRecord(row).ruta_relativa || row.archivo_recomendado || row.capa_recomendada);
     const hasPrc = Boolean(row.prc_nombre);
     const pendingControls = Number.isFinite(row.controles_pendientes) ? row.controles_pendientes : null;
     const totalControls = Number.isFinite(row.controles_totales) ? row.controles_totales : null;
@@ -188,7 +245,7 @@
     if (!stage) {
       if (["actualizado", "enviado"].includes(operational.production)) stage = "publicacion";
       else if (operational.production === "en_desarrollo") stage = "actualizacion_sig";
-      else if (operational.qaSharepoint === "observaciones" || pendingControls !== null || row.estado_auditoria === "auditoria_avanzada") stage = "qa";
+      else if (operational.qaManual === "observaciones" || pendingControls !== null || row.estado_auditoria === "auditoria_avanzada") stage = "qa";
       else if (acts > 0 && hasCartography) stage = "comparacion";
       else if (hasCartography && acts === 0) stage = "qa";
       else stage = "levantamiento";
@@ -211,14 +268,14 @@
     else if (!nextAction && !hasPrc) nextAction = "Confirmar el instrumento vigente y su fuente oficial.";
     else if (!nextAction && !hasCartography) nextAction = "Localizar, descargar y vincular la cartografía vigente.";
     else if (!nextAction && operational.prepublished && acts === 0) nextAction = "Revisar tabla, nomenclatura y consistencia de campos antes de cerrar QA.";
-    else if (!nextAction && operational.qaSharepoint !== "aprobado") nextAction = "Ejecutar QA manual de Javiera y registrar el resultado en SharePoint.";
+    else if (!nextAction && operational.qaManual !== "aprobado") nextAction = "Resolver los controles no automatizables y registrar la revisión de Javiera en la plataforma.";
     else if (!nextAction && operational.production !== "enviado") nextAction = "Homologar la tabla de usos, marcar actualizado y preparar el envío a Propiteq.";
     else if (!nextAction) nextAction = "Monitorear nuevas modificaciones o enmiendas.";
     return {
       ...operational,
-      qa: operational.qaSharepoint,
+      qa: operational.qaManual,
       qaPlatform: operational.qa,
-      qaDate: override.fecha_qa_sharepoint || internal.fecha_qa || "",
+      qaDate: override.fecha_revision_javiera || internal.fecha_qa || "",
       responsible,
       stage,
       progress,
@@ -309,7 +366,7 @@
   function rowTemplate(row) {
     const consumption = row.consumo_propieteq || "no_disponible";
     const audit = row.estado_auditoria || "sin_iniciar";
-    const sourceDetail = [row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ");
+    const sourceDetail = [inventoryRecord(row).ruta_relativa, row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ");
     const operational = operationalStatus(row);
     const cartographyLabels = {
       encontrada: "Archivo encontrado",
@@ -373,7 +430,7 @@
         <td data-label="Etapa técnica"><span class="seguimiento-stage ${escape(internal.stage)}">${escape(stageLabels[internal.stage] || internal.stage)}</span><small class="seguimiento-priority ${escape(internal.priority)}">Prioridad ${escape(priorityLabels[internal.priority] || internal.priority)}</small></td>
         <td data-label="Estado / avance"><span class="seguimiento-operational-pill production ${escape(internal.production)}">${escape(productionLabels[internal.production])}</span>${statusControl}<div class="seguimiento-progress" aria-label="${escape(`${internal.progress}% de avance`)}"><span style="width:${internal.progress}%"></span></div><small>${escape(`${internal.progress}% informado/calculado`)}</small></td>
         <td data-label="QA automático de la plataforma"><span class="seguimiento-operational-pill qa ${escape(internal.qaPlatform)}">${escape(qaPlatformLabels[internal.qaPlatform])}</span><small>${escape(qaPlatformNote(row))}</small></td>
-        <td data-label="QA manual (SharePoint)"><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaSharepointLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Último QA manual: ${internal.qaDate}` : "Sin fecha de QA manual")}</small></td>
+        <td data-label="Revisión Javiera"><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaManualLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Última revisión: ${internal.qaDate}` : "Sin fecha de revisión")}</small></td>
         <td data-label="Alertas y bloqueos"><strong class="seguimiento-alert-count">${escape(alerts)}</strong><small class="${internal.blocking ? "seguimiento-blocking" : ""}">${escape(internal.blocking || "Sin bloqueo técnico registrado")}</small></td>
         <td data-label="Próxima acción"><p class="seguimiento-next-action">${escape(internal.nextAction)}</p></td>
         <td data-label="Última actividad">${escape(internal.lastActivity)}</td>
@@ -400,26 +457,29 @@
     if ($("seguimientoPrepublishedQa")) $("seguimientoPrepublishedQa").textContent = prepublished.filter(item => item.qa !== "aprobado").length;
     if ($("seguimientoPrepublishedReady")) $("seguimientoPrepublishedReady").textContent = rows.filter(item => item.production === "actualizado").length;
     if ($("seguimientoPropiteqSent")) $("seguimientoPropiteqSent").textContent = rows.filter(item => item.production === "enviado").length;
+    if ($("seguimientoInventoryDeclared")) $("seguimientoInventoryDeclared").textContent = prcInventory().resumen?.comunas || "—";
+    if ($("seguimientoPrepublishedHeadline")) {
+      $("seguimientoPrepublishedHeadline").textContent = `${prepublished.length} PRC enviados en la carga inicial · ${prcInventory().resumen?.comunas || 0} carpetas SIG indexadas`;
+    }
     if ($("seguimientoDirectCount")) $("seguimientoDirectCount").textContent = directProductionCandidates().length;
-    const tracker = operationalData().fuente_publicacion_propiteq || {};
     const trackerLink = $("seguimientoDriveLink");
-    if (trackerLink && tracker.url) {
-      trackerLink.href = tracker.url;
+    if (trackerLink) {
+      trackerLink.href = "https://github.com/javiera-amb/observatorio-normativo-transsa/blob/main/data/inventario_prc_onedrive.js";
       trackerLink.removeAttribute("aria-disabled");
-      trackerLink.textContent = "Abrir tabla SharePoint ↗";
-      if ($("seguimientoDriveStatus")) $("seguimientoDriveStatus").textContent = tracker.descripcion || "Tabla de publicación efectiva.";
+      trackerLink.textContent = "Abrir inventario versionado ↗";
+      if ($("seguimientoDriveStatus")) $("seguimientoDriveStatus").textContent = "Los GeoPackage permanecen en OneDrive; Git conserva rutas relativas, huellas, fechas y resultados de validación.";
     }
   }
 
   function directCandidateTemplate(row) {
     const operational = operationalStatus(row);
-    const qaSharepoint = qaSharepointState(row);
+    const qaManual = qaManualState(row);
     return `<tr>
       <td data-label="Región / comuna"><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong></td>
       <td data-label="IPT"><strong class="seguimiento-ipt-name">${escape(row.prc_nombre)}</strong><span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span></td>
       <td data-label="Estado"><span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.production === "actualizado" ? "Homologación pendiente de registrar" : "Marcar actualizado después de homologar usos")}</small></td>
       <td data-label="Capa / archivo"><strong>${escape(row.capa_recomendada || "Sin capa")}</strong><small>${escape(row.archivo_recomendado)}</small></td>
-      <td data-label="QA manual (SharePoint)"><span class="seguimiento-operational-pill qa ${escape(qaSharepoint)}">${escape(qaSharepointLabels[qaSharepoint])}</span><small>Control manual de Javiera registrado en SharePoint.</small></td>
+      <td data-label="Revisión Javiera"><span class="seguimiento-operational-pill qa ${escape(qaManual)}">${escape(qaManualLabels[qaManual])}</span><small>Solo se usa cuando el control no puede automatizarse.</small></td>
       <td data-label="Acción obligatoria"><strong>Homologar usos</strong><small>Comparar la columna de usos con el lenguaje Transsa, guardar evidencia y marcar “Actualizado”.</small></td>
     </tr>`;
   }
@@ -433,13 +493,13 @@
   }
 
   function downloadDirectCandidates() {
-    const headers = ["region", "comuna", "prc_fecha", "capa_recomendada", "archivo_recomendado", "estado_produccion", "qa_sharepoint", "accion"];
+    const headers = ["region", "comuna", "prc_fecha", "capa_recomendada", "archivo_recomendado", "estado_produccion", "revision_javiera", "accion"];
     const lines = [headers.join(";")];
     directProductionCandidates().forEach(row => {
       const operational = operationalStatus(row);
       lines.push([
         row.region, row.comuna, row.prc_fecha, row.capa_recomendada, row.archivo_recomendado,
-        operational.production, qaSharepointState(row), "Homologar columna de usos y marcar actualizado"
+        operational.production, qaManualState(row), "Homologar columna de usos y marcar actualizado"
       ].map(csvCell).join(";"));
     });
     const blob = new Blob(["\\ufeff" + lines.join("\\n")], { type: "text/csv;charset=utf-8" });
@@ -493,13 +553,13 @@
     });
     if ($("seguimientoInternalTitle")) $("seguimientoInternalTitle").textContent = isJaviera ? "Control de Javiera" : "Mi tablero de tareas";
     if ($("seguimientoInternalDescription")) $("seguimientoInternalDescription").textContent = isJaviera
-      ? "Revisa el avance nacional, los bloqueos y el QA automático. El QA manual se registra en SharePoint cuando la plataforma no puede comprobar un control."
-      : "Selecciona tu nombre, filtra tus comunas y marca el estado de producción. El cambio se guarda en este navegador como borrador y debe registrarse en SharePoint para que sea compartido con el equipo.";
+      ? "Revisa el avance nacional, los bloqueos y el QA automático. Los controles que la plataforma no pueda resolver quedan asignados a tu revisión."
+      : "Selecciona tu nombre, filtra tus comunas y marca el estado de producción. Puedes exportar los cambios para incorporarlos al registro versionado del equipo.";
     if ($("seguimientoInternalBadge")) $("seguimientoInternalBadge").textContent = isJaviera ? "Panel de supervisión" : "Tablero del equipo";
     if ($("seguimientoCurrentUser")) $("seguimientoCurrentUser").closest("label").hidden = isJaviera;
     if ($("seguimientoLocalSaveNote")) $("seguimientoLocalSaveNote").textContent = isJaviera
-      ? "El QA automático lo calcula esta plataforma; las observaciones no automatizables quedan para revisión de Javiera en SharePoint."
-      : "Los estados marcados aquí son un borrador local; el registro oficial sigue siendo la tabla SharePoint.";
+      ? "El QA automático lo calcula esta plataforma; las observaciones no automatizables quedan para revisión de Javiera."
+      : "Los estados se guardan localmente hasta exportarlos e incorporarlos al registro compartido de Git.";
   }
 
   function setInternalView(view) {
@@ -528,7 +588,7 @@
     };
     saveLocalChanges();
     const note = $("seguimientoLocalSaveNote");
-    if (note) note.textContent = `${commune}: estado “${productionLabels[value]}” guardado como borrador local. Registra el mismo valor en SharePoint para compartirlo con el equipo.`;
+    if (note) note.textContent = `${commune}: estado “${productionLabels[value]}” guardado. Descarga los cambios para incorporarlos al registro compartido de la plataforma.`;
     renderMetrics();
     renderInternalMetrics();
     renderInternalTable();

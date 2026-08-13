@@ -40,9 +40,8 @@
     <nav class="module-nav" aria-label="Módulos de Transsa Urban Intelligence">
       <button class="module-tab active" data-module="diario">Cambios recientes</button>
       <button class="module-tab" data-module="seguimiento">Seguimiento PRC</button>
-      <button class="module-tab" data-module="capas">Cobertura comunal</button>
       <button class="module-tab" data-module="vigencia">IPT y vigencia</button>
-      <button class="module-tab" data-module="ipt">Reportes IPT</button>
+      <button class="module-tab" data-module="capas">Cobertura comunal</button>
       <button class="module-tab" data-module="mapa">Mapa</button>
       <button class="module-tab" data-module="historico">Archivo</button>
     </nav>
@@ -214,7 +213,7 @@
       </section>
     </section>
 
-    <section id="module-ipt" class="module-panel">
+    <section id="module-ipt" class="module-panel" hidden aria-hidden="true">
       <div class="module-header">
         <div>
           <p class="eyebrow">ACTUALIZACIÓN MENSUAL · DÍA 1</p>
@@ -600,14 +599,14 @@
           <div>
             <span>USO INTERNO</span>
             <h3 id="seguimientoInternalTitle">Mi tablero de tareas</h3>
-            <p id="seguimientoInternalDescription">Selecciona tu nombre, filtra tus comunas y marca el estado de producción. El cambio se guarda en este navegador como borrador y debe registrarse en SharePoint para que sea compartido con el equipo.</p>
+            <p id="seguimientoInternalDescription">Selecciona tu nombre, filtra tus comunas y marca el estado de producción. Puedes exportar los cambios para incorporarlos al registro versionado del equipo.</p>
             <div class="seguimiento-internal-switch" role="tablist" aria-label="Panel interno">
               <button class="active" type="button" data-internal-view="equipo">Mi trabajo</button>
               <button type="button" data-internal-view="javiera">Control Javiera</button>
             </div>
             <label class="seguimiento-current-user"><span>Estoy trabajando como</span><select id="seguimientoCurrentUser"><option value="">Todo el equipo</option><option value="Cristóbal">Cristóbal</option><option value="Annabel">Annabel</option><option value="Fernanda">Fernanda</option><option value="Javiera">Javiera</option></select></label>
             <button id="seguimientoDownloadLocalChanges" class="secondary-button seguimiento-local-download" type="button">Descargar borradores</button>
-            <p id="seguimientoLocalSaveNote" class="seguimiento-local-save-note">Los estados marcados aquí son un borrador local; el registro oficial sigue siendo la tabla SharePoint.</p>
+            <p id="seguimientoLocalSaveNote" class="seguimiento-local-save-note">Los estados se guardan localmente hasta exportarlos e incorporarlos al registro compartido de Git.</p>
           </div>
           <span id="seguimientoInternalBadge" class="seguimiento-readonly-badge">Tablero del equipo</span>
         </section>
@@ -624,19 +623,19 @@
 
         <section class="seguimiento-workflow-panel" data-internal-scope="equipo">
           <div><p class="eyebrow">FLUJO DE ACTUALIZACIÓN</p><h3>Qué ocurre cuando se sube un PRC consolidado</h3><p>Subir el archivo inicia la revisión; no cambia por sí solo el estado de producción ni aprueba el QA.</p></div>
-          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso</strong><small>Se sube el GPKG/GeoPackage a la carpeta IPT con comuna, fecha y versión.</small></li><li><span>2</span><strong>Detección</strong><small>La plataforma identifica el PRC y contrasta su fecha con la línea normativa.</small></li><li><span>3</span><strong>Comparación</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma compara el PRC actualizado con las correcciones detectadas. Si un control no es automatizable, queda QA pendiente para Javiera, quien registra el control manual en SharePoint.</small></li><li><span>5</span><strong>Envío</strong><small>El equipo marca “enviado”; Propiteq queda a cargo de cargar la versión al visor.</small></li></ol>
+          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso</strong><small>Se guarda el GPKG en OneDrive con la convención IPT_00_PRC_Comuna_Estado.</small></li><li><span>2</span><strong>Detección</strong><small>El sincronizador publica ruta relativa, fecha, huella y estructura del archivo.</small></li><li><span>3</span><strong>Comparación</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma comprueba las correcciones automatizables; el resto queda pendiente para Javiera.</small></li><li><span>5</span><strong>Envío</strong><small>El equipo marca “enviado”; Propiteq queda a cargo de cargar la versión al visor.</small></li></ol>
         </section>
 
         <section class="seguimiento-legacy-panel" data-internal-scope="equipo,javiera">
-          <div><p class="eyebrow">PRC YA PUBLICADOS</p><h3>44 PRC identificados sin QA formal</h3><p>El inventario actual contiene 44 comunas construidas (versiones 1.1–2.1). Se reconocen como publicados de forma provisional; el posible PRC número 45 se confirma con la tabla SharePoint antes de cerrar el total.</p></div>
-          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">44</strong><small>PRC identificados en inventario</small></span><span><strong id="seguimientoPrepublishedQa">44</strong><small>con QA manual pendiente</small></span><span><strong id="seguimientoPropiteqSent">44</strong><small>enviados: carga pendiente de Propiteq</small></span><span><strong id="seguimientoDirectCount">62</strong><small>candidatos a actualización directa</small></span></div>
-          <div class="seguimiento-drive-row"><span>Publicación efectiva</span><a id="seguimientoDriveLink" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Vincular tabla SharePoint</a><small id="seguimientoDriveStatus">Tabla SharePoint DEI pendiente de lectura automática; abrir para actualizar la evidencia de Propiteq.</small></div>
+          <div><p class="eyebrow">INVENTARIO SIG · ONEDRIVE + GIT</p><h3><span id="seguimientoPrepublishedHeadline">Inventario pendiente de sincronización</span></h3><p>Los GeoPackage permanecen en OneDrive. Git conserva el estado operativo, la ruta relativa, la huella del archivo y el QA. “Enviado” significa que la siguiente carga corresponde a Propiteq, no que el visor ya lo muestre.</p></div>
+          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">0</strong><small>PRC enviados en la carga inicial</small></span><span><strong id="seguimientoPrepublishedQa">0</strong><small>con revisión Javiera pendiente</small></span><span><strong id="seguimientoPropiteqSent">0</strong><small>con estado enviado</small></span><span><strong id="seguimientoInventoryDeclared">0</strong><small>carpetas SIG indexadas</small></span><span><strong id="seguimientoDirectCount">0</strong><small>candidatos a actualización directa</small></span></div>
+          <div class="seguimiento-drive-row"><span>Archivos SIG</span><a id="seguimientoDriveLink" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Abrir inventario versionado</a><small id="seguimientoDriveStatus">Ejecuta la sincronización local para indexar los archivos de OneDrive.</small></div>
         </section>
 
         <section class="seguimiento-direct-panel" data-internal-scope="equipo,javiera">
-          <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>La base identifica estos casos como candidatos para pasar directamente a producción. Antes de marcar “Actualizado” en SharePoint hay que homologar la columna de usos al lenguaje Transsa.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
+          <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>La base identifica estos casos como candidatos para pasar directamente a producción. Antes de marcar “Actualizado” hay que homologar la columna de usos al lenguaje Transsa.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
           <div class="seguimiento-direct-note">Criterio automático: PRC identificado + archivo vinculado + apto preliminarmente para visor + 0 actos posteriores detectados. No es un QA aprobado; es una cola priorizada de homologación. Pemuco y Pinto quedan fuera porque tienen archivo, pero no un PRC identificado en la base.</div>
-          <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>QA manual (SharePoint)</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
+          <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>Revisión Javiera</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
         </section>
 
         <section class="seguimiento-kpis internal-kpis" data-internal-scope="equipo,javiera" aria-label="Resumen interno de trabajo PRC">
@@ -660,7 +659,7 @@
         <section class="seguimiento-table-section internal-table-section" data-internal-scope="equipo,javiera">
           <div class="seguimiento-table-scroll">
             <table class="seguimiento-table internal-table">
-              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA automático de la plataforma</th><th>QA manual (SharePoint)</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
+              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA automático de la plataforma</th><th>Revisión Javiera</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
               <tbody id="seguimientoInternalBody"></tbody>
             </table>
           </div>
@@ -669,7 +668,7 @@
 
         <section class="seguimiento-internal-legend" data-internal-scope="equipo,javiera">
           <div><strong>Estado de producción</strong><p>Lo informa el equipo: pendiente, en desarrollo, actualizado o enviado. “Enviado” significa que Propiteq asume la carga al visor.</p></div>
-          <div><strong>QA manual (SharePoint)</strong><p>Control interno que realiza Javiera cuando la plataforma no puede comprobar un control o requiere revisión interpretativa. No se muestra en la vista pública.</p></div>
+          <div><strong>Revisión Javiera</strong><p>Control interno que realiza Javiera cuando la plataforma no puede comprobar una condición o requiere interpretación. No se muestra en la vista pública.</p></div>
           <div><strong>QA automático de la plataforma</strong><p>Comparación que ejecuta esta plataforma entre el PRC actualizado y las correcciones detectadas. Es el único QA mostrado en la vista pública: aprobado, con diferencias o pendiente de revisión de Javiera.</p></div>
           <div><strong>Etapa técnica</strong><p>Indica dónde está el trabajo: fuentes, comparación normativa, actualización SIG, QA o publicación.</p></div>
           <div><strong>QA pendiente Javiera</strong><p>Se activa cuando existe un control que no puede resolverse automáticamente; Javiera debe revisar evidencia, normativa, geometría, atributos o topología y registrar el resultado.</p></div>
@@ -700,6 +699,18 @@
         <label><span>Comuna</span><select id="capasCommuneSelect"></select></label>
       </section>
 
+      <section class="capas-regions-section">
+        <div class="capas-section-heading">
+          <div><p class="eyebrow">BLOQUE 1 · COBERTURA NACIONAL</p><h3>Estado por región y comuna</h3><p>Abre una región para revisar las comunas y sus cuatro indicadores. Las cifras sólo se consideran confirmadas cuando existe un cruce geométrico ejecutado.</p></div>
+          <span id="capasRegionsCount" class="result-count"></span>
+        </div>
+        <div class="capas-region-filters">
+          <label><span>Buscar comuna o región</span><input id="capasRegionSearch" type="search" placeholder="Coquimbo, Biobío, Santiago…"></label>
+          <label><span>Ordenar comunas</span><select id="capasRegionSort"><option value="nombre">Nombre</option><option value="pendientes">Más pendientes</option><option value="confirmadas">Más confirmadas</option></select></label>
+        </div>
+        <div id="capasRegionGrid" class="capas-region-grid"></div>
+      </section>
+
       <section class="capas-kpis" aria-label="Resumen de cobertura de la comuna seleccionada">
         <article><span>IPT aplicables</span><strong id="capasMetricIpt">0</strong><small id="capasMetricIptTypes">Sin registros</small></article>
         <article class="verified"><span>Cobertura confirmada</span><strong id="capasMetricCovered">0</strong><small>Intersección ejecutada con elementos</small></article>
@@ -708,27 +719,23 @@
       </section>
 
       <section class="capas-coverage-section">
-        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 1 · NORMATIVA</p><h3>IPT normativos identificados</h3><p>El PRC se controla exclusivamente con la base que estamos construyendo en Transsa. Notion no se usa para declarar su versión, avance ni QA.</p></div><span id="capasIptCount" class="result-count"></span></div>
-        <div id="capasIptGrid" class="capas-ipt-grid"></div>
-        <div id="capasIptEmpty" class="empty-state" hidden><div>IPT</div><h3>Sin IPT registrado</h3><p>La comuna no aparece en el consolidado actual de Portal IPT.</p></div>
-      </section>
-
-      <section class="capas-coverage-section">
-        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 2 · INFORMACIÓN ESPACIAL</p><h3>Capas territoriales para la comuna</h3><p>El estado principal proviene del cruce geométrico. La fecha del dato y la edición de Notion se mantienen como metadatos separados.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 2 · DETALLE TERRITORIAL</p><h3>Capas aplicables a <span id="capasSelectedLayerTitle">la comuna</span></h3><p>PRC, PRI, PRDU, límites, movilidad, equipamientos, riesgos y demás capas se leen en un único catálogo. La categoría ordena la fuente; el cruce comunal determina la cobertura.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
         <div class="capas-audit-banner" id="capasCrossBanner">
           <h3 id="capasCrossBannerTitle">Matriz nacional aún no ejecutada</h3>
           <p id="capasCrossBannerText">El catálogo ya distingue referencias de archivos, archivos incompletos y fichas sin adjunto. Para confirmar cobertura debemos materializar los archivos vigentes, validar CRS y geometría, e intersectarlos con las 346 comunas.</p>
         </div>
         <div class="capas-coverage-filters">
           <label><span>Buscar capa</span><input id="capasSearch" type="search" placeholder="Metro, predios, riesgos, establecimientos…"></label>
+          <label><span>Tipo de capa</span><select id="capasCategoryFilter"><option value="">Todos</option></select></label>
           <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="confirmada">Cobertura confirmada</option><option value="sin_elementos">Sin elementos</option><option value="bloqueada">Cruce bloqueado</option><option value="pendiente">Cruce pendiente</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option><option value="error">Error de cruce</option></select></label>
+          <label><span>Ordenar por</span><select id="capasSort"><option value="categoria">Categoría</option><option value="nombre">Nombre</option><option value="estado">Estado de cobertura</option><option value="fecha">Fecha del dato</option></select></label>
         </div>
         <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Fuente / archivo espacial</th><th>Estado del equipo</th><th>QA de la capa</th><th>Fecha del dato</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
         <div id="capasCoverageEmpty" class="empty-state" hidden><div>GIS</div><h3>Sin capas para este filtro</h3><p>Prueba con otro estado o término de búsqueda.</p></div>
       </section>
 
       <section class="capas-coverage-section capas-candidates-section">
-        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 3 · AMPLIACIÓN DEL CATÁLOGO</p><h3>Otras capas que conviene incorporar</h3><p>Fuentes externas detectadas durante el barrido. Todavía no se mezclan con las 33 capas operativas: primero se aprueba su utilidad, licencia, vigencia y método de actualización.</p></div><span id="capasCandidateCount" class="result-count"></span></div>
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 3 · AMPLIACIÓN DEL CATÁLOGO</p><h3>Fuentes aún no incorporadas</h3><p>Estas fuentes quedan separadas hasta materializar el archivo, revisar licencia y ejecutar el cruce. No se presentan como cobertura comunal.</p></div><span id="capasCandidateCount" class="result-count"></span></div>
         <div id="capasCandidateGrid" class="capas-candidate-grid"></div>
       </section>
 
@@ -902,13 +909,16 @@
   <script src="data/historicos.js"></script>
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
-  <script src="data/estado_operativo_datos.js?v=20260812-estados-2"></script>
-  <script src="seguimiento-consolidado.js?v=20260812-paneles-1"></script>
+  <script src="data/avance_bases_inicial.js?v=20260813-importacion-1"></script>
+  <script src="data/inventario_prc_onedrive.js?v=20260813-inventario-1"></script>
+  <script src="data/estado_equipo_versionado.js?v=20260813-equipo-1"></script>
+  <script src="data/estado_operativo_datos.js?v=20260813-estados-3"></script>
+  <script src="seguimiento-consolidado.js?v=20260813-onedrive-2"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
   <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
   <script src="data/fuentes_capas_externas.js?v=20260811-fuentes-1"></script>
-  <script src="capas-territoriales.js?v=20260812-responsive-2"></script>
+  <script src="capas-territoriales.js?v=20260813-estados-3"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

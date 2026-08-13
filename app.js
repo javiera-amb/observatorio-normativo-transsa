@@ -1534,7 +1534,7 @@ function init() {
   bindEvents();
 
   const requestedModule = location.hash === "#ipt"
-    ? "ipt"
+    ? "vigencia"
     : location.hash === "#historico"
       ? "historico"
       : location.hash === "#mapa"

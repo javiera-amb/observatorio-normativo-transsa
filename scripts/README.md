@@ -41,3 +41,58 @@ El proceso:
 - escribe `data/cobertura_capas_resultados.js`, que consume la vista “Cobertura comunal”.
 
 Una capa sin archivo queda `bloqueada`; una capa procesada puede quedar `con_cobertura` o `sin_elementos` para cada comuna. Cero elementos es un resultado, no un pendiente.
+
+## Sincronización local con OneDrive
+
+GitHub Pages no puede leer una ruta `C:\\` del equipo. La sincronización se
+ejecuta localmente y publica en Git únicamente rutas relativas, inventarios,
+huellas y resultados de QA; los GeoPackage permanecen en OneDrive.
+
+1. Copiar `config/rutas_tui.example.json` a `_local/rutas_tui.json`.
+2. Instalar `pip install -r scripts/requirements_sincronizacion.txt`.
+3. Ejecutar `python scripts/sincronizar_tui_local.py`.
+
+El proceso crea la estructura por categoría en `FUENTES_TUI`, indexa los PRC
+con nombres como `IPT_00_PRC_NombreComuna_Enviado.gpkg` y ejecuta el cruce
+capa × comuna cuando el límite comunal está disponible. El sufijo del archivo
+se usa como señal inicial; el estado operativo compartido sigue versionado por
+la plataforma.
+
+La capa comunal maestra se lee exclusivamente desde:
+
+```text
+FUENTES_TUI\00_LIMITES Y ESCALAS\00_Comunas\Comunas_SII-Transsa.gpkg
+```
+
+No se crea una carpeta alternativa para esta capa.
+
+La estructura de cada capa es:
+
+- `00_fuente_original`: descarga sin modificaciones;
+- `01_trabajo_transsa`: limpieza, scraping público corregido o enriquecimiento;
+- `02_qa`: informes, conteos y evidencias;
+- `03_para_cruce`: única versión consumida por el cruce nacional;
+- `metadata.json`: origen, licencia, fecha, transformación Transsa y responsable.
+
+## Importación inicial del Excel de avance
+
+```bash
+python scripts/importar_avance_bases.py /ruta/Avance_Bases_de_datos.xlsx
+```
+
+El Excel se usa solo como línea base de migración. No acredita cobertura
+territorial: esa condición proviene exclusivamente de la intersección
+geométrica.
+
+## Estados marcados por el equipo
+
+La vista interna guarda cambios en el navegador y permite descargar
+`borradores_seguimiento_prc.csv`. Para incorporarlos al registro compartido:
+
+```bash
+python scripts/importar_borradores_seguimiento.py /ruta/borradores_seguimiento_prc.csv
+```
+
+El resultado queda en `data/estado_equipo_versionado.js` con historial. Después
+se revisa `git diff`, se publica y todo el equipo ve el mismo estado, sin una
+planilla operativa paralela.
