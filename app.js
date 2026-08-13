@@ -79,6 +79,7 @@ function switchModule(moduleName) {
   if (moduleName === "vigencia") {
     setTimeout(() => {
       renderVigencia();
+      window.renderVigenciaRegional?.();
       vigenciaMap?.invalidateSize({ pan: false });
     }, 80);
   }
@@ -876,18 +877,12 @@ function renderVigenciaMetrics() {
     ? window.SEGUIMIENTO_NORMATIVO.comunas
     : [];
   const sourceSummary = window.SEGUIMIENTO_NORMATIVO?.resumen || {};
-  const isUpdatedOrProbable = row =>
-    String(row.estado_fuente || "").includes("Vigente · sin cambios posteriores detectados")
-    || String(row.estado_fuente || "").includes("Probablemente actualizado");
-  const isMissing = row =>
-    ["Sin cartografía SIG vinculada", "Sin información comunal consolidada", "Sin PRC/LU vigente identificado"]
-      .some(label => String(row.estado_fuente || "").includes(label));
   const syncedSummary = {
     instrumentos: rows.length || sourceSummary.total || 0,
-    actualizados: rows.filter(row => String(row.estado_fuente || "").includes("Vigente · sin cambios posteriores detectados")).length,
-    probablemente_actualizados: rows.filter(row => String(row.estado_fuente || "").includes("Probablemente actualizado")).length,
-    revision_necesaria: rows.filter(row => !isUpdatedOrProbable(row) && !isMissing(row)).length,
-    sin_cartografia: rows.filter(isMissing).length,
+    actualizados: rows.filter(row => Boolean(row.prc_nombre)).length,
+    probablemente_actualizados: 0,
+    revision_necesaria: rows.filter(row => Number(row.actos_posteriores || 0) > 0 || Number(row.controles_pendientes || 0) > 0).length,
+    sin_cartografia: rows.filter(row => !row.prc_nombre).length,
   };
   const summary = rows.length ? syncedSummary : (vigenciaData.resumen || {});
   $("vigenciaMetricTotal").textContent = summary.instrumentos || 0;
@@ -966,20 +961,16 @@ function timelineEventClass(event) {
 }
 
 function timelineTemplate(event) {
-  const eventClass = timelineEventClass(event);
   const zones = Array.isArray(event.zonas_afectadas) && event.zonas_afectadas.length
     ? `<p class="timeline-zones">Zonas: ${escapeHtml(event.zonas_afectadas.join(", "))}</p>`
     : "";
 
   return `
-    <article class="timeline-event ${eventClass}">
+    <article class="timeline-event">
       <div class="timeline-node"></div>
       <div class="timeline-content">
         <div class="timeline-topline">
           <span>${escapeHtml(event.fecha || "Sin fecha")}</span>
-          <span class="timeline-incorporation ${eventClass}">
-            ${escapeHtml(String(event.incorporacion || "sin verificar").replaceAll("_", " "))}
-          </span>
         </div>
         <h4>${escapeHtml(event.titulo || event.tipo || "Acto")}</h4>
         <p class="timeline-type">
@@ -1291,6 +1282,7 @@ function renderVigenciaDetail() {
 function renderVigencia() {
   renderVigenciaMetrics();
   renderVigenciaList();
+  window.renderVigenciaRegional?.();
 }
 
 function populateVigenciaFilters() {
@@ -1533,19 +1525,14 @@ function init() {
   renderVigenciaMetrics();
   bindEvents();
 
-  const requestedModule = location.hash === "#ipt"
-    ? "vigencia"
-    : location.hash === "#historico"
-      ? "historico"
-      : location.hash === "#mapa"
-        ? "mapa"
-        : location.hash === "#vigencia"
-          ? "vigencia"
-          : location.hash === "#seguimiento"
-            ? "seguimiento"
-            : location.hash === "#capas"
-              ? "capas"
-              : "diario";
+  const requestedHash = location.hash.replace(/^#/, "");
+  const requestedModule = ["seguimiento", "vigencia", "capas", "diario", "mapa", "historico"].includes(requestedHash)
+    ? requestedHash
+    : requestedHash === "ipt"
+      ? "vigencia"
+      : requestedHash === "noticias"
+        ? "diario"
+        : "seguimiento";
   switchModule(requestedModule);
   if (requestedModule === "mapa") renderTerritorialMap();
   if (requestedModule === "vigencia") renderVigencia();

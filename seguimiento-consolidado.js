@@ -14,6 +14,7 @@
     internalOwner: "",
     internalStage: "",
     internalPriority: "",
+    internalMetric: "",
     internalView: new URLSearchParams(window.location.search).get("panel") === "javiera" ? "javiera" : "equipo",
   };
 
@@ -109,6 +110,18 @@
     observado: "en_desarrollo",
   }[value] || value || "pendiente");
   const historicalV1Sent = row => normalizeProductionState(initialRecord(row).prc?.estado_produccion) === "enviado";
+  const applicableIptGroup = row => (window.VIGENCIA_CARTOGRAFICA?.instrumentos || []).find(item =>
+    normalizeCommune(item.comuna) === normalizeCommune(row.comuna)
+    && (!row.region
+      || normalizeCommune(item.region) === normalizeCommune(row.region)
+      || normalizeCommune(item.region).includes(normalizeCommune(row.region))
+      || normalizeCommune(row.region).includes(normalizeCommune(item.region)))
+  );
+  const hasApplicableHigherIpt = row => Boolean((applicableIptGroup(row)?.instrumentos || [])
+    .some(item => ["PRI", "PRM", "PRMS", "PRDU"].includes(String(item.tipo_ipt || "").trim())));
+  const noCommunalPrcApplies = row => !row.prc_nombre
+    && hasApplicableHigherIpt(row);
+  const officialProcess = row => window.PROCESOS_PRC_OFICIALES?.comunas?.[rowKey(row)] || null;
   const inventoryIsTuiV2 = row => inventoryRecord(row).modelo_detectado === "tui_v2";
   const inventoryV2StructureOk = row => inventoryIsTuiV2(row)
     && inventoryRecord(row).qa_archivo?.estandar_tui_v2?.cumple_estructura === true;
@@ -127,16 +140,19 @@
     if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row) && ["actualizado", "enviado"].includes(reported)) {
       return "en_desarrollo";
     }
+    if (noCommunalPrcApplies(row) && reported === "pendiente") return "no_aplica";
     return reported;
   };
   const qaPlatformState = row => {
     const override = mergedOverride(row);
+    if (noCommunalPrcApplies(row)) return "no_aplica";
     if (requiresV2(row)) return "observaciones";
     if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row)) return "observaciones";
     return override.qa_plataforma || "pendiente";
   };
   const qaManualState = row => {
     const override = mergedOverride(row);
+    if (noCommunalPrcApplies(row)) return "no_aplica";
     return override.qa_revision_javiera || override.qa || "pendiente";
   };
   const isDirectProductionCandidate = row => Boolean(
@@ -157,6 +173,8 @@
       date: mergedOverride(row).fecha_estado || "",
       note: production === "enviado"
         ? (mergedOverride(row).nota_propiteq || "La versión TUI V2 fue enviada y su carga queda a cargo de Propiteq.")
+        : production === "no_aplica"
+          ? "No se identificó un PRC comunal vigente; se muestran los instrumentos metropolitanos, intercomunales o regionales aplicables."
         : legacy
           ? "Existe una V1 enviada a Propiteq, pero debe reemplazarse por una reconstrucción TUI V2."
           : "La versión vigente todavía permanece en manos del equipo.",
@@ -182,6 +200,7 @@
     en_desarrollo: "En desarrollo",
     actualizado: "Actualizado",
     enviado: "Enviado",
+    no_aplica: "Sin PRC comunal",
   };
 
   const publicationLabels = {
@@ -190,23 +209,28 @@
     actualizado: "Listo para enviar",
     enviado: "A cargo de Propiteq",
     observado: "V1 enviada · reemplazo pendiente",
+    no_aplica: "No requiere envío PRC",
   };
 
   const qaPlatformLabels = {
     pendiente: "QA automático pendiente",
     observaciones: "QA automático con diferencias",
     aprobado: "QA automático aprobado",
+    no_aplica: "QA PRC no aplica",
   };
 
   const qaManualLabels = {
     pendiente: "Revisión Javiera pendiente",
     observaciones: "Revisión Javiera con observaciones",
     aprobado: "Revisión Javiera aprobada",
+    no_aplica: "Revisión PRC no aplica",
   };
 
   const qaPlatformNote = row => {
     const operational = operationalStatus(row);
     const override = mergedOverride(row);
+    if (operational.qa === "no_aplica") return "No existe un PRC comunal que comparar; se mantiene el monitoreo de los IPT superiores aplicables.";
+    if (noCommunalPrcApplies(row)) return "No existe un PRC comunal identificado para comparar; se mantiene el monitoreo de los IPT superiores aplicables.";
     if (requiresV2(row)) return "QA bloqueado: la V1 usa geometrías intersectadas con riesgos y no contiene la tabla normativa completa dentro del GeoPackage.";
     if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row)) {
       const bloqueos = inventoryRecord(row).qa_archivo?.estandar_tui_v2?.bloqueos || [];
@@ -227,6 +251,7 @@
     actualizacion_sig: "Actualización SIG",
     qa: "QA",
     publicacion: "Publicación",
+    monitoreo: "Monitoreo normativo",
   };
 
   const priorityLabels = {
@@ -274,12 +299,14 @@
     const operational = operationalStatus(row);
     const hasCartography = Boolean(inventoryRecord(row).ruta_relativa || row.archivo_recomendado || row.capa_recomendada);
     const hasPrc = Boolean(row.prc_nombre);
+    const higherIpt = hasApplicableHigherIpt(row);
     const pendingControls = Number.isFinite(row.controles_pendientes) ? row.controles_pendientes : null;
     const totalControls = Number.isFinite(row.controles_totales) ? row.controles_totales : null;
     const acts = Number(row.actos_posteriores || 0);
     let stage = internal.etapa;
     if (!stage) {
       if (operational.requiresV2) stage = "actualizacion_sig";
+      else if (operational.production === "no_aplica") stage = "monitoreo";
       else if (["actualizado", "enviado"].includes(operational.production)) stage = "publicacion";
       else if (operational.production === "en_desarrollo") stage = "actualizacion_sig";
       else if (operational.qaManual === "observaciones" || pendingControls !== null || row.estado_auditoria === "auditoria_avanzada") stage = "qa";
@@ -298,13 +325,20 @@
     else if (!blocking && pendingControls > 0) blocking = `${pendingControls} controles de QA abiertos`;
     else if (!blocking && acts > 0) blocking = `${acts} ${acts === 1 ? "acto posterior por comparar" : "actos posteriores por comparar"}`;
     else if (!blocking && !hasCartography) blocking = "Falta cartografía vinculada";
-    else if (!blocking && !hasPrc) blocking = "Falta confirmar IPT vigente";
+    else if (!blocking && !hasPrc && !higherIpt) blocking = "Falta confirmar IPT vigente";
     else if (!blocking && operational.prepublished && acts === 0) blocking = "Revisar tabla de atributos y nomenclatura";
-    const priority = internal.prioridad || (operational.requiresV2 || pendingControls > 0 || acts >= 10 ? "critica" : acts >= 4 || !hasCartography || !hasPrc ? "alta" : acts > 0 ? "media" : "baja");
+    const priority = operational.production === "no_aplica"
+      ? "baja"
+      : internal.prioridad || (operational.requiresV2 || pendingControls > 0 || acts >= 10 ? "critica" : acts >= 4 || !hasCartography || !hasPrc ? "alta" : acts > 0 ? "media" : "baja");
+    const priorityRank = operational.production === "no_aplica"
+      ? 5
+      : Math.max(1, Math.min(5, Number(override.prioridad_orden || internal.prioridad_orden || ({ critica: 1, alta: 2, media: 3, baja: 4 })[priority] || 5)));
     let nextAction = internal.proxima_accion || "";
     if (!nextAction && operational.requiresV2) nextAction = "Reconstruir TUI V2 con zonificación normativa sin intersección de riesgos y tabla de atributos incorporada en el GeoPackage.";
     else if (!nextAction && pendingControls > 0) nextAction = `Resolver y documentar ${pendingControls} controles antes de aprobar el QA.`;
     else if (!nextAction && acts > 0) nextAction = `Comparar ${acts} ${acts === 1 ? "acto posterior" : "actos posteriores"} con la cartografía SIG.`;
+    else if (!nextAction && operational.production === "no_aplica" && officialProcess(row)) nextAction = `${officialProcess(row).etiqueta}: monitorear la fuente municipal y mantener visible el instrumento metropolitano, intercomunal o regional aplicable mientras el PRC no entre en vigencia.`;
+    else if (!nextAction && operational.production === "no_aplica") nextAction = "No producir un PRC inexistente: monitorear si existe un proceso comunal en elaboración y mantener visible el instrumento metropolitano, intercomunal o regional aplicable.";
     else if (!nextAction && !hasPrc) nextAction = "Confirmar el instrumento vigente y su fuente oficial.";
     else if (!nextAction && !hasCartography) nextAction = "Localizar, descargar y vincular la cartografía vigente.";
     else if (!nextAction && operational.prepublished && acts === 0) nextAction = "Revisar tabla, nomenclatura y consistencia de campos antes de cerrar QA.";
@@ -321,6 +355,7 @@
       progress,
       blocking,
       priority,
+      priorityRank,
       nextAction,
       lastActivity: internal.fecha_actividad || operational.statusDate || operational.qaDate || row.ultima_revision || "Sin actividad registrada",
     };
@@ -363,6 +398,7 @@
 
   function filteredRows() {
     const query = state.search.trim().toLocaleLowerCase("es");
+    const productionOrder = { enviado: 0, actualizado: 1, en_desarrollo: 2, pendiente: 3 };
     return data().comunas.filter(row => {
       const operational = operationalStatus(row);
       const haystack = [row.region, row.comuna, row.prc_nombre, row.estado_fuente, row.motivo]
@@ -374,6 +410,12 @@
         && (!state.audit || row.estado_auditoria === state.audit)
         && (!state.production || operational.production === state.production)
         && (!state.qa || operational.qa === state.qa);
+    }).sort((a, b) => {
+      const aState = operationalStatus(a).production;
+      const bState = operationalStatus(b).production;
+      return (productionOrder[aState] ?? 9) - (productionOrder[bState] ?? 9)
+        || String(a.region).localeCompare(String(b.region), "es")
+        || String(a.comuna).localeCompare(String(b.comuna), "es");
     });
   }
 
@@ -384,13 +426,19 @@
         .join(" ").toLocaleLowerCase("es");
       const ownerMatches = !state.internalOwner
         || (state.internalOwner === "__sin_asignar__" && internal.responsible === "Sin asignar")
-        || (state.internalOwner !== "__sin_asignar__" && (internal.responsible === state.internalOwner || internal.responsible === "Sin asignar"));
+        || (state.internalOwner !== "__sin_asignar__" && internal.responsible === state.internalOwner);
       return (!query || haystack.includes(query))
         && (!state.internalRegion || row.region === state.internalRegion)
         && ownerMatches
         && (!state.internalStage || internal.stage === state.internalStage)
-        && (!state.internalPriority || internal.priority === state.internalPriority);
-    });
+        && (!state.internalPriority || String(internal.priorityRank) === String(state.internalPriority))
+        && (!state.internalMetric || (state.internalMetric === "con_prc" && Boolean(row.prc_nombre))
+          || (state.internalMetric === "activo" && internal.production === "en_desarrollo")
+          || (state.internalMetric === "revision_javiera" && internal.production !== "no_aplica" && internal.qa !== "aprobado" && internal.qaPlatform !== "aprobado")
+          || state.internalMetric === "total");
+    }).sort((a, b) => a.internal.priorityRank - b.internal.priorityRank
+      || String(a.row.region).localeCompare(String(b.row.region), "es")
+      || String(a.row.comuna).localeCompare(String(b.row.comuna), "es"));
   }
 
   function alertText(row) {
@@ -409,6 +457,14 @@
     const audit = row.estado_auditoria || "sin_iniciar";
     const sourceDetail = [inventoryRecord(row).ruta_relativa, row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ");
     const operational = operationalStatus(row);
+    const group = applicableIptGroup(row);
+    const applicableNames = (group?.instrumentos || [])
+      .slice()
+      .sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")))
+      .map(item => `${item.tipo_ipt || "IPT"} ${item.fecha || "sin fecha"}`);
+    const iptName = row.prc_nombre || (applicableNames.length ? `Sin PRC comunal · aplica ${applicableNames.join(" · ")}` : "IPT comunal no identificado");
+    const iptDate = row.prc_fecha || (group?.fecha_ultimo_instrumento || "Sin fecha comunal");
+    const process = officialProcess(row);
     const cartographyLabels = {
       encontrada: "Archivo encontrado",
       observada: "V1 observada",
@@ -422,8 +478,9 @@
           <strong class="seguimiento-comuna">${escape(row.comuna)}</strong>
         </td>
         <td data-label="IPT vigente identificado">
-          <strong class="seguimiento-ipt-name">${escape(row.prc_nombre || "No identificado")}</strong>
-          <span class="seguimiento-date">${escape(row.prc_fecha || "Sin fecha")}</span>
+          <strong class="seguimiento-ipt-name">${escape(iptName)}</strong>
+          <span class="seguimiento-date">${escape(iptDate)}</span>
+          ${process ? `<a class="seguimiento-process-link" href="${escape(process.fuente)}" target="_blank" rel="noopener noreferrer">${escape(process.etiqueta)} · fuente oficial ↗</a>` : ""}
         </td>
         <td data-label="Cartografía">
           <span class="seguimiento-operational-pill cartography ${escape(operational.cartography)}">${escape(cartographyLabels[operational.cartography])}</span>
@@ -463,14 +520,20 @@
       : Number.isFinite(row.controles_pendientes)
       ? `${row.controles_pendientes} de ${row.controles_totales} controles abiertos`
       : row.actos_posteriores ? `${row.actos_posteriores} ${row.actos_posteriores === 1 ? "acto posterior" : "actos posteriores"}` : "Sin alertas normativas abiertas";
-    const statusControl = state.internalView === "equipo"
-      ? `<label class="seguimiento-inline-status"><span>Marcar avance</span><select data-update-production="${escape(rowKey(row))}" aria-label="Marcar estado de ${escape(row.comuna)}">${Object.entries(productionLabels).map(([value, label]) => `<option value="${value}" ${internal.production === value ? "selected" : ""}>${escape(label)}</option>`).join("")}</select></label>`
+    const statusControl = state.internalView === "equipo" && internal.production !== "no_aplica"
+      ? `<label class="seguimiento-inline-status"><span>Marcar avance</span><select data-update-production="${escape(rowKey(row))}" aria-label="Marcar estado de ${escape(row.comuna)}">${Object.entries(productionLabels).filter(([value]) => value !== "no_aplica").map(([value, label]) => `<option value="${value}" ${internal.production === value ? "selected" : ""}>${escape(label)}</option>`).join("")}</select></label>`
+      : "";
+    const ownerControl = state.internalView === "javiera"
+      ? `<label class="seguimiento-inline-status"><span>Asignar</span><select data-update-owner="${escape(rowKey(row))}"><option value="" ${internal.responsible === "Sin asignar" ? "selected" : ""}>Sin asignar</option>${["Cristóbal", "Annabel", "Fernanda", "Javiera"].map(owner => `<option value="${owner}" ${internal.responsible === owner ? "selected" : ""}>${owner}</option>`).join("")}</select></label>`
+      : "";
+    const priorityControl = state.internalView === "javiera"
+      ? `<label class="seguimiento-inline-status"><span>Orden</span><select data-update-priority="${escape(rowKey(row))}">${[1,2,3,4,5].map(rank => `<option value="${rank}" ${internal.priorityRank === rank ? "selected" : ""}>${rank}</option>`).join("")}</select></label>`
       : "";
     return `
       <tr>
         <td data-label="Comuna"><span class="seguimiento-region">${escape(row.region)}</span><strong class="seguimiento-comuna">${escape(row.comuna)}</strong><small>${escape(row.prc_fecha || "PRC sin fecha")}</small></td>
-        <td data-label="Responsable"><span class="seguimiento-owner ${internal.responsible === "Sin asignar" ? "unassigned" : ""}">${escape(internal.responsible)}</span></td>
-        <td data-label="Etapa técnica"><span class="seguimiento-stage ${escape(internal.stage)}">${escape(stageLabels[internal.stage] || internal.stage)}</span><small class="seguimiento-priority ${escape(internal.priority)}">Prioridad ${escape(priorityLabels[internal.priority] || internal.priority)}</small></td>
+        <td data-label="Responsable"><span class="seguimiento-owner ${internal.responsible === "Sin asignar" ? "unassigned" : ""}">${escape(internal.responsible)}</span>${ownerControl}</td>
+        <td data-label="Etapa técnica"><span class="seguimiento-stage ${escape(internal.stage)}">${escape(stageLabels[internal.stage] || internal.stage)}</span><small class="seguimiento-priority ${escape(internal.priority)}">Prioridad ${internal.priorityRank} · ${escape(priorityLabels[internal.priority] || internal.priority)}</small>${priorityControl}</td>
         <td data-label="Estado / avance"><span class="seguimiento-operational-pill production ${escape(internal.production)}">${escape(productionLabels[internal.production])}</span>${statusControl}<div class="seguimiento-progress" aria-label="${escape(`${internal.progress}% de avance`)}"><span style="width:${internal.progress}%"></span></div><small>${escape(`${internal.progress}% informado/calculado`)}</small></td>
         <td data-label="QA automático de la plataforma"><span class="seguimiento-operational-pill qa ${escape(internal.qaPlatform)}">${escape(qaPlatformLabels[internal.qaPlatform])}</span><small>${escape(qaPlatformNote(row))}</small></td>
         <td data-label="Revisión Javiera"><span class="seguimiento-operational-pill qa ${escape(internal.qa)}">${escape(qaManualLabels[internal.qa])}</span><small>${escape(internal.qaDate ? `Última revisión: ${internal.qaDate}` : "Sin fecha de revisión")}</small></td>
@@ -491,10 +554,10 @@
 
   function renderInternalMetrics() {
     const rows = data().comunas.map(row => internalStatus(row));
-    $("seguimientoInternalUnassigned").textContent = rows.filter(item => item.responsible === "Sin asignar").length;
+    $("seguimientoInternalTotal").textContent = rows.length;
+    $("seguimientoInternalWithPrc").textContent = data().comunas.filter(row => Boolean(row.prc_nombre)).length;
     $("seguimientoInternalActive").textContent = rows.filter(item => item.production === "en_desarrollo" || (item.stage === "qa" && item.qaDate)).length;
-    $("seguimientoInternalBlocked").textContent = rows.filter(item => item.blocking).length;
-    $("seguimientoInternalApproved").textContent = rows.filter(item => item.qa === "aprobado").length;
+    $("seguimientoInternalJaviera").textContent = rows.filter(item => item.production !== "no_aplica" && item.qa !== "aprobado" && item.qaPlatform !== "aprobado").length;
     const prepublished = rows.filter(item => item.prepublished);
     const legacyV2 = rows.filter(item => item.requiresV2);
     const v2Detected = rows.filter(item => item.model === "tui_v2");
@@ -673,12 +736,29 @@
     renderTable();
   }
 
+  function updateInternalField(key, field, value) {
+    const [region, ...communeParts] = key.split("|");
+    const commune = communeParts.join("|");
+    if (!data().comunas.some(row => row.region === region && row.comuna === commune)) return;
+    const current = localChanges[key] || {};
+    localChanges[key] = {
+      ...current,
+      [field]: field === "prioridad_orden" ? Number(value) : value,
+      fecha_estado: new Date().toISOString().slice(0, 10),
+    };
+    saveLocalChanges();
+    const note = $("seguimientoLocalSaveNote");
+    if (note) note.textContent = `${commune}: ${field === "responsable" ? "responsable" : "prioridad"} actualizado. Descarga los cambios para incorporarlos al registro compartido.`;
+    renderInternalMetrics();
+    renderInternalTable();
+  }
+
   function downloadLocalChanges() {
-    const headers = ["region", "comuna", "responsable", "estado_produccion", "fecha_estado"];
+    const headers = ["region", "comuna", "responsable", "prioridad_orden", "estado_produccion", "fecha_estado"];
     const lines = [headers.join(";")];
     Object.entries(localChanges).forEach(([key, change]) => {
       const [region, ...communeParts] = key.split("|");
-      lines.push([region, communeParts.join("|"), change.responsable || "", change.estado_produccion || "", change.fecha_estado || ""]
+      lines.push([region, communeParts.join("|"), change.responsable || "", change.prioridad_orden || "", change.estado_produccion || "", change.fecha_estado || ""]
         .map(csvCell).join(";"));
     });
     const blob = new Blob(["\ufeff", lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
@@ -801,9 +881,23 @@
     $("seguimientoInternalStage")?.addEventListener("change", event => { state.internalStage = event.target.value; renderInternalTable(); });
     $("seguimientoInternalPriority")?.addEventListener("change", event => { state.internalPriority = event.target.value; renderInternalTable(); });
     $("seguimientoInternalBody")?.addEventListener("change", event => {
-      const select = event.target.closest("[data-update-production]");
-      if (select) updateProductionStatus(select.dataset.updateProduction, select.value);
+      const production = event.target.closest("[data-update-production]");
+      const owner = event.target.closest("[data-update-owner]");
+      const priority = event.target.closest("[data-update-priority]");
+      if (production) updateProductionStatus(production.dataset.updateProduction, production.value);
+      else if (owner) updateInternalField(owner.dataset.updateOwner, "responsable", owner.value);
+      else if (priority) updateInternalField(priority.dataset.updatePriority, "prioridad_orden", priority.value);
     });
+    document.querySelectorAll("[data-production-filter]").forEach(card => card.addEventListener("click", () => {
+      state.production = state.production === card.dataset.productionFilter ? "" : card.dataset.productionFilter;
+      if ($("seguimientoProduction")) $("seguimientoProduction").value = state.production;
+      renderTable();
+    }));
+    document.querySelectorAll("[data-internal-metric]").forEach(card => card.addEventListener("click", () => {
+      state.internalMetric = state.internalMetric === card.dataset.internalMetric ? "" : card.dataset.internalMetric;
+      document.querySelectorAll("[data-internal-metric]").forEach(item => item.classList.toggle("filter-active", item === card && Boolean(state.internalMetric)));
+      renderInternalTable();
+    }));
     $("seguimientoInternalBody")?.addEventListener("click", event => {
       const button = event.target.closest("[data-seguimiento-commune]");
       if (button) openCommune(button.dataset.seguimientoCommune);

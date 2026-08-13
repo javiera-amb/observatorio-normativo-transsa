@@ -1,5 +1,170 @@
 window.TUI_EVENTS = [
   {
+    "event_id": "EVT-20260812-NORMATIVE-UP-B308729CD6",
+    "event_type": "normative_update",
+    "title": "Resolución exenta número 1.212, de 2026.- Modifica resoluciones N° 682, N° 684, N° 685, N° 831, y N° 959 exentas, todas de 2026, que llaman a proceso de selección en condiciones especiales para el otorgamiento de subsidios del programa habitacional Fondo Solidario de Elección de Vivienda, regulado por el decreto N° 49, de 2011",
+    "event_date": "2026-08-12",
+    "published_at": "2026-08-12",
+    "summary": "Ministerio de Vivienda y Urbanismo abrió un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Resolución exenta número 1.212, de 2026.- Modifica resoluciones N° 682, N° 684, N° 685, N° 831, y N° 959 exentas, todas de 2026, que llaman a proceso de selección en condiciones especiales para el otorgamiento de subsidios del programa habitacional Fondo Solidario de Elección de Vivienda, regulado por el decreto N° 49, de 2011”.",
+    "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla modificaciones a resoluciones exentas que establecen procesos de selección para el otorgamiento de subsidios del Programa Habitacional Fondo Solidario de Elección de Vivienda.",
+    "practical_implications": "El proceso de participación ciudadana quedó abierto. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+    "impacted_parties": "Postulantes a subsidios del Fondo Solidario de Elección de Vivienda, autoridades regionales, Ministerio de Vivienda y Urbanismo, y organismos como el Serviu.",
+    "recommended_action": "Monitorear las observaciones ciudadanas, la evolución de la evaluación ambiental y las eventuales medidas o condiciones que puedan incidir en la ejecución del proyecto.",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "Falta confirmar en la fuente: plazo de participación ciudadana.",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.95,
+    "review_status": "requires_review",
+    "is_featured": false,
+    "category": "normative",
+    "version": 1,
+    "source_name": "Ministerio de Vivienda y Urbanismo",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/12/44523/01/2851678.pdf",
+    "document_type": "Resolución exenta",
+    "document_number": "682",
+    "territories": [
+      {
+        "territory_type": "province",
+        "name": "Huasco y en la",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "ahorro_minimo",
+      "normativa",
+      "normative",
+      "plazos",
+      "programas_habitacionales",
+      "subsidios",
+      "vivienda"
+    ],
+    "market_segments": [
+      "infraestructura",
+      "multifamily",
+      "residencial"
+    ],
+    "actors": [
+      "Ministerio de Vivienda y Urbanismo",
+      "Serviu",
+      "Subsecretaria de Vivienda y Urbanismo"
+    ],
+    "projects": [],
+    "tags": [
+      "ahorro_minimo",
+      "hybrid_classification",
+      "ollama_preliminary",
+      "plazos",
+      "programas_habitacionales",
+      "subsidios",
+      "vivienda"
+    ]
+  },
+  {
+    "event_id": "EVT-20260812-NORMATIVE-UP-68AF1FC6B5",
+    "event_type": "normative_update",
+    "title": "Resolución exenta número 2.274, de 2026.- Llama a postulación en condiciones especiales 2026 para el desarrollo de proyectos del Programa de Mejoramiento de Viviendas y Barrios, regulado por el decreto N° 27, de 2016, Capítulo Tercero, Proyectos para Condominios de Viviendas para la Región del Biobío, fija condiciones para su aplicación, criterios regionales de selección y el monto de recursos disponibles",
+    "event_date": "2026-08-12",
+    "published_at": "2026-08-12",
+    "summary": "Resolución exenta número 2.274, de 2026.- Llama a postulación en condiciones especiales 2026 para el desarrollo de proyectos del Programa de Mejoramiento de Viviendas y Barrios, regulado por el decreto N° 27, de 2016, Capítulo Tercero, Proyectos para Condominios de Viviendas para la Región del Biobío, fija condiciones para su aplicación, criterios regionales de selección y el monto de recursos disponibles",
+    "why_it_matters": "",
+    "practical_implications": "",
+    "impacted_parties": "",
+    "recommended_action": "",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.0,
+    "review_status": "preliminary",
+    "is_featured": false,
+    "category": "otros",
+    "version": 1,
+    "source_name": "Diario Oficial de la República de Chile",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/12/44523/01/2850448.pdf",
+    "document_type": "Publicación oficial",
+    "document_number": "1.237",
+    "territories": [
+      {
+        "territory_type": "region",
+        "name": "Región del Biobío",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "otros"
+    ],
+    "market_segments": [],
+    "actors": [],
+    "projects": [],
+    "tags": [
+      "hybrid_classification",
+      "ollama_preliminary"
+    ]
+  },
+  {
+    "event_id": "EVT-20260810-NORMATIVE-UP-35C7155257",
+    "event_type": "normative_update",
+    "title": "Decreto número 13, de 2026.- Modifica decreto Nº 66, de 2007, del entonces Ministerio de Economía, Fomento y Reconstrucción, que aprueba reglamento de instalaciones interiores y medidores de gas",
+    "event_date": "2026-08-10",
+    "published_at": "2026-08-10",
+    "summary": "El Decreto Supremo N° 13, de 2026, modifica el Decreto Supremo N° 66, de 2007, que aprueba el reglamento de instalaciones interiores y medidores de gas. La modificación incorpora requisitos técnicos para sistemas de tuberías multicapas, incluyendo manuales de instalación, protección contra daños, y especificaciones de instalación.",
+    "why_it_matters": "Este decreto actualiza normas técnicas para instalaciones de gas, incorporando sistemas multicapa que no estaban regulados previamente. Esto afecta la seguridad, la instalación y la operación de sistemas de gas en edificios residenciales, comerciales, industriales y públicos.",
+    "practical_implications": "Los fabricantes, importadores y comercializadores de sistemas multicapa deben proporcionar manuales de instalación. Las instalaciones deben cumplir con normas de protección contra daños físicos, químicos y mecánicos, y seguir especificaciones técnicas de fabricantes para dimensionamiento y conexión a artefactos.",
+    "impacted_parties": "Fabricantes, importadores, comercializadores, instaladores, supervisores de seguridad, y usuarios finales de sistemas de gas en edificios.",
+    "recommended_action": "Monitorear la implementación del decreto y revisar su impacto en proyectos de instalaciones de gas.",
+    "recommended_action_code": "monitor",
+    "requires_review_reason": "",
+    "relevance_level": "medium",
+    "impact_level": "unknown",
+    "confidence": 0.95,
+    "review_status": "preliminary",
+    "is_featured": false,
+    "category": "normative",
+    "version": 1,
+    "source_name": "Ministerio de Energía",
+    "source_type": "official",
+    "source_url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/10/44521/01/2851196.pdf",
+    "document_type": "Decreto Supremo",
+    "document_number": "13",
+    "territories": [
+      {
+        "territory_type": "country",
+        "name": "Chile",
+        "relationship_type": "direct",
+        "is_primary": 1
+      }
+    ],
+    "topics": [
+      "instalaciones_de_gas",
+      "normative",
+      "regulacion_tecnica",
+      "seguridad"
+    ],
+    "market_segments": [
+      "industrial",
+      "infraestructura",
+      "residencial"
+    ],
+    "actors": [
+      "Ministerio de Energía",
+      "Superintendencia de Electricidad y Combustibles"
+    ],
+    "projects": [],
+    "tags": [
+      "gas",
+      "hybrid_classification",
+      "normativa",
+      "ollama_preliminary",
+      "reglamento",
+      "seguridad"
+    ]
+  },
+  {
     "event_id": "EVT-20260806-ENVIRONMENTA-03B84E15A3",
     "event_type": "environmental_assessment",
     "title": "Decreto alcaldicio exento número 2.308, de 2026.- Aprueba la Enmienda Nº 1 del Plan Regulador Comunal de Pelluhue",
@@ -533,7 +698,7 @@ window.TUI_EVENTS = [
       }
     ],
     "topics": [
-      "Vivienda"
+      "vivienda"
     ],
     "market_segments": [],
     "actors": [],

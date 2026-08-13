@@ -26,9 +26,62 @@
   const prcInventory = () => window.INVENTARIO_PRC_ONEDRIVE || { comunas: {} };
   const communeSource = () => window.SEGUIMIENTO_NORMATIVO?.comunas || [];
   const iptSource = () => window.VIGENCIA_CARTOGRAFICA?.instrumentos || [];
-  const catalogLayers = () => (layersSource().capas || []).filter(Boolean);
-  const territorialLayers = () => catalogLayers();
-  const metricLayers = () => catalogLayers().filter(layer => normalize(layer.nombre) !== normalize("Planes Reguladores Comunales"));
+  const rawCatalogLayers = () => (layersSource().capas || []).filter(Boolean);
+  const standardizedCategory = layer => {
+    const text = normalize(`${layer.nombre} ${(layer.categorias || []).join(" ")}`);
+    if (/division politico|limite|comuna|region/.test(text)) return "Límites y escalas";
+    if (/predio|catastro|area homogenea|scraping ah|suelo/.test(text)) return "Suelo y propiedad";
+    if (/metro|transporte|red vial|ferrea|paradero|embalse|caleta|antena/.test(text)) return "Movilidad e infraestructura";
+    if (/establecimiento|educacion|pdi|bombero|carabinero|deportiva|junta vecinal|equipamiento|poi|supermercado/.test(text)) return "Equipamientos y servicios";
+    if (/censo|demograf|barrio|campamento|area poblada|sector oficina|mercado/.test(text)) return "Demografía y mercado";
+    if (/amenaza|riesgo|tsunami|volcan|protegida|sitio prioritario|ambiental/.test(text)) return "Riesgos y medio ambiente";
+    if (/plan regulador|conservacion historica|normativa/.test(text)) return "Normativa territorial";
+    return "Producción Transsa / por clasificar";
+  };
+  const candidateCategory = item => {
+    const text = normalize(`${item.nombre} ${item.valor}`);
+    if (/riesgo|humedal|ambient|temperatura|ruido|proteg/.test(text)) return "Riesgos y medio ambiente";
+    if (/metro|movilidad|transporte|ferrea|paradero|vial/.test(text)) return "Movilidad e infraestructura";
+    if (/turis|parque|equipamiento|poi|supermercado/.test(text)) return "Equipamientos y servicios";
+    if (/predio|suelo|catastr/.test(text)) return "Suelo y propiedad";
+    return "Catálogo por incorporar";
+  };
+  const candidateLayers = () => {
+    const existing = new Set(rawCatalogLayers().map(layer => normalize(layer.nombre)));
+    return (externalSource().adicionales || [])
+      .filter(item => item?.nombre && !existing.has(normalize(item.nombre)))
+      .map(item => ({
+        nombre: item.nombre,
+        categorias: [candidateCategory(item)],
+        owner: "Por asignar",
+        verificacion: "fuente identificada",
+        url: item.url,
+        _candidate: item,
+      }));
+  };
+  // El PRC del diccionario antiguo no se usa como fuente. Los IPT que aparecen
+  // en la matriz se generan desde la auditoría normativa y el inventario TUI.
+  const catalogLayers = () => [
+    ...rawCatalogLayers()
+      .filter(layer => normalize(layer.nombre) !== normalize("Planes Reguladores Comunales"))
+      .map(layer => ({ ...layer, categorias: [standardizedCategory(layer)] })),
+    ...candidateLayers(),
+  ];
+  const applicableIptLayers = () => {
+    const group = selectedIptGroup();
+    const instruments = group?.instrumentos || [];
+    const latest = latestByType(instruments);
+    return [...latest.values()].map(instrument => ({
+      nombre: `${instrument.tipo_ipt || "IPT"} · ${instrument.nombre || "Instrumento vigente"}`,
+      categorias: ["Instrumentos de planificación territorial"],
+      owner: instrument.tipo_ipt === "PRC" ? "Base Transsa / producción SIG" : "Fuente oficial IPT",
+      verificacion: "normativa identificada",
+      url: instrument.fuente || "https://portalipt.minvu.cl/instrumentos",
+      _ipt: instrument,
+    }));
+  };
+  const territorialLayers = () => [...applicableIptLayers(), ...catalogLayers()];
+  const metricLayers = () => catalogLayers();
 
   function communeRows() {
     const rows = communeSource();
@@ -44,7 +97,20 @@
   function selectedIptGroup() {
     const commune = selectedCommune();
     return iptSource().find(row => normalize(row.comuna) === normalize(commune.comuna)
-      && (!commune.region || normalize(row.region) === normalize(commune.region))) || null;
+      && (!commune.region
+        || normalize(row.region) === normalize(commune.region)
+        || normalize(row.region).includes(normalize(commune.region))
+        || normalize(commune.region).includes(normalize(row.region)))) || null;
+  }
+
+  function sourceLineage(layer, external, candidate) {
+    if (candidate) return `${candidate.fuente || "Fuente externa"} · ${candidate.automatizable ? "adquisición automatizable" : "adquisición con revisión manual"}`;
+    const name = normalize(layer.nombre);
+    if (/base predios|predios sii/.test(name)) return "Scraping público · corrección y consolidación Transsa";
+    if (/scraping ah|areas homogeneas sii/.test(name)) return "Fuente pública SII · procesamiento Transsa";
+    if (/barrios transsa/.test(name)) return "Metodología y procesamiento Transsa";
+    if (external?.organismo) return `${external.organismo} · fuente externa ${external.nivel || "por validar"}`;
+    return "Inventario inicial Notion · fuente espacial por acreditar";
   }
 
   function populateCommunes() {
@@ -237,6 +303,29 @@
   }
 
   function territorialCoverage(layer, commune) {
+    if (layer._ipt) {
+      const group = selectedIptGroup();
+      const latest = latestByType(group?.instrumentos || []);
+      const operational = instrumentOperational(layer._ipt, latest.get(layer._ipt.tipo_ipt) === layer._ipt);
+      const hasCartography = ["encontrada", "observada_v1", "otra_version"].includes(operational.cartography);
+      return {
+        state: operational.cartography === "encontrada" ? "confirmada" : hasCartography ? "pendiente" : "bloqueada",
+        label: operational.cartography === "encontrada" ? "Cartografía vinculada a la versión" : hasCartography ? "Cartografía localizada · requiere control" : "Normativa identificada · falta cartografía",
+        detail: operational.cartographyDetail,
+        dataDate: layer._ipt.fecha || "Sin fecha normativa",
+        dateLabel: "Fecha normativa",
+        operational,
+      };
+    }
+    if (layer._candidate) {
+      return {
+        state: "pendiente",
+        label: "Fuente identificada · adquisición pendiente",
+        detail: `${layer._candidate.fuente || "Fuente externa"}. Debe materializarse, controlar licencia y versión, validar geometría y ejecutar el cruce comunal.`,
+        dataDate: layer._candidate.actualizacion || "Sin fecha del dato",
+        dateLabel: "Actualización declarada",
+      };
+    }
     const meta = coverageSource().capas[layer.nombre] || { modo: "por_confirmar", fecha_dato: "Sin fecha del dato", detalle: "La ficha no declara cobertura comunal." };
     const sourceMeta = coverageSource().fuentes?.[layer.nombre] || { estado: "sin_archivo", archivos: [] };
     const external = externalSource().capas?.[layer.nombre];
@@ -301,29 +390,45 @@
   }
 
   function coverageRow(layer, result) {
+    if (layer._ipt) {
+      const operational = result.operational || instrumentOperational(layer._ipt, true);
+      return `
+        <tr>
+          <td data-label="Capa"><span class="capas-table-category">Instrumento de planificación territorial</span><strong>${escape(layer.nombre)}</strong><small>${escape(layer.owner)}</small><a href="${escape(layer.url)}" target="_blank" rel="noopener noreferrer">Abrir fuente oficial ↗</a></td>
+          <td data-label="Cobertura en la comuna"><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small></td>
+          <td data-label="Fuente / archivo espacial"><span class="capas-status-pill ${escape(operational.cartography)}">${escape(cartographyLabels[operational.cartography])}</span><small>${escape(operational.cartographyDetail)}</small></td>
+          <td data-label="Estado del equipo"><span class="capas-status-pill ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.productionDetail)}</small></td>
+          <td data-label="QA de la capa"><span class="capas-status-pill ${escape(operational.qa)}">${escape(iptQaLabels[operational.qa])}</span><small>${escape(operational.qaDetail)}</small></td>
+          <td data-label="Fecha del dato"><strong>${escape(result.dataDate)}</strong><small>${escape(result.dateLabel)}</small></td>
+        </tr>`;
+    }
     const categories = layer.categorias?.length ? layer.categorias.join(" · ") : "Sin categoría";
     const override = { ...initialLayerOverride(layer), ...(operationalSource().capas?.[layer.nombre] || {}) };
     const sourceMeta = coverageSource().fuentes?.[layer.nombre] || { estado: "sin_archivo", archivos: [] };
     const external = externalSource().capas?.[layer.nombre];
+    const candidate = layer._candidate;
     const crossLayer = crossSource().capas?.[layer.nombre];
-    const cartography = crossLayer?.estado === "procesada" ? "archivo_procesado"
+    const cartography = candidate ? "fuente_localizada"
+      : crossLayer?.estado === "procesada" ? "archivo_procesado"
       : sourceMeta.estado === "no_es_capa" ? "no_acreditada"
         : external && ["sin_archivo", "referencia_incompleta", "formato_no_espacial"].includes(sourceMeta.estado)
           ? external.estado === "localizada" ? "fuente_localizada"
             : external.estado === "localizada_observada" ? "fuente_observada"
               : external.estado === "descentralizada" ? "fuente_descentralizada" : "fuente_interna"
           : sourceMeta.estado;
-    const sourceFiles = crossLayer?.fuentes?.map(item => item.archivo).join(" · ")
+    const sourceFiles = candidate ? `${candidate.fuente || "Fuente externa"} · ${candidate.cobertura || "Cobertura por comprobar"}`
+      : crossLayer?.fuentes?.map(item => item.archivo).join(" · ")
       || (sourceMeta.archivos || []).join(" · ")
       || (external ? `${external.organismo} · ${external.acceso}` : "")
       || sourceMeta.detalle || "La ficha no aporta un archivo espacial.";
+    const lineage = sourceLineage(layer, external, candidate);
     const production = override.estado_produccion || "pendiente";
     const qa = override.qa || "pendiente";
     return `
       <tr>
         <td data-label="Capa"><span class="capas-table-category">${escape(categories)}</span><strong>${escape(layer.nombre)}</strong><small>${escape(layer.owner || "Sin responsable")}</small>${layer.url ? `<a href="${escape(layer.url)}" target="_blank" rel="noopener noreferrer">Ver ficha y evidencia ↗</a>` : ""}</td>
         <td data-label="Cobertura en la comuna"><span class="capas-coverage-pill ${escape(result.state)}">${escape(result.label)}</span><small>${escape(result.detail)}</small>${result.documentaryScope ? `<small class="capas-documentary-note">${escape(result.documentaryScope)}</small>` : ""}</td>
-        <td data-label="Fuente / archivo espacial"><span class="capas-status-pill ${escape(cartography)}">${escape(cartographyLabels[cartography] || "Sin archivo")}</span><small>${escape(sourceFiles)}</small>${external?.fecha_fuente ? `<small>Fecha/referencia: ${escape(external.fecha_fuente)}</small>` : ""}${external?.url ? `<a href="${escape(external.url)}" target="_blank" rel="noopener noreferrer">Abrir fuente ${escape(external.nivel)} ↗</a>` : ""}</td>
+        <td data-label="Fuente / archivo espacial"><span class="capas-status-pill ${escape(cartography)}">${escape(cartographyLabels[cartography] || "Sin archivo")}</span><small class="capas-source-lineage">Origen: ${escape(lineage)}</small><small>${escape(sourceFiles)}</small>${(candidate?.actualizacion || external?.fecha_fuente) ? `<small>Fecha/referencia: ${escape(candidate?.actualizacion || external?.fecha_fuente)}</small>` : ""}${(candidate?.url || external?.url) ? `<a href="${escape(candidate?.url || external?.url)}" target="_blank" rel="noopener noreferrer">Abrir fuente ${escape(candidate?.nivel || external?.nivel || "externa")} ↗</a>` : ""}</td>
         <td data-label="Estado del equipo"><span class="capas-status-pill ${escape(production)}">${escape(productionLabels[production] || production)}</span><small>${escape(override.fecha_estado || override.responsable || "Sin actualización del equipo")}</small></td>
         <td data-label="QA de la capa"><span class="capas-status-pill ${escape(qa)}">${escape(qaLabels[qa])}</span><small>${escape(override.fecha_qa || `Catálogo: ${layer.verificacion || "sin verificar"}`)}</small></td>
         <td data-label="Fecha del dato"><strong>${escape(result.dataDate)}</strong><small>${escape(result.dateLabel)}</small></td>
@@ -336,14 +441,32 @@
     const rows = territorialLayers().map(layer => ({ layer, result: territorialCoverage(layer, commune) }))
       .filter(item => !state.coverage || item.result.state === state.coverage)
       .filter(item => !state.category || (item.layer.categorias || []).some(category => normalize(category) === normalize(state.category)))
-      .filter(item => !query || normalize([item.layer.nombre, ...(item.layer.categorias || []), item.layer.owner, externalSource().capas?.[item.layer.nombre]?.organismo].join(" ")).includes(query));
-    const categoryName = item => (item.layer.categorias?.[0] || "Sin categoría").toLocaleLowerCase("es");
+      .filter(item => !query || normalize([item.layer.nombre, ...(item.layer.categorias || []), item.layer.owner, item.layer._candidate?.fuente, item.layer._candidate?.valor, externalSource().capas?.[item.layer.nombre]?.organismo].join(" ")).includes(query));
+    const categoryOrder = [
+      "Instrumentos de planificación territorial",
+      "Límites y escalas",
+      "Suelo y propiedad",
+      "Movilidad e infraestructura",
+      "Equipamientos y servicios",
+      "Demografía y mercado",
+      "Riesgos y medio ambiente",
+      "Normativa territorial",
+      "Producción Transsa / por clasificar",
+      "Catálogo por incorporar",
+    ];
+    const categoryName = item => (item.layer.categorias?.[0] || "Sin categoría");
+    const categoryRank = item => {
+      const rank = categoryOrder.findIndex(category => normalize(category) === normalize(categoryName(item)));
+      return rank === -1 ? categoryOrder.length : rank;
+    };
     const stateName = item => item.result.label || item.result.state;
     return rows.sort((a, b) => {
       if (state.sort === "nombre") return a.layer.nombre.localeCompare(b.layer.nombre, "es");
       if (state.sort === "estado") return stateName(a).localeCompare(stateName(b), "es");
       if (state.sort === "fecha") return String(b.result.dataDate || "").localeCompare(String(a.result.dataDate || ""));
-      return categoryName(a).localeCompare(categoryName(b), "es") || a.layer.nombre.localeCompare(b.layer.nombre, "es");
+      return categoryRank(a) - categoryRank(b)
+        || categoryName(a).localeCompare(categoryName(b), "es")
+        || a.layer.nombre.localeCompare(b.layer.nombre, "es");
     });
   }
 
@@ -353,7 +476,10 @@
     const pending = layers.filter(item => ["pendiente", "bloqueada", "error"].includes(item.result.state)).length;
     const notApplicable = layers.filter(item => ["sin_elementos", "no_aplica", "proceso"].includes(item.result.state)).length;
     const ipt = iptSource().find(row => normalize(row.comuna) === normalize(commune.comuna)
-      && (!commune.region || normalize(row.region) === normalize(commune.region)));
+      && (!commune.region
+        || normalize(row.region) === normalize(commune.region)
+        || normalize(row.region).includes(normalize(commune.region))
+        || normalize(commune.region).includes(normalize(row.region))));
     return { layers: layers.length, confirmed, pending, notApplicable, ipt: ipt?.instrumentos?.length || 0 };
   }
 
@@ -405,7 +531,7 @@
     const types = [...ipt.latest.keys()].sort((a, b) => a.localeCompare(b, "es"));
     $("capasMetricIpt").textContent = ipt.instruments.length;
     $("capasMetricIptTypes").textContent = types.length ? types.join(" · ") : "Sin registros";
-    const metrics = territorial.filter(item => normalize(item.layer.nombre) !== normalize("Planes Reguladores Comunales"));
+    const metrics = territorial.filter(item => !item.layer._ipt);
     $("capasMetricCovered").textContent = metrics.filter(item => item.result.state === "confirmada").length;
     $("capasMetricPending").textContent = metrics.filter(item => ["bloqueada", "pendiente", "error"].includes(item.result.state)).length;
     $("capasMetricNotApplicable").textContent = metrics.filter(item => ["sin_elementos", "no_aplica", "proceso"].includes(item.result.state)).length;
@@ -429,21 +555,6 @@
     $("capasCrossBannerText").textContent = `${summary.motivo_cero || execution.motivo || "Falta materializar los archivos espaciales."} Hay ${located} fuentes externas localizadas, pero “fuente localizada” todavía no significa cobertura confirmada: falta descarga, control de versión, geometría, CRS y cruce comunal.`;
   }
 
-  function renderCandidates() {
-    const rows = externalSource().adicionales || [];
-    const host = $("capasCandidateGrid");
-    if (!host) return;
-    host.innerHTML = rows.map(item => `
-      <article class="capas-candidate-card">
-        <div><span class="capas-candidate-priority ${escape(item.prioridad)}">Prioridad ${escape(item.prioridad)}</span><span class="capas-candidate-level">${escape(item.nivel)}</span></div>
-        <h4>${escape(item.nombre)}</h4>
-        <p>${escape(item.valor)}</p>
-        <dl><div><dt>Fuente</dt><dd>${escape(item.fuente)}</dd></div><div><dt>Cobertura</dt><dd>${escape(item.cobertura)}</dd></div><div><dt>Actualización</dt><dd>${escape(item.actualizacion)}</dd></div><div><dt>Adquisición</dt><dd>${item.automatizable ? "Automatizable" : "Revisión manual"}</dd></div></dl>
-        <a href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">Revisar fuente ↗</a>
-      </article>`).join("");
-    $("capasCandidateCount").textContent = `${rows.length} candidatas`;
-  }
-
   function render() {
     const commune = selectedCommune();
     state.commune = commune.comuna;
@@ -454,7 +565,6 @@
     renderMetrics(ipt, territorial);
     renderRegions();
     renderCrossBanner();
-    renderCandidates();
   }
 
   function bind() {
@@ -478,7 +588,7 @@
     populateCommunes();
     const categoryFilter = $("capasCategoryFilter");
     if (categoryFilter && categoryFilter.options.length === 1) {
-      [...new Set(catalogLayers().flatMap(layer => layer.categorias || []))]
+      [...new Set(territorialLayers().flatMap(layer => layer.categorias || []))]
         .sort((a, b) => a.localeCompare(b, "es"))
         .forEach(category => categoryFilter.insertAdjacentHTML("beforeend", `<option value="${escape(category)}">${escape(category)}</option>`));
     }

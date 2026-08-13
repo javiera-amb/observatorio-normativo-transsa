@@ -286,10 +286,12 @@ button.priority-card:hover {
   .module-nav {
     order: 3;
     width: 100%;
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .module-tab {
-    flex: 0 0 auto;
+    flex: 1 1 calc(50% - 6px);
   }
 
   .intro-copy,
@@ -309,3 +311,20 @@ button.priority-card:hover {
     padding: 22px;
   }
 }
+
+/* Portada sintética: resume las cuatro áreas sin repetir una segunda página
+   completa antes del contenido operativo. */
+.tui-overview{display:block;margin:22px auto 0;padding:22px 26px;border:1px solid var(--line);border-radius:20px;background:#fff}
+.tui-overview-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,.8fr);gap:24px;align-items:end}
+.tui-overview-heading h1{max-width:740px;margin:5px 0 0;color:var(--transsa-navy);font-size:clamp(1.55rem,3vw,2.35rem);line-height:1.04}
+.tui-overview .home-search{margin:0;padding:8px;border:1px solid #dedfe8;border-radius:13px;background:#f7f8fa}
+.tui-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
+.tui-overview-grid button{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;min-width:0;padding:13px;border:1px solid #e0e2e9;border-radius:13px;background:#fafbfc;color:var(--transsa-navy);font:inherit;text-align:left;cursor:pointer}
+.tui-overview-grid button:hover{border-color:#bbbdfd;background:#f7f7ff}
+.tui-overview-grid button>span{grid-row:1/3;display:inline-flex;width:29px;height:29px;align-items:center;justify-content:center;border-radius:9px;background:var(--transsa-blue);color:#fff;font-size:.62rem;font-weight:800}
+.tui-overview-grid strong{font-size:.72rem}.tui-overview-grid small{margin-top:3px;color:var(--muted);font-size:.59rem;line-height:1.35}
+.module-panel{padding-top:24px}
+.news-integrated-section{margin-top:24px;padding-top:24px;border-top:1px solid var(--line)}
+.daily-feature{margin-bottom:24px}.daily-feature .latest-card{padding:22px;border-radius:18px}.latest-label{margin-bottom:12px}.latest-card h3{font-size:1.15rem}.latest-meta{margin:14px 0}.reports-section{padding-top:30px}.report-grid{grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}.report-card{min-height:245px;padding:18px}.report-card h3{margin:14px 0 7px;font-size:1rem}.card-summary{font-size:.8rem;line-height:1.45}.metrics{gap:10px}.metric-card{padding:16px 18px}
+@media(max-width:1080px){.tui-overview-heading{grid-template-columns:1fr}.tui-overview-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.tui-overview{padding:17px}.tui-overview-grid{grid-template-columns:1fr}.tui-overview-heading h1{font-size:1.65rem}}
