@@ -53,10 +53,25 @@ huellas y resultados de QA; los GeoPackage permanecen en OneDrive.
 3. Ejecutar `python scripts/sincronizar_tui_local.py`.
 
 El proceso crea la estructura por categoría en `FUENTES_TUI`, indexa los PRC
-con nombres como `IPT_00_PRC_NombreComuna_Enviado.gpkg` y ejecuta el cruce
+con nombres como `IPT_00_PRC_NombreComuna_TUI_V2_Actualizado.gpkg` y ejecuta el cruce
 capa × comuna cuando el límite comunal está disponible. El sufijo del archivo
 se usa como señal inicial; el estado operativo compartido sigue versionado por
 la plataforma.
+
+## Estándar PRC TUI V2
+
+Los 45 PRC enviados en la carga inicial se conservan como antecedente V1, pero
+no se consideran una base geométrica válida. Deben reconstruirse porque su
+zonificación fue subdividida mediante intersecciones con capas de riesgo y la
+tabla normativa no quedó incorporada en el GeoPackage.
+
+El nuevo estándar está documentado en `config/estandar_prc_tui_v2.json`:
+
+- la zonificación conserva la geometría normativa base;
+- inundación y otras amenazas quedan como capas independientes;
+- la identificación de zona y los usos viven dentro del GeoPackage;
+- `TUI_V2` forma parte del nombre del archivo;
+- el control estructural no reemplaza el QA normativo de la plataforma.
 
 La capa comunal maestra se busca exclusivamente dentro de:
 

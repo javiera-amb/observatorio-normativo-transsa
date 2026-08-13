@@ -22,7 +22,7 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260812-paneles-1">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260813-prc-tui-v2">
   <link rel="stylesheet" href="capas-territoriales.css?v=20260812-responsive-2">
 </head>
 <body>
@@ -585,8 +585,8 @@
       <section class="seguimiento-interpretation">
         <div><span class="seguimiento-dot pending"></span><strong>Pendiente</strong><p>El equipo aún no comienza o no ha informado avance.</p></div>
         <div><span class="seguimiento-dot development"></span><strong>En desarrollo</strong><p>La cartografía está siendo construida, corregida o consolidada.</p></div>
-        <div><span class="seguimiento-dot ready"></span><strong>Actualizado</strong><p>Tabla de usos homologada y archivo listo para enviar a Propiteq.</p></div>
-        <div><span class="seguimiento-dot platform"></span><strong>Enviado</strong><p>La producción sale del equipo y Propiteq queda a cargo de cargarla al visor.</p></div>
+        <div><span class="seguimiento-dot ready"></span><strong>Actualizado</strong><p>La versión TUI V2 tiene geometría base, atributos incorporados y está lista para enviar a Propiteq.</p></div>
+        <div><span class="seguimiento-dot platform"></span><strong>Enviado</strong><p>La versión TUI V2 sale del equipo y Propiteq queda a cargo de cargarla al visor.</p></div>
       </section>
       <section class="capas-audit-banner seguimiento-definitions">
         <h3>Cómo leer “cambios / controles” y “último QA”</h3>
@@ -623,18 +623,24 @@
 
         <section class="seguimiento-workflow-panel" data-internal-scope="equipo">
           <div><p class="eyebrow">FLUJO DE ACTUALIZACIÓN</p><h3>Qué ocurre cuando se sube un PRC consolidado</h3><p>Subir el archivo inicia la revisión; no cambia por sí solo el estado de producción ni aprueba el QA.</p></div>
-          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso</strong><small>Se guarda el GPKG en OneDrive con la convención IPT_00_PRC_Comuna_Estado.</small></li><li><span>2</span><strong>Detección</strong><small>El sincronizador publica ruta relativa, fecha, huella y estructura del archivo.</small></li><li><span>3</span><strong>Comparación</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma comprueba las correcciones automatizables; el resto queda pendiente para Javiera.</small></li><li><span>5</span><strong>Envío</strong><small>El equipo marca “enviado”; Propiteq queda a cargo de cargar la versión al visor.</small></li></ol>
+          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso TUI V2</strong><small>Se guarda `IPT_00_PRC_Comuna_TUI_V2_Estado.gpkg` en OneDrive.</small></li><li><span>2</span><strong>Control estructural</strong><small>Se comprueban CRS, geometrías y atributos incorporados dentro del GeoPackage.</small></li><li><span>3</span><strong>Comparación normativa</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores sin recortar la zonificación con riesgos.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma comprueba las correcciones automatizables; el resto queda pendiente para Javiera.</small></li><li><span>5</span><strong>Envío</strong><small>Solo una TUI V2 sin bloqueos puede marcarse “enviada” para la carga de Propiteq.</small></li></ol>
+        </section>
+
+        <section class="seguimiento-v2-alert" data-internal-scope="equipo,javiera">
+          <div><p class="eyebrow">ALERTA CRÍTICA · PRC HISTÓRICOS</p><h3>Las 45 versiones enviadas deben reconstruirse como TUI V2</h3><p>Las V1 se generaron intersectando la zonificación con capas de riesgo: sus polígonos representan fragmentos de esa intersección y no la geometría normativa base. Además, la información normativa quedó fuera de la tabla de atributos del GeoPackage.</p></div>
+          <ul><li><strong>No reutilizar la V1</strong><span>Se conserva solo como antecedente del envío histórico a Propiteq.</span></li><li><strong>Zonificación sin recortes</strong><span>Inundación y otros riesgos quedan como capas independientes.</span></li><li><strong>Atributos dentro del GPKG</strong><span>El Excel puede ser evidencia, pero no la tabla principal.</span></li></ul>
+          <button id="seguimientoLegacyV2Download" class="secondary-button" type="button">Descargar cola de reconstrucción</button>
         </section>
 
         <section class="seguimiento-legacy-panel" data-internal-scope="equipo,javiera">
-          <div><p class="eyebrow">INVENTARIO SIG · ONEDRIVE + GIT</p><h3><span id="seguimientoPrepublishedHeadline">Inventario pendiente de sincronización</span></h3><p>Los GeoPackage permanecen en OneDrive. Git conserva el estado operativo, la ruta relativa, la huella del archivo y el QA. “Enviado” significa que la siguiente carga corresponde a Propiteq, no que el visor ya lo muestre.</p></div>
-          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">0</strong><small>PRC enviados en la carga inicial</small></span><span><strong id="seguimientoPrepublishedQa">0</strong><small>con revisión Javiera pendiente</small></span><span><strong id="seguimientoPropiteqSent">0</strong><small>con estado enviado</small></span><span><strong id="seguimientoInventoryDeclared">0</strong><small>carpetas SIG indexadas</small></span><span><strong id="seguimientoDirectCount">0</strong><small>candidatos a actualización directa</small></span></div>
+          <div><p class="eyebrow">INVENTARIO SIG · ONEDRIVE + GIT</p><h3><span id="seguimientoPrepublishedHeadline">Inventario pendiente de sincronización</span></h3><p>El envío V1 se conserva como historia de publicación. El estado operativo mostrado por la plataforma corresponde ahora a la versión TUI V2 que debe construirse, validarse y reemplazarla.</p></div>
+          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">0</strong><small>V1 enviadas históricamente</small></span><span><strong id="seguimientoLegacyV2Required">0</strong><small>requieren reconstrucción V2</small></span><span><strong id="seguimientoTuiV2Detected">0</strong><small>archivos TUI V2 detectados</small></span><span><strong id="seguimientoTuiV2StructureOk">0</strong><small>V2 con estructura técnica correcta</small></span><span><strong id="seguimientoInventoryDeclared">0</strong><small>carpetas SIG indexadas</small></span></div>
           <div class="seguimiento-drive-row"><span>Archivos SIG</span><a id="seguimientoDriveLink" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Abrir inventario versionado</a><small id="seguimientoDriveStatus">Ejecuta la sincronización local para indexar los archivos de OneDrive.</small></div>
         </section>
 
         <section class="seguimiento-direct-panel" data-internal-scope="equipo,javiera">
-          <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>La base identifica estos casos como candidatos para pasar directamente a producción. Antes de marcar “Actualizado” hay que homologar la columna de usos al lenguaje Transsa.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
-          <div class="seguimiento-direct-note">Criterio automático: PRC identificado + archivo vinculado + apto preliminarmente para visor + 0 actos posteriores detectados. No es un QA aprobado; es una cola priorizada de homologación. Pemuco y Pinto quedan fuera porque tienen archivo, pero no un PRC identificado en la base.</div>
+          <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>Estos casos pueden evitar una comparación de actos posteriores, pero igualmente deben generarse con el estándar TUI V2 y pasar el control estructural.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
+          <div class="seguimiento-direct-note">La cola excluye automáticamente las 45 V1 observadas. “Sin cambios posteriores” no significa QA aprobado: todavía exige zonificación base, atributos dentro del GeoPackage y homologación de usos.</div>
           <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>Revisión Javiera</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
         </section>
 
@@ -667,7 +673,7 @@
         </section>
 
         <section class="seguimiento-internal-legend" data-internal-scope="equipo,javiera">
-          <div><strong>Estado de producción</strong><p>Lo informa el equipo: pendiente, en desarrollo, actualizado o enviado. “Enviado” significa que Propiteq asume la carga al visor.</p></div>
+          <div><strong>Estado de producción TUI V2</strong><p>Lo informa el equipo: pendiente, en desarrollo, actualizado o enviado. Una V1 enviada históricamente no cuenta como V2 enviada.</p></div>
           <div><strong>Revisión Javiera</strong><p>Control interno que realiza Javiera cuando la plataforma no puede comprobar una condición o requiere interpretación. No se muestra en la vista pública.</p></div>
           <div><strong>QA automático de la plataforma</strong><p>Comparación que ejecuta esta plataforma entre el PRC actualizado y las correcciones detectadas. Es el único QA mostrado en la vista pública: aprobado, con diferencias o pendiente de revisión de Javiera.</p></div>
           <div><strong>Etapa técnica</strong><p>Indica dónde está el trabajo: fuentes, comparación normativa, actualización SIG, QA o publicación.</p></div>
@@ -910,15 +916,15 @@
   <script src="data/vigencia_cartografica.js"></script>
   <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
   <script src="data/avance_bases_inicial.js?v=20260813-importacion-1"></script>
-  <script src="data/inventario_prc_onedrive.js?v=20260813-inventario-1"></script>
+  <script src="data/inventario_prc_onedrive.js?v=20260813-inventario-v2"></script>
   <script src="data/estado_equipo_versionado.js?v=20260813-equipo-1"></script>
-  <script src="data/estado_operativo_datos.js?v=20260813-estados-3"></script>
-  <script src="seguimiento-consolidado.js?v=20260813-onedrive-2"></script>
+  <script src="data/estado_operativo_datos.js?v=20260813-estados-v4"></script>
+  <script src="seguimiento-consolidado.js?v=20260813-prc-tui-v2"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
   <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
   <script src="data/fuentes_capas_externas.js?v=20260811-fuentes-1"></script>
-  <script src="capas-territoriales.js?v=20260813-estados-3"></script>
+  <script src="capas-territoriales.js?v=20260813-prc-tui-v2"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

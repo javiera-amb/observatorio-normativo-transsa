@@ -1,7 +1,7 @@
 window.ESTADO_OPERATIVO_DATOS = {
   corte: "2026-08-13",
   destino_publicacion: "Transsa / Propiteq",
-  criterio: "El equipo informa pendiente, en desarrollo, actualizado o enviado. La plataforma compara el PRC consolidado con las correcciones detectadas y calcula el QA automático; lo que no pueda comprobarse queda pendiente de revisión para Javiera.",
+  criterio: "El equipo informa pendiente, en desarrollo, actualizado o enviado para la versión TUI V2. Las 45 V1 enviadas se conservan como historia, pero quedan bloqueadas para reconstrucción. La plataforma compara el PRC consolidado con las correcciones detectadas y calcula el QA automático; lo que no pueda comprobarse queda pendiente de revisión para Javiera.",
   valores_permitidos: {
     estado_produccion: ["pendiente", "en_desarrollo", "actualizado", "enviado"],
     qa_plataforma: ["pendiente", "observaciones", "aprobado"],
@@ -21,7 +21,7 @@ window.ESTADO_OPERATIVO_DATOS = {
     estados_compartidos: "Git / datos versionados de la plataforma",
     nota: "La web publica rutas relativas, huellas y resultados; nunca la ruta C: del usuario ni los binarios SIG."
   },
-  criterio_produccion_directa: "PRC identificado, archivo vinculado, sin actos posteriores detectados y apto preliminarmente para visor. Antes de marcar actualizado se debe homologar la columna de usos al lenguaje Transsa.",
+  criterio_produccion_directa: "PRC identificado, archivo vinculado, sin actos posteriores detectados y apto preliminarmente para visor. Antes de marcar actualizado debe existir una TUI V2 con zonificación sin intersecciones de riesgo, atributos incorporados y usos homologados.",
   // Clave: "Región|Comuna". Estas entradas prevalecen sobre la carga inicial
   // del Excel y sobre el estado detectado desde el nombre del archivo.
   comunas: {},

@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "codigo": "TUI_V2",
+  "nombre": "Estándar PRC TUI versión 2",
+  "convencion_archivo": "IPT_00_PRC_NombreComuna_TUI_V2_Estado.gpkg",
+  "reglas": {
+    "geometria_zonificacion": "La capa principal conserva la geometría normativa de cada zona. No se subdivide ni reemplaza mediante intersecciones con inundación, tsunami, remoción en masa u otras amenazas.",
+    "capas_riesgo": "Las zonas de riesgo se almacenan como capas independientes y nunca como geometría de la zonificación base.",
+    "atributos": "La tabla normativa y la homologación de usos se guardan dentro del GeoPackage. Un Excel puede conservarse como evidencia, pero no reemplaza la tabla de atributos.",
+    "qa": "La validez estructural del archivo no aprueba por sí sola el QA normativo. La plataforma debe comparar actos, geometría, atributos y controles pendientes."
+  },
+  "campos_zona_candidatos": ["zona", "zonificacion", "codigo_zona", "cod_zona", "id_zona", "subzona"],
+  "campos_uso_candidatos": ["uso", "usos", "destino", "actividad"],
+  "tokens_riesgo": ["riesgo", "inundacion", "tsunami", "remocion", "volcan", "amenaza"],
+  "minimo_atributos_no_geometricos": 2
+}

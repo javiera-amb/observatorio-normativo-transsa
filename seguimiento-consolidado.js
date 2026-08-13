@@ -72,7 +72,8 @@
   const initialOverride = row => {
     const prc = initialRecord(row).prc || {};
     return {
-      ...(prc.estado_produccion ? { estado_produccion: prc.estado_produccion } : {}),
+      ...(prc.estado_produccion && prc.estado_produccion !== "enviado" ? { estado_produccion: prc.estado_produccion } : {}),
+      ...(prc.estado_produccion === "enviado" ? { envio_historico_v1: true } : {}),
       ...(prc.qa_revision_javiera ? { qa_revision_javiera: prc.qa_revision_javiera } : {}),
       ...(prc.responsable ? { responsable: prc.responsable } : {}),
       ...(prc.alerta_sin_modificaciones ? { alerta_sin_modificaciones: prc.alerta_sin_modificaciones } : {}),
@@ -81,8 +82,9 @@
   const inventoryOverride = row => {
     const record = inventoryRecord(row);
     return {
-      ...(record.estado_detectado ? { estado_produccion: record.estado_detectado } : {}),
+      ...(record.estado_detectado && record.modelo_detectado === "tui_v2" ? { estado_produccion: record.estado_detectado } : {}),
       ...(record.ruta_relativa ? { evidencia: record.ruta_relativa } : {}),
+      ...(record.modelo_detectado ? { modelo_prc: record.modelo_detectado } : {}),
     };
   };
   const localOverride = row => localChanges[rowKey(row)] || {};
@@ -106,19 +108,25 @@
     visible: "enviado",
     observado: "en_desarrollo",
   }[value] || value || "pendiente");
-  const isPrepublished = row => normalizeProductionState(
-    localOverride(row).estado_produccion
-      || operationalData().comunas?.[rowKey(row)]?.estado_produccion
-      || versionedTeamData().comunas?.[rowKey(row)]?.estado_produccion
-      || inventoryRecord(row).estado_detectado
-      || initialRecord(row).prc?.estado_produccion
-  ) === "enviado";
+  const historicalV1Sent = row => normalizeProductionState(initialRecord(row).prc?.estado_produccion) === "enviado";
+  const inventoryIsTuiV2 = row => inventoryRecord(row).modelo_detectado === "tui_v2";
+  const inventoryV2StructureOk = row => inventoryIsTuiV2(row)
+    && inventoryRecord(row).qa_archivo?.estandar_tui_v2?.cumple_estructura === true;
+  const requiresV2 = row => historicalV1Sent(row) && !inventoryIsTuiV2(row);
+  const isPrepublished = row => historicalV1Sent(row);
   const productionState = row => {
     const override = mergedOverride(row);
-    return normalizeProductionState(override.estado_produccion || (isPrepublished(row) ? "enviado" : "pendiente"));
+    const reported = normalizeProductionState(override.estado_produccion || "pendiente");
+    if (requiresV2(row)) return reported === "en_desarrollo" ? "en_desarrollo" : "pendiente";
+    if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row) && ["actualizado", "enviado"].includes(reported)) {
+      return "en_desarrollo";
+    }
+    return reported;
   };
   const qaPlatformState = row => {
     const override = mergedOverride(row);
+    if (requiresV2(row)) return "observaciones";
+    if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row)) return "observaciones";
     return override.qa_plataforma || "pendiente";
   };
   const qaManualState = row => {
@@ -131,13 +139,23 @@
     && row.archivo_recomendado
     && row.apto_para_visor === "SI"
     && String(row.estado_fuente || "").includes("sin cambios posteriores detectados")
+    && !requiresV2(row)
   );
   const directProductionCandidates = () => data().comunas.filter(isDirectProductionCandidate);
-  const publicationStatus = row => ({
-    state: productionState(row),
-    date: mergedOverride(row).fecha_estado || "",
-    note: mergedOverride(row).nota_propiteq || "El envío deja la carga posterior a cargo de Propiteq.",
-  });
+  const legacyV2Queue = () => data().comunas.filter(requiresV2);
+  const publicationStatus = row => {
+    const production = productionState(row);
+    const legacy = historicalV1Sent(row);
+    return {
+      state: production === "enviado" ? "enviado" : legacy ? "observado" : production,
+      date: mergedOverride(row).fecha_estado || "",
+      note: production === "enviado"
+        ? (mergedOverride(row).nota_propiteq || "La versión TUI V2 fue enviada y su carga queda a cargo de Propiteq.")
+        : legacy
+          ? "Existe una V1 enviada a Propiteq, pero debe reemplazarse por una reconstrucción TUI V2."
+          : "La versión vigente todavía permanece en manos del equipo.",
+    };
+  };
 
   const consumptionLabels = {
     disponible: "Disponible",
@@ -165,6 +183,7 @@
     en_desarrollo: "En preparación",
     actualizado: "Listo para enviar",
     enviado: "A cargo de Propiteq",
+    observado: "V1 enviada · reemplazo pendiente",
   };
 
   const qaPlatformLabels = {
@@ -182,6 +201,11 @@
   const qaPlatformNote = row => {
     const operational = operationalStatus(row);
     const override = mergedOverride(row);
+    if (requiresV2(row)) return "QA bloqueado: la V1 usa geometrías intersectadas con riesgos y no contiene la tabla normativa completa dentro del GeoPackage.";
+    if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row)) {
+      const bloqueos = inventoryRecord(row).qa_archivo?.estandar_tui_v2?.bloqueos || [];
+      return bloqueos.join(" ") || "El archivo TUI V2 no cumple todavía los controles estructurales.";
+    }
     if (override.qa_plataforma_motivo) return override.qa_plataforma_motivo;
     if (operational.qa === "pendiente" && ["actualizado", "enviado"].includes(operational.production)) {
       return "La plataforma no puede comprobar este control; revisión de Javiera requerida.";
@@ -214,8 +238,10 @@
     const hasCartography = Boolean(inventory.ruta_relativa || row.archivo_recomendado || row.capa_recomendada);
     const qa = qaPlatformState(row);
     const production = productionState(row);
+    const legacy = historicalV1Sent(row);
+    const rebuildV2 = requiresV2(row);
     return {
-      cartography: hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
+      cartography: rebuildV2 ? "observada" : hasCartography ? "encontrada" : row.estado_auditoria === "sin_cartografia" ? "no_encontrada" : "no_verificada",
       production,
       qa,
       qaManual: qaManualState(row),
@@ -223,12 +249,16 @@
       qaDate: override.fecha_qa_plataforma || "",
       responsible: override.responsable || "Sin responsable registrado",
       evidence: override.evidencia || inventory.ruta_relativa || "",
-      note: override.nota || (production === "enviado"
-        ? "Enviado a Propiteq; la carga al visor queda fuera del control del equipo."
-        : prepublished ? "PRC incluido en el inventario histórico enviado a Propiteq; QA automático pendiente." : ""),
+      note: rebuildV2
+        ? "V1 enviada históricamente; no es base válida para nuevas cargas. Reconstrucción TUI V2 obligatoria."
+        : override.nota || (production === "enviado" ? "TUI V2 enviada a Propiteq." : ""),
       publication,
       prepublished,
-      inconsistency: ["actualizado", "enviado"].includes(production) && qa === "observaciones",
+      legacyV1: legacy,
+      requiresV2: rebuildV2,
+      model: inventory.modelo_detectado || (legacy ? "legado_v1" : "sin_clasificar"),
+      v2StructureOk: inventoryV2StructureOk(row),
+      inconsistency: rebuildV2 || (["actualizado", "enviado"].includes(production) && qa === "observaciones"),
     };
   }
 
@@ -243,7 +273,8 @@
     const acts = Number(row.actos_posteriores || 0);
     let stage = internal.etapa;
     if (!stage) {
-      if (["actualizado", "enviado"].includes(operational.production)) stage = "publicacion";
+      if (operational.requiresV2) stage = "actualizacion_sig";
+      else if (["actualizado", "enviado"].includes(operational.production)) stage = "publicacion";
       else if (operational.production === "en_desarrollo") stage = "actualizacion_sig";
       else if (operational.qaManual === "observaciones" || pendingControls !== null || row.estado_auditoria === "auditoria_avanzada") stage = "qa";
       else if (acts > 0 && hasCartography) stage = "comparacion";
@@ -252,18 +283,21 @@
     }
     let progress = Number.isFinite(internal.avance) ? Math.max(0, Math.min(100, internal.avance)) : null;
     if (progress === null && totalControls > 0 && pendingControls !== null) progress = Math.round(((totalControls - pendingControls) / totalControls) * 100);
-    if (progress === null) progress = ({ pendiente: 0, en_desarrollo: 50, actualizado: 90, enviado: 100 })[operational.production] || 0;
+    if (progress === null) progress = operational.requiresV2 && operational.production === "pendiente"
+      ? 0 : ({ pendiente: 0, en_desarrollo: 50, actualizado: 90, enviado: 100 })[operational.production] || 0;
     const responsible = override.responsable && !override.responsable.toLocaleLowerCase("es").includes("sin responsable")
       ? override.responsable : "Sin asignar";
     let blocking = internal.bloqueo || "";
-    if (!blocking && pendingControls > 0) blocking = `${pendingControls} controles de QA abiertos`;
+    if (!blocking && operational.requiresV2) blocking = "V1 observada: geometría recortada por riesgos y atributos fuera del GeoPackage";
+    else if (!blocking && pendingControls > 0) blocking = `${pendingControls} controles de QA abiertos`;
     else if (!blocking && acts > 0) blocking = `${acts} ${acts === 1 ? "acto posterior por comparar" : "actos posteriores por comparar"}`;
     else if (!blocking && !hasCartography) blocking = "Falta cartografía vinculada";
     else if (!blocking && !hasPrc) blocking = "Falta confirmar IPT vigente";
     else if (!blocking && operational.prepublished && acts === 0) blocking = "Revisar tabla de atributos y nomenclatura";
-    const priority = internal.prioridad || (pendingControls > 0 || acts >= 10 ? "critica" : acts >= 4 || !hasCartography || !hasPrc ? "alta" : acts > 0 ? "media" : "baja");
+    const priority = internal.prioridad || (operational.requiresV2 || pendingControls > 0 || acts >= 10 ? "critica" : acts >= 4 || !hasCartography || !hasPrc ? "alta" : acts > 0 ? "media" : "baja");
     let nextAction = internal.proxima_accion || "";
-    if (!nextAction && pendingControls > 0) nextAction = `Resolver y documentar ${pendingControls} controles antes de aprobar el QA.`;
+    if (!nextAction && operational.requiresV2) nextAction = "Reconstruir TUI V2 con zonificación normativa sin intersección de riesgos y tabla de atributos incorporada en el GeoPackage.";
+    else if (!nextAction && pendingControls > 0) nextAction = `Resolver y documentar ${pendingControls} controles antes de aprobar el QA.`;
     else if (!nextAction && acts > 0) nextAction = `Comparar ${acts} ${acts === 1 ? "acto posterior" : "actos posteriores"} con la cartografía SIG.`;
     else if (!nextAction && !hasPrc) nextAction = "Confirmar el instrumento vigente y su fuente oficial.";
     else if (!nextAction && !hasCartography) nextAction = "Localizar, descargar y vincular la cartografía vigente.";
@@ -354,6 +388,7 @@
   }
 
   function alertText(row) {
+    if (requiresV2(row)) return "Reconstrucción TUI V2 obligatoria";
     if (Number.isFinite(row.controles_pendientes)) {
       return `${row.controles_pendientes} de ${row.controles_totales} controles abiertos`;
     }
@@ -370,6 +405,7 @@
     const operational = operationalStatus(row);
     const cartographyLabels = {
       encontrada: "Archivo encontrado",
+      observada: "V1 observada",
       no_encontrada: "No encontrada",
       no_verificada: "No verificada",
     };
@@ -390,12 +426,12 @@
         <td data-label="Estado de producción">
           <span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span>
           <small>${escape(operational.statusDate ? `Actualizado: ${operational.statusDate}` : operational.responsible)}</small>
-          <small>${escape(operational.production === "enviado" ? "La carga al visor queda fuera del equipo." : operational.production === "actualizado" ? "Tabla homologada: listo para envío." : operational.production === "en_desarrollo" ? "Trabajo en curso." : "Aún no trabajado.")}</small>
+          <small>${escape(operational.requiresV2 ? "Producción TUI V2 aún pendiente; la V1 queda solo como antecedente." : operational.production === "enviado" ? "La carga al visor queda fuera del equipo." : operational.production === "actualizado" ? "Tabla homologada: listo para envío." : operational.production === "en_desarrollo" ? "Trabajo en curso." : "Aún no trabajado.")}</small>
           ${operational.inconsistency ? `<small class="seguimiento-state-warning">QA automático con diferencias.</small>` : ""}
         </td>
         <td data-label="Traspaso a Propiteq">
-          <span class="seguimiento-operational-pill publication ${escape(operational.production)}">${escape(publicationLabels[operational.production])}</span>
-          <small>${escape(operational.production === "enviado" ? (operational.publication.note || "Propiteq debe cargar la versión al visor.") : "La carga aún permanece en manos del equipo.")}</small>
+          <span class="seguimiento-operational-pill publication ${escape(operational.publication.state)}">${escape(publicationLabels[operational.publication.state])}</span>
+          <small>${escape(operational.publication.note)}</small>
         </td>
         <td data-label="QA automático de la plataforma">
           <span class="seguimiento-operational-pill qa ${escape(operational.qa)}">${escape(qaPlatformLabels[operational.qa])}</span>
@@ -417,7 +453,8 @@
   }
 
   function internalRowTemplate({ row, internal }) {
-    const alerts = Number.isFinite(row.controles_pendientes)
+    const alerts = internal.requiresV2 ? "Reconstruir TUI V2"
+      : Number.isFinite(row.controles_pendientes)
       ? `${row.controles_pendientes} de ${row.controles_totales} controles abiertos`
       : row.actos_posteriores ? `${row.actos_posteriores} ${row.actos_posteriores === 1 ? "acto posterior" : "actos posteriores"}` : "Sin alertas normativas abiertas";
     const statusControl = state.internalView === "equipo"
@@ -453,13 +490,15 @@
     $("seguimientoInternalBlocked").textContent = rows.filter(item => item.blocking).length;
     $("seguimientoInternalApproved").textContent = rows.filter(item => item.qa === "aprobado").length;
     const prepublished = rows.filter(item => item.prepublished);
+    const legacyV2 = rows.filter(item => item.requiresV2);
+    const v2Detected = rows.filter(item => item.model === "tui_v2");
     if ($("seguimientoPrepublishedCount")) $("seguimientoPrepublishedCount").textContent = prepublished.length;
-    if ($("seguimientoPrepublishedQa")) $("seguimientoPrepublishedQa").textContent = prepublished.filter(item => item.qa !== "aprobado").length;
-    if ($("seguimientoPrepublishedReady")) $("seguimientoPrepublishedReady").textContent = rows.filter(item => item.production === "actualizado").length;
-    if ($("seguimientoPropiteqSent")) $("seguimientoPropiteqSent").textContent = rows.filter(item => item.production === "enviado").length;
+    if ($("seguimientoLegacyV2Required")) $("seguimientoLegacyV2Required").textContent = legacyV2.length;
+    if ($("seguimientoTuiV2Detected")) $("seguimientoTuiV2Detected").textContent = v2Detected.length;
+    if ($("seguimientoTuiV2StructureOk")) $("seguimientoTuiV2StructureOk").textContent = v2Detected.filter(item => item.v2StructureOk).length;
     if ($("seguimientoInventoryDeclared")) $("seguimientoInventoryDeclared").textContent = prcInventory().resumen?.comunas || "—";
     if ($("seguimientoPrepublishedHeadline")) {
-      $("seguimientoPrepublishedHeadline").textContent = `${prepublished.length} PRC enviados en la carga inicial · ${prcInventory().resumen?.comunas || 0} carpetas SIG indexadas`;
+      $("seguimientoPrepublishedHeadline").textContent = `${prepublished.length} PRC V1 enviados históricamente · ${legacyV2.length} requieren reconstrucción TUI V2`;
     }
     if ($("seguimientoDirectCount")) $("seguimientoDirectCount").textContent = directProductionCandidates().length;
     const trackerLink = $("seguimientoDriveLink");
@@ -480,7 +519,7 @@
       <td data-label="Estado"><span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.production === "actualizado" ? "Homologación pendiente de registrar" : "Marcar actualizado después de homologar usos")}</small></td>
       <td data-label="Capa / archivo"><strong>${escape(row.capa_recomendada || "Sin capa")}</strong><small>${escape(row.archivo_recomendado)}</small></td>
       <td data-label="Revisión Javiera"><span class="seguimiento-operational-pill qa ${escape(qaManual)}">${escape(qaManualLabels[qaManual])}</span><small>Solo se usa cuando el control no puede automatizarse.</small></td>
-      <td data-label="Acción obligatoria"><strong>Homologar usos</strong><small>Comparar la columna de usos con el lenguaje Transsa, guardar evidencia y marcar “Actualizado”.</small></td>
+      <td data-label="Acción obligatoria"><strong>Crear TUI V2 y homologar usos</strong><small>Conservar la geometría normativa base, incorporar los atributos en el GPKG y homologar la columna de usos.</small></td>
     </tr>`;
   }
 
@@ -499,7 +538,7 @@
       const operational = operationalStatus(row);
       lines.push([
         row.region, row.comuna, row.prc_fecha, row.capa_recomendada, row.archivo_recomendado,
-        operational.production, qaManualState(row), "Homologar columna de usos y marcar actualizado"
+        operational.production, qaManualState(row), "Crear TUI V2 con geometría base; incorporar atributos y homologar usos"
       ].map(csvCell).join(";"));
     });
     const blob = new Blob(["\\ufeff" + lines.join("\\n")], { type: "text/csv;charset=utf-8" });
@@ -507,6 +546,29 @@
     const link = document.createElement("a");
     link.href = url;
     link.download = "PRC_candidatos_produccion_directa.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadLegacyV2Queue() {
+    const headers = ["region", "comuna", "estado_historico", "estado_tui_v2", "qa_plataforma", "accion_obligatoria", "convencion_archivo"];
+    const lines = [headers.join(";")];
+    legacyV2Queue().forEach(row => {
+      lines.push([
+        row.region,
+        row.comuna,
+        "V1 enviada a Propiteq",
+        productionLabels[productionState(row)],
+        qaPlatformLabels[qaPlatformState(row)],
+        "Reconstruir zonificación sin intersección de riesgos e incorporar tabla normativa en el GeoPackage",
+        `IPT_00_PRC_${row.comuna.replaceAll(" ", "")}_TUI_V2_Actualizado.gpkg`,
+      ].map(csvCell).join(";"));
+    });
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "PRC_V1_reconstruccion_TUI_V2.csv";
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -580,6 +642,17 @@
     if (!row || !Object.prototype.hasOwnProperty.call(productionLabels, value)) return;
     const current = localChanges[key] || {};
     const currentUser = $("seguimientoCurrentUser")?.value || current.responsable || "";
+    const note = $("seguimientoLocalSaveNote");
+    if (["actualizado", "enviado"].includes(value) && !inventoryV2StructureOk(row)) {
+      if (note) note.textContent = `${commune}: no puede marcarse “${productionLabels[value]}”. Primero debe existir un GeoPackage TUI V2 con geometría y atributos estructuralmente válidos.`;
+      renderInternalTable();
+      return;
+    }
+    if (value === "enviado" && qaPlatformState(row) !== "aprobado") {
+      if (note) note.textContent = `${commune}: no puede marcarse “Enviado” mientras el QA automático de la plataforma no esté aprobado.`;
+      renderInternalTable();
+      return;
+    }
     localChanges[key] = {
       ...current,
       estado_produccion: value,
@@ -587,7 +660,6 @@
       ...(currentUser ? { responsable: currentUser } : {}),
     };
     saveLocalChanges();
-    const note = $("seguimientoLocalSaveNote");
     if (note) note.textContent = `${commune}: estado “${productionLabels[value]}” guardado. Descarga los cambios para incorporarlos al registro compartido de la plataforma.`;
     renderMetrics();
     renderInternalMetrics();
@@ -686,6 +758,7 @@
       renderInternalTable();
     });
     $("seguimientoDownloadLocalChanges")?.addEventListener("click", downloadLocalChanges);
+    $("seguimientoLegacyV2Download")?.addEventListener("click", downloadLegacyV2Queue);
     $("seguimientoSearch")?.addEventListener("input", event => {
       state.search = event.target.value;
       renderTable();

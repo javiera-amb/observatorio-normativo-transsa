@@ -100,6 +100,7 @@
   };
   const cartographyLabels = {
     encontrada: "Encontrada",
+    observada_v1: "V1 observada · requiere TUI V2",
     otra_version: "De otra versión",
     no_verificada: "No verificada",
     no_acreditada: "No acreditada",
@@ -133,10 +134,13 @@
     const initial = recordByCommune(initialSource().comunas, commune).prc || {};
     const inventory = recordByCommune(prcInventory().comunas, commune);
     return {
-      ...(initial.estado_produccion ? { estado_produccion: initial.estado_produccion } : {}),
+      ...(initial.estado_produccion && initial.estado_produccion !== "enviado" ? { estado_produccion: initial.estado_produccion } : {}),
+      ...(initial.estado_produccion === "enviado" ? { envio_historico_v1: true } : {}),
       ...(initial.responsable ? { responsable: initial.responsable } : {}),
-      ...(inventory.estado_detectado ? { estado_produccion: inventory.estado_detectado } : {}),
+      ...(inventory.estado_detectado && inventory.modelo_detectado === "tui_v2" ? { estado_produccion: inventory.estado_detectado } : {}),
       ...(inventory.ruta_relativa ? { evidencia: inventory.ruta_relativa } : {}),
+      ...(inventory.modelo_detectado ? { modelo_prc: inventory.modelo_detectado } : {}),
+      ...(inventory.qa_archivo ? { qa_archivo: inventory.qa_archivo } : {}),
       ...(versionedTeamSource().comunas?.[`${commune.region}|${commune.comuna}`] || {}),
       ...(operationalSource().comunas?.[`${commune.region}|${commune.comuna}`] || {}),
     };
@@ -157,6 +161,8 @@
   }
 
   function inferredQa(row, override) {
+    if (override.envio_historico_v1 && override.modelo_prc !== "tui_v2") return "observaciones";
+    if (override.modelo_prc === "tui_v2" && override.qa_archivo?.estandar_tui_v2?.cumple_estructura !== true) return "observaciones";
     if (override.qa_plataforma) return override.qa_plataforma;
     if (Number.isFinite(row?.controles_totales) && Number.isFinite(row?.controles_pendientes)) {
       if (row.controles_pendientes === 0 && row.controles_totales > 0) return "aprobado";
@@ -171,7 +177,8 @@
     const isPrincipalPrc = instrument.tipo_ipt === "PRC" && isLatest;
     const hasReferencedCartography = Boolean(override.evidencia || row?.archivo_recomendado || row?.capa_recomendada);
     const sameVersion = Boolean(override.evidencia) || (hasReferencedCartography && row?.prc_fecha === instrument.fecha);
-    const cartography = sameVersion ? "encontrada" : hasReferencedCartography && instrument.tipo_ipt === "PRC" ? "otra_version" : "no_verificada";
+    const requiresV2 = isPrincipalPrc && override.envio_historico_v1 && override.modelo_prc !== "tui_v2";
+    const cartography = requiresV2 ? "observada_v1" : sameVersion ? "encontrada" : hasReferencedCartography && instrument.tipo_ipt === "PRC" ? "otra_version" : "no_verificada";
     const production = isPrincipalPrc ? override.estado_produccion || "pendiente" : "pendiente";
     const qa = isPrincipalPrc ? inferredQa(row, override) : "pendiente";
     const stateWarning = ["actualizado", "enviado", "listo", "en_plataforma"].includes(production) && qa !== "aprobado"
@@ -179,13 +186,17 @@
       : "";
     return {
       cartography,
-      cartographyDetail: sameVersion
-        ? [override.evidencia, row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ")
+      cartographyDetail: requiresV2
+        ? "La V1 fue enviada históricamente, pero su geometría fue subdividida por intersecciones de riesgo y no contiene la tabla normativa completa."
+        : sameVersion
+          ? [override.evidencia, row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ")
         : cartography === "otra_version" ? `El archivo registrado corresponde al PRC ${row.prc_fecha || "sin fecha"}.` : "No hay archivo o servicio vinculado a esta versión.",
       production,
-      productionDetail: `${isPrincipalPrc && override.fecha_estado ? `${override.fecha_estado} · ${override.responsable || "sin responsable"}` : "Estado pendiente de actualización por el equipo."}${stateWarning}`,
+      productionDetail: `${requiresV2 ? "Reconstrucción TUI V2 pendiente; la V1 queda solo como antecedente." : isPrincipalPrc && override.fecha_estado ? `${override.fecha_estado} · ${override.responsable || "sin responsable"}` : "Estado pendiente de actualización por el equipo."}${stateWarning}`,
       qa,
-      qaDetail: isPrincipalPrc && Number.isFinite(row?.controles_pendientes)
+      qaDetail: requiresV2
+        ? "QA bloqueado hasta reconstruir la zonificación base, separar riesgos e incorporar los atributos al GeoPackage."
+        : isPrincipalPrc && Number.isFinite(row?.controles_pendientes)
         ? `${row.controles_pendientes} de ${row.controles_totales} controles pendientes · último QA ${override.fecha_qa || row.ultima_revision || "sin fecha"}.`
         : isPrincipalPrc && override.fecha_qa ? `Cierre ${override.fecha_qa}.` : "Sin cierre de QA registrado para este instrumento.",
     };
