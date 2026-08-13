@@ -41,22 +41,14 @@
   }
 
   function insertNewsModule() {
-    if (document.getElementById("module-noticias")) return;
-
-    const mapTab = document.querySelector('[data-module="mapa"]');
-    const nav = document.querySelector(".module-nav");
-    const newsTab = document.createElement("button");
-    newsTab.className = "module-tab";
-    newsTab.dataset.module = "noticias";
-    newsTab.textContent = "Noticias";
-    nav?.insertBefore(newsTab, mapTab || null);
-
-    const mapModule = document.getElementById("module-mapa");
+    if (document.getElementById("newsIntegratedSection")) return;
+    const dailyModule = document.getElementById("module-diario");
+    if (!dailyModule) return;
     const section = document.createElement("section");
-    section.id = "module-noticias";
-    section.className = "module-panel";
+    section.id = "newsIntegratedSection";
+    section.className = "news-integrated-section";
     section.innerHTML = `
-      <div class="module-header">
+      <div class="section-heading">
         <div>
           <p class="eyebrow">INTELIGENCIA TERRITORIAL</p>
           <h2>Noticias consolidadas</h2>
@@ -83,12 +75,7 @@
         </div>
       </section>
     `;
-    mapModule?.parentNode?.insertBefore(section, mapModule);
-
-    newsTab.addEventListener("click", () => {
-      if (typeof switchModule === "function") switchModule("noticias");
-      renderNews();
-    });
+    dailyModule.appendChild(section);
 
     section.querySelectorAll("[data-news-scope]").forEach(button => {
       button.addEventListener("click", () => {

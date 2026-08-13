@@ -43,18 +43,29 @@ def main() -> int:
             comuna = (fila.get("comuna") or "").strip()
             responsable = (fila.get("responsable") or "").strip()
             produccion = (fila.get("estado_produccion") or "").strip()
+            prioridad_texto = (fila.get("prioridad_orden") or "").strip()
             fecha = (fila.get("fecha_estado") or "").strip()
             if not region or not comuna:
                 continue
-            if produccion not in ESTADOS:
+            if produccion and produccion not in ESTADOS:
                 raise SystemExit(f"Estado inválido para {comuna}: {produccion!r}")
             if responsable and responsable not in RESPONSABLES:
                 raise SystemExit(f"Responsable inválido para {comuna}: {responsable!r}")
             clave = f"{region}|{comuna}"
+            prioridad = None
+            if prioridad_texto:
+                try:
+                    prioridad = int(prioridad_texto)
+                except ValueError as error:
+                    raise SystemExit(f"Prioridad inválida para {comuna}: {prioridad_texto!r}") from error
+                if prioridad not in {1, 2, 3, 4, 5}:
+                    raise SystemExit(f"Prioridad fuera de rango para {comuna}: {prioridad}")
             registro = {
-                "estado_produccion": produccion,
+                **estado["comunas"].get(clave, {}),
+                **({"estado_produccion": produccion} if produccion else {}),
                 "fecha_estado": fecha or ahora[:10],
                 **({"responsable": responsable} if responsable else {}),
+                **({"prioridad_orden": prioridad} if prioridad is not None else {}),
             }
             estado["comunas"][clave] = registro
             estado["historial"].append({"clave": clave, **registro, "importado_en": ahora})

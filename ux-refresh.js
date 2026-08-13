@@ -202,11 +202,11 @@
 
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
-    const vigenciaRelease = "20260811-cobertura-comunal-4";
+    const vigenciaRelease = "20260813-correcciones-1";
 
     try {
-      await loadScript("data/noticias.js", "data-noticias");
-      await loadScript("tui-content.js", "tui-content");
+      await loadScript("data/noticias.js?v=20260813-noticias-1", "data-noticias");
+      await loadScript("tui-content.js?v=20260813-correcciones-1", "tui-content");
     } catch (error) {
       console.error("No se pudo cargar el módulo de noticias:", error);
     }

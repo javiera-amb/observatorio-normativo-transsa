@@ -435,62 +435,19 @@
   }
 
   function comparisonTemplate(comparison, item) {
-    const changes = Array.isArray(comparison.cambios) ? comparison.cambios : [];
-
-    return `
-      ${auditBlockersTemplate(comparison)}
+    const internal = new URLSearchParams(window.location.search).get("vista") === "equipo";
+    return `<div class="coquimbo-audit-package">
       ${frameworkTemplate(item, comparison)}
-      ${validationTemplate(comparison)}
-      ${sigWorkTemplate(comparison)}
-      <section class="detailed-comparison-section">
-        <div class="detailed-comparison-heading">
-          <div>
-            <h4>Cambios específicos del PRC 2019 → 2026</h4>
-            <p>Comparación por zona y parámetro, mostrando una sola vez el cambio y su impacto urbano.</p>
-          </div>
-          <span class="detailed-comparison-status">Revisión documental avanzada</span>
-        </div>
-        <p class="detailed-comparison-count">${changes.length} ${changes.length === 1 ? "cambio identificado" : "cambios identificados"}</p>
-        <div class="detailed-change-list">
-          ${changes.map(change => `
-            <article class="detailed-change-card">
-              <div class="detailed-change-title">
-                <span class="change-type-pill">${escape(typeLabel(change.tipo_cambio))}</span>
-                <strong>${escape(change.materia)}</strong>
-              </div>
-              ${Array.isArray(change.zonas) && change.zonas.length ? `
-                <div class="detailed-change-zones">
-                  ${change.zonas.map(zone => `<span>${escape(zone)}</span>`).join("")}
-                </div>
-              ` : ""}
-              <div class="before-after-grid">
-                <div class="before-after-box"><span>PRC 2019</span><p>${escape(change.antes)}</p></div>
-                <div class="before-after-box"><span>PRC 2026</span><p>${escape(change.despues)}</p></div>
-              </div>
-              <p class="detailed-impact"><strong>Impacto urbano:</strong> ${escape(change.impacto)}</p>
-              <details class="change-support-details">
-                <summary>Fuente y estado de revisión</summary>
-                <div class="change-support-body">
-                  <span class="change-sig-pill ${escape(change.estado_sig || "pendiente_revision")}">${escape(sigLabel(change.estado_sig))}</span>
-                  ${change.evidencia ? `<span>${escape(change.evidencia)}</span>` : ""}
-                  ${change.fuente ? `<a href="${escape(change.fuente)}" target="_blank" rel="noopener noreferrer">Abrir fuente →</a>` : ""}
-                </div>
-              </details>
-            </article>
-          `).join("")}
-        </div>
-        <details class="comparison-validation-details">
-          <summary>Alcance y validaciones pendientes</summary>
-          <p>Los cambios de catálogo y parámetros están documentados. La plataforma no asignará polígonos reemplazados ni superficies afectadas hasta comparar las láminas oficiales 2019 y 2026 y validar el resultado en SIG.</p>
-        </details>
-      </section>
-    `;
+      ${internal ? auditBlockersTemplate(comparison) : ""}
+      ${internal ? sigWorkTemplate(comparison) : ""}
+      ${!internal ? `<section class="audit-blockers-section"><div class="audit-alert-heading"><div><h4>SIG 2026 aún no validado</h4><p>La fuente vectorial fue localizada, pero la plataforma todavía debe cerrar los controles documentales, geométricos, de atributos y topología. La vista interna contiene las tareas técnicas y su responsable.</p></div></div></section>` : ""}
+    </div>`;
   }
 
   function addDetailedComparison() {
     const item = vigenciaInstruments().find(instrument => instrument.id === vigenciaState.selectedId);
     const detail = document.getElementById("vigenciaDetail");
-    if (!item || !detail || detail.querySelector(".detailed-comparison-section")) return;
+    if (!item || !detail || detail.querySelector(".coquimbo-audit-package")) return;
 
     const comparison = (item.comparaciones_versiones || [])
       .find(candidate => candidate.id === "coquimbo-prc-2019-2026" && Array.isArray(candidate.cambios) && candidate.cambios.length);
@@ -511,6 +468,9 @@
     } else {
       detail.insertAdjacentHTML("beforeend", comparisonTemplate(comparison, item));
     }
+    // Para Coquimbo, "Normativa aplicable y versiones" reemplaza la tarjeta
+    // genérica de planes vigentes; mantener ambas repetía la misma información.
+    planSection?.remove();
   }
 
   const originalRenderDetail = renderVigenciaDetail;
