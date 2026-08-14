@@ -48,6 +48,9 @@
       .supporting-detail-body > p { margin:0 0 12px; color:var(--muted); font-size:.75rem; line-height:1.45; }
       .compact-normative-timeline .timeline-content > h4 { margin-top:5px; }
       .compact-normative-timeline .timeline-type { margin-bottom:0; }
+      .timeline-source-links { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+      .timeline-source-links a { display:inline-flex; padding:5px 7px; border:1px solid #cfd3ff; border-radius:7px; background:#f5f5ff; color:var(--transsa-blue); font-size:.62rem; font-weight:700; text-decoration:none; }
+      .timeline-source-links a:hover { text-decoration:underline; }
       @media(max-width:620px){
         .version-comparison-head{display:block;}
         .comparison-statuses{justify-content:flex-start;margin-top:9px;}
@@ -72,6 +75,28 @@
     no_aplica: "No aplica a SIG",
     pendiente_revision: "SIG pendiente"
   }[status] || "SIG pendiente");
+
+  const isOfficialUrl = value => /^https?:\/\//i.test(String(value || "").trim());
+
+  function officialLinks(event) {
+    const links = [];
+    const documents = Array.isArray(event.documentos_oficiales) ? event.documentos_oficiales : [];
+
+    documents.forEach((document, index) => {
+      const url = typeof document === "string" ? document : document?.url;
+      if (!isOfficialUrl(url)) return;
+      const label = typeof document === "object"
+        ? (document.nombre || document.titulo || document.label)
+        : "";
+      links.push({ url, label: label || `Documento oficial ${index + 1}` });
+    });
+
+    if (isOfficialUrl(event.fuente) && !links.some(link => link.url === event.fuente)) {
+      links.push({ url: event.fuente, label: links.length ? "Registro oficial" : "Consultar registro oficial" });
+    }
+
+    return [...new Map(links.map(link => [link.url, link])).values()];
+  }
 
   function hasDetailedComparison(item) {
     return (item.comparaciones_versiones || []).some(comparison =>
@@ -181,13 +206,15 @@
         ${timeline.length ? timeline.map(event => {
           const eventClass = typeof timelineEventClass === "function" ? timelineEventClass(event) : "pendiente";
           const act = [event.tipo, event.numero].filter(Boolean).join(" · ");
+          const links = officialLinks(event);
           return `
             <article class="timeline-event ${escapeAttribute(eventClass)}">
               <div class="timeline-node"></div>
               <div class="timeline-content">
-                <div class="timeline-topline"><span>${escapeHtml(event.fecha || "Sin fecha")}</span></div>
+                <div class="timeline-topline"><span>${escapeHtml(/^\d{4}-\d{2}-\d{2}$/.test(String(event.fecha || "")) ? event.fecha : "Sin fecha informada")}</span></div>
                 <h4>${escapeHtml(event.titulo || event.tipo || "Acto")}</h4>
                 ${act ? `<p class="timeline-type">${escapeHtml(act)}</p>` : ""}
+                ${links.length ? `<div class="timeline-source-links">${links.map(link => `<a href="${escapeAttribute(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)} ↗</a>`).join("")}</div>` : ""}
               </div>
             </article>
           `;

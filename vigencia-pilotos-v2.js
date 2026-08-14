@@ -193,9 +193,13 @@
   }
 
   function timelineFromAct(act) {
+    const documents = [
+      ...(Array.isArray(act.documentos_oficiales) ? act.documentos_oficiales : []),
+      ...(Array.isArray(act.documentos) ? act.documentos : [])
+    ];
     return {
       id: act.id,
-      fecha: act.fecha || "Sin fecha",
+      fecha: validDate(act.fecha) ? act.fecha : "",
       tipo: act.tipo_acto || "Modificación",
       numero: act.evidencia || (act.codigos_origen_afectados?.length
         ? `Origen ${act.codigos_origen_afectados.join(", ")}`
@@ -205,6 +209,7 @@
       resumen: [act.fundamento_revision, act.impacto_urbano].filter(Boolean).join(" "),
       incorporacion: act.incorporacion_sig || "pendiente_revision",
       fuente: act.fuente_oficial || "",
+      documentos_oficiales: documents,
       zonas_afectadas: act.zonas_afectadas || [],
       clase_evento: "acto_posterior",
       confianza_vinculacion: act.confianza_vinculacion || ""
