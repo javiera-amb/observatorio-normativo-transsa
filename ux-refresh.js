@@ -202,7 +202,7 @@
 
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
-    const vigenciaRelease = "20260814-correcciones-3";
+    const vigenciaRelease = "20260814-correcciones-4";
 
     try {
       await loadScript("data/noticias.js?v=20260813-noticias-1", "data-noticias");
@@ -228,6 +228,7 @@
       await loadScript("vigencia-nacional-ui.js", "vigencia-nacional-ui");
       await loadScript(`vigencia-comparacion-detallada.js?v=${vigenciaRelease}`, "vigencia-comparacion-detallada");
       await loadScript(`vigencia-refundidos-fuentes.js?v=${vigenciaRelease}`, "vigencia-refundidos-fuentes");
+      await loadScript(`vigencia-simplificada.js?v=${vigenciaRelease}`, "vigencia-simplificada");
       if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
       console.error("No se pudo cargar la vista comunal de IPT:", error);
