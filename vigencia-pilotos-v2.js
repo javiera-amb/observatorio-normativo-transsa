@@ -216,6 +216,29 @@
     };
   }
 
+  function timelineFromComparison(comparison) {
+    const previous = comparison.instrumento_anterior || {};
+    const current = comparison.instrumento_nuevo || {};
+    return {
+      id: comparison.id,
+      fecha: validDate(current.fecha) ? current.fecha : "",
+      tipo: `Comparación ${comparison.tipo_ipt || "IPT"}`,
+      numero: previous.registro && current.registro
+        ? `Registros ${previous.registro} → ${current.registro}`
+        : "Comparación de versiones",
+      estado: comparison.estado_analisis === "validado"
+        ? "Cambios validados"
+        : "Pendiente de análisis documental",
+      titulo: `${previous.nombre || "Versión anterior"} → ${current.nombre || "Nueva versión"}`,
+      resumen: comparison.resumen_estrategico || "",
+      incorporacion: comparison.estado_sig || "pendiente_revision",
+      fuente: current.fuente || previous.fuente || "https://portalipt.minvu.cl/instrumentos",
+      clase_evento: "comparacion_versiones",
+      comparacion_id: comparison.id,
+      cambios: comparison.cambios || []
+    };
+  }
+
   function isCommunalAct(act) {
     const level = normalize(act.nivel_planificacion);
     const type = String(act.tipo_ipt || "").toUpperCase();
@@ -240,6 +263,9 @@
     const urbanLimits = plans
       .filter(plan => plan.tipo_ipt === "LU")
       .sort((left, right) => dateValue(right.fecha).localeCompare(dateValue(left.fecha)));
+    const higherScalePlans = plans
+      .filter(plan => ["PRI", "PRIN", "PRM", "PRDU"].includes(String(plan.tipo_ipt || "").toUpperCase()))
+      .sort((left, right) => dateValue(right.fecha).localeCompare(dateValue(left.fecha)));
     const communalActs = acts.filter(isCommunalAct);
 
     const prcBase = prcPlans[0] || null;
@@ -253,10 +279,17 @@
       versiones_prc: prcPlans,
       seccionales: sectionals,
       limites_urbanos: urbanLimits,
+      instrumentos_escala_superior: higherScalePlans,
       modificaciones_enmiendas: communalActs,
       cantidad_seccionales: sectionals.length,
       cantidad_actos_comunales: communalActs.length,
-      criterio_aplicacion: "El PRC constituye la base comunal. Cada plan seccional se mantiene como instrumento independiente y sustituye la normativa del PRC únicamente dentro de su polígono de aplicación. Las modificaciones y enmiendas alteran el marco consolidado según su acto y ámbito.",
+      producto_entrega: {
+        nombre: "Consolidado normativo comunal PRC + seccionales",
+        regla_prevalencia: "Dentro del polígono de un plan seccional prevalecen sus zonas y normas sobre las del PRC. Fuera de esos polígonos continúa aplicando el PRC base.",
+        instrumentos_incluidos: [prcBase, ...sectionals].filter(Boolean),
+        instrumentos_no_fusionados: higherScalePlans
+      },
+      criterio_aplicacion: "El PRC constituye la base comunal. Cada plan seccional integra el consolidado y sustituye las zonas y normas del PRC únicamente dentro de su polígono de aplicación. Los PRI, PRIN, PRM, PRDU y demás escalas superiores se mantienen separados: aportan contexto y condicionantes, pero no se fusionan ni se interpretan como reemplazos de la zonificación comunal.",
       estado_integracion_sig: (sectionals.length || communalActs.length) ? "pendiente_revision" : "no_aplica",
       resumen: prcBase
         ? `${prcBase.nombre} funciona como instrumento base comunal${sectionals.length ? ` y debe leerse junto con ${sectionals.length} ${sectionals.length === 1 ? "plan seccional" : "planes seccionales"} que reemplazan su normativa en sectores específicos` : ""}${communalActs.length ? `, además de ${communalActs.length} ${communalActs.length === 1 ? "acto posterior comunal" : "actos posteriores comunales"}` : ""}.`
@@ -292,8 +325,20 @@
 
     const baseTimeline = Array.isArray(item.linea_tiempo) ? item.linea_tiempo : [];
     const actIds = new Set(acts.map(act => act.id));
-    const cleanBase = baseTimeline.filter(event => !actIds.has(event.id) && event.clase_evento !== "acto_posterior");
-    item.linea_tiempo = [...cleanBase, ...acts.map(timelineFromAct)]
+    // La base histórica traía comparaciones mecánicas entre todos los planes de
+    // un mismo tipo. Se eliminan y reconstruyen solo desde las líneas normativas
+    // validadas por comparisonPairs. Así dos seccionales de sectores distintos
+    // nunca aparecen como si uno reemplazara al otro.
+    const cleanBase = baseTimeline.filter(event =>
+      !actIds.has(event.id) &&
+      event.clase_evento !== "acto_posterior" &&
+      event.clase_evento !== "comparacion_versiones"
+    );
+    item.linea_tiempo = [
+      ...cleanBase,
+      ...versionComparisons.map(timelineFromComparison),
+      ...acts.map(timelineFromAct)
+    ]
       .sort((left, right) => dateValue(left.fecha).localeCompare(dateValue(right.fecha)));
 
     const intercommunalPlans = (item.instrumentos || [])
@@ -315,7 +360,7 @@
         + consolidatedPrc.seccionales.filter(plan => plan.estado_integracion_sig === "pendiente_revision").length,
       resumen: strategicSource?.resumen_estrategico
         || `${consolidatedPrc.resumen} Se asociaron ${acts.length} actos históricos del Portal IPT. Los planes distintos se mantienen como instrumentos independientes; solo se comparan versiones que pertenecen a la misma línea normativa.`,
-      advertencia: "La consolidación es analítica y cartográfica: no elimina la identidad jurídica de los planes seccionales. Los vínculos por comuna y región son preliminares hasta confirmar el código de origen o revisar el expediente oficial."
+      advertencia: "El producto comunal consolida el PRC con todos los planes seccionales aplicables, conservando la identidad y el polígono de cada seccional. Los instrumentos de escala superior no se fusionan con esta geometría. Los vínculos por comuna y región son preliminares hasta confirmar el código de origen o revisar el expediente oficial."
     };
 
     item.resumen_alerta = `La ficha reúne ${item.cantidad_instrumentos || 0} instrumentos vigentes, ${versionComparisons.length} comparaciones de versiones y ${acts.length} actos históricos asociados. Falta validar vínculos documentales y comprobar su incorporación en SIG.`;

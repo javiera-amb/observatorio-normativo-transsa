@@ -37,6 +37,13 @@
       .normative-change-empty p { margin:7px 0 0; color:var(--muted); font-size:.75rem; line-height:1.5; }
       .normative-change-pending-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
       .normative-change-pending-list span { padding:5px 7px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); font-size:.64rem; }
+      .normative-consolidation-rule { margin:0 0 16px; padding:14px 15px; border-left:5px solid #2b7a5a; border-radius:0 12px 12px 0; background:#edf7f2; }
+      .normative-consolidation-rule strong { display:block; color:var(--transsa-navy); font-size:.8rem; }
+      .normative-consolidation-rule p { margin:5px 0 0; color:#315c4d; font-size:.72rem; line-height:1.5; }
+      .normative-framework-group + .normative-framework-group { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+      .normative-framework-group h5 { margin:0 0 9px; color:var(--transsa-navy); font-size:.76rem; }
+      .normative-framework-group > p { margin:-3px 0 10px; color:var(--muted); font-size:.69rem; line-height:1.45; }
+      .normative-role-card.sectional { border-left:4px solid #2c8aa8; background:#f1f8fb; }
       @media(max-width:980px){ .vigencia-workspace{grid-template-columns:1fr;} .vigencia-list-panel{position:static;} }
       @media(max-width:560px){ .compact-normative-timeline .timeline{grid-template-columns:1fr;} }
     `;
@@ -45,11 +52,11 @@
 
   function roleForPlan(plan, latestByType) {
     const type = String(plan?.tipo_ipt || "IPT").trim();
+    if (type === "PS") return "Integra el consolidado · reemplaza al PRC en su polígono";
     const isLatest = latestByType.get(type) === plan;
     if (!isLatest) return `Versión anterior de ${type} registrada`;
-    if (type === "PRC") return "Último PRC registrado";
-    if (type === "PS") return "Plan seccional aplicable en su ámbito";
-    if (["PRI", "PRM", "PRDU"].includes(type)) return "Normativa superior o intercomunal aplicable";
+    if (type === "PRC") return "PRC base del consolidado comunal";
+    if (["PRI", "PRIN", "PRM", "PRDU"].includes(type)) return "Escala superior · no reemplaza la zonificación del PRC";
     if (type === "LU") return "Límite urbano aplicable";
     return `Último ${type} registrado`;
   }
@@ -65,30 +72,57 @@
       if (!current || planDate(plan) > planDate(current)) latestByType.set(type, plan);
     });
 
-    plans.sort((a, b) => {
-      const aLatest = latestByType.get(String(a?.tipo_ipt || "IPT").trim()) === a ? 1 : 0;
-      const bLatest = latestByType.get(String(b?.tipo_ipt || "IPT").trim()) === b ? 1 : 0;
-      return bLatest - aLatest || planDate(b).localeCompare(planDate(a)) || String(a?.tipo_ipt || "").localeCompare(String(b?.tipo_ipt || ""), "es");
-    });
+    const currentPrc = latestByType.get("PRC") || null;
+    const sectionals = plans
+      .filter(plan => String(plan?.tipo_ipt || "").trim() === "PS")
+      .sort((a, b) => planDate(a).localeCompare(planDate(b)));
+    const historicPrc = plans
+      .filter(plan => String(plan?.tipo_ipt || "").trim() === "PRC" && plan !== currentPrc)
+      .sort((a, b) => planDate(b).localeCompare(planDate(a)));
+    const contextPlans = plans
+      .filter(plan => !["PRC", "PS"].includes(String(plan?.tipo_ipt || "").trim()))
+      .sort((a, b) => planDate(b).localeCompare(planDate(a)));
+
+    const card = (plan, cardClass) => {
+      const type = String(plan?.tipo_ipt || "IPT").trim();
+      return `
+        <article class="normative-role-card ${cardClass}">
+          <span>${escape(roleForPlan(plan, latestByType))}</span>
+          <strong>${escape(plan.nombre || type)}</strong>
+          <small>${escape([type, plan.fecha].filter(Boolean).join(" · "))}</small>
+        </article>
+      `;
+    };
 
     return `
       <section class="normative-framework-section normative-framework-general">
         <h4>Normativa aplicable y versiones</h4>
-        <p class="section-helper">Se ordenan los últimos instrumentos registrados y sus versiones anteriores. La condición definitiva de vigencia se confirma en la auditoría documental.</p>
-        <div class="normative-framework-grid">
-          ${plans.map(plan => {
-            const type = String(plan?.tipo_ipt || "IPT").trim();
-            const isLatest = latestByType.get(type) === plan;
-            const cardClass = isLatest && type === "PRC" ? "current" : isLatest ? "context" : "replaced";
-            return `
-              <article class="normative-role-card ${cardClass}">
-                <span>${escape(roleForPlan(plan, latestByType))}</span>
-                <strong>${escape(plan.nombre || type)}</strong>
-                <small>${escape([type, plan.fecha].filter(Boolean).join(" · "))}</small>
-              </article>
-            `;
-          }).join("")}
+        <p class="section-helper">Se separa el producto normativo comunal de los instrumentos históricos, superiores o complementarios.</p>
+        <div class="normative-consolidation-rule">
+          <strong>Consolidado comunal a entregar: PRC + ${sectionals.length} ${sectionals.length === 1 ? "plan seccional" : "planes seccionales"}</strong>
+          <p>Dentro de cada polígono seccional prevalecen sus zonas y normas; fuera de esos polígonos continúa aplicando el PRC base. Los seccionales de sectores distintos se superponen al PRC, pero no se reemplazan entre sí.</p>
         </div>
+        <div class="normative-framework-group">
+          <h5>Consolidado normativo comunal</h5>
+          <p>Componentes que deben entregarse juntos, conservando la geometría y trazabilidad de cada instrumento.</p>
+          <div class="normative-framework-grid">
+            ${currentPrc ? card(currentPrc, "current") : ""}
+            ${sectionals.map(plan => card(plan, "sectional")).join("")}
+          </div>
+        </div>
+        ${historicPrc.length ? `
+          <div class="normative-framework-group">
+            <h5>Versiones históricas del PRC</h5>
+            <div class="normative-framework-grid">${historicPrc.map(plan => card(plan, "replaced")).join("")}</div>
+          </div>
+        ` : ""}
+        ${contextPlans.length ? `
+          <div class="normative-framework-group">
+            <h5>Escalas superiores y otros instrumentos</h5>
+            <p>Se consultan como contexto o condicionantes, pero no se fusionan como reemplazos de la zonificación comunal.</p>
+            <div class="normative-framework-grid">${contextPlans.map(plan => card(plan, "context")).join("")}</div>
+          </div>
+        ` : ""}
       </section>
     `;
   }

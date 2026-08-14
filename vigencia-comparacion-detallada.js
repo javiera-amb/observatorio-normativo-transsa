@@ -96,12 +96,18 @@
       .normative-framework-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
       .normative-role-card{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
       .normative-role-card.current{border-left:4px solid #2b7a5a;background:#edf7f2}
+      .normative-role-card.sectional{border-left:4px solid #2c8aa8;background:#f1f8fb}
       .normative-role-card.replaced{border-left:4px solid #9293a1}
       .normative-role-card.context{border-left:4px solid var(--transsa-blue)}
       .normative-role-card span,.normative-role-card strong,.normative-role-card small{display:block}
       .normative-role-card span{color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.04em}
       .normative-role-card strong{margin-top:5px;color:var(--transsa-navy);font-size:.82rem;line-height:1.4}
       .normative-role-card small{margin-top:5px;color:var(--muted);font-size:.68rem;line-height:1.4}
+      .normative-consolidation-rule{margin:0 0 14px;padding:13px 14px;border-left:5px solid #2b7a5a;border-radius:0 11px 11px 0;background:#edf7f2}
+      .normative-consolidation-rule strong{display:block;color:var(--transsa-navy);font-size:.78rem}
+      .normative-consolidation-rule p{margin:5px 0 0;color:#315c4d;font-size:.7rem;line-height:1.5}
+      .normative-framework-group+.normative-framework-group{margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}
+      .normative-framework-group h5{margin:0 0 9px;color:var(--transsa-navy);font-size:.75rem}
       .sig-diagnosis{margin-bottom:14px;padding:14px;border-left:4px solid #d7951f;border-radius:0 11px 11px 0;background:#fff7e8}
       .sig-diagnosis strong{display:block;color:#72531b;font-size:.8rem}
       .sig-diagnosis p{margin:5px 0 0;color:#6a5125;font-size:.72rem;line-height:1.5}
@@ -314,10 +320,12 @@
       Number(plan.registro) !== Number(previous.registro) &&
       Number(plan.registro) !== Number(current.registro)
     );
+    const sectionals = otherPlans.filter(plan => String(plan.tipo_ipt || "") === "PS");
+    const contextPlans = otherPlans.filter(plan => String(plan.tipo_ipt || "") !== "PS");
     const roleFor = plan => {
       const type = String(plan.tipo_ipt || "IPT");
-      if (type === "PS") return "Plan seccional independiente · reemplaza normativa solo en su ámbito";
-      if (type === "PRI" || type === "PRM" || type === "PRDU") return "Normativa superior o intercomunal aplicable";
+      if (type === "PS") return "Integra el consolidado · reemplaza al PRC en su polígono";
+      if (["PRI", "PRIN", "PRM", "PRDU"].includes(type)) return "Escala superior · no reemplaza la zonificación del PRC";
       if (type === "LU") return "Límite urbano aplicable";
       return "Instrumento complementario";
     };
@@ -325,26 +333,52 @@
     return `
       <section class="normative-framework-section">
         <h4>Normativa aplicable y versiones</h4>
-        <p class="section-helper">Se distingue el instrumento base vigente, la versión reemplazada y la normativa que sigue aplicando simultáneamente.</p>
-        <div class="normative-framework-grid">
-          <article class="normative-role-card current">
-            <span>PRC base vigente</span>
-            <strong>${escape(current.nombre || "PRC Coquimbo 2026")}</strong>
-            <small>${escape([current.fecha, current.acto].filter(Boolean).join(" · "))}</small>
-          </article>
-          <article class="normative-role-card replaced">
-            <span>Versión reemplazada · histórico</span>
-            <strong>${escape(previous.nombre || "PRC Coquimbo 2019")}</strong>
-            <small>${escape([previous.fecha, previous.acto].filter(Boolean).join(" · "))}</small>
-          </article>
-          ${otherPlans.map(plan => `
-            <article class="normative-role-card context">
-              <span>${escape(roleFor(plan))}</span>
-              <strong>${escape(plan.nombre || plan.tipo_ipt || "IPT")}</strong>
-              <small>${escape([plan.tipo_ipt, plan.fecha].filter(Boolean).join(" · "))}</small>
-            </article>
-          `).join("")}
+        <p class="section-helper">Se distingue el producto normativo comunal de sus versiones históricas y de las escalas de planificación que solo aportan contexto.</p>
+        <div class="normative-consolidation-rule">
+          <strong>Consolidado comunal a entregar: PRC vigente + ${sectionals.length} ${sectionals.length === 1 ? "plan seccional" : "planes seccionales"}</strong>
+          <p>En cada polígono seccional prevalecen sus zonas y normas sobre las del PRC. PRI, PRIN, PRM y PRDU se mantienen separados y no sustituyen la zonificación comunal.</p>
         </div>
+        <div class="normative-framework-group">
+          <h5>Consolidado normativo comunal</h5>
+          <div class="normative-framework-grid">
+            <article class="normative-role-card current">
+              <span>PRC base del consolidado comunal</span>
+              <strong>${escape(current.nombre || "PRC Coquimbo 2026")}</strong>
+              <small>${escape([current.fecha, current.acto].filter(Boolean).join(" · "))}</small>
+            </article>
+            ${sectionals.map(plan => `
+              <article class="normative-role-card sectional">
+                <span>${escape(roleFor(plan))}</span>
+                <strong>${escape(plan.nombre || plan.tipo_ipt || "IPT")}</strong>
+                <small>${escape([plan.tipo_ipt, plan.fecha].filter(Boolean).join(" · "))}</small>
+              </article>
+            `).join("")}
+          </div>
+        </div>
+        <div class="normative-framework-group">
+          <h5>Versión histórica del PRC</h5>
+          <div class="normative-framework-grid">
+            <article class="normative-role-card replaced">
+              <span>Versión reemplazada · histórico</span>
+              <strong>${escape(previous.nombre || "PRC Coquimbo 2019")}</strong>
+              <small>${escape([previous.fecha, previous.acto].filter(Boolean).join(" · "))}</small>
+            </article>
+          </div>
+        </div>
+        ${contextPlans.length ? `
+          <div class="normative-framework-group">
+            <h5>Escalas superiores y otros instrumentos</h5>
+            <div class="normative-framework-grid">
+              ${contextPlans.map(plan => `
+                <article class="normative-role-card context">
+                  <span>${escape(roleFor(plan))}</span>
+                  <strong>${escape(plan.nombre || plan.tipo_ipt || "IPT")}</strong>
+                  <small>${escape([plan.tipo_ipt, plan.fecha].filter(Boolean).join(" · "))}</small>
+                </article>
+              `).join("")}
+            </div>
+          </div>
+        ` : ""}
       </section>
     `;
   }
