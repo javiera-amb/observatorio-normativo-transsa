@@ -2,6 +2,7 @@
 .seguimiento-view-switch{display:flex;padding:3px;border:1px solid #d9dce5;border-radius:11px;background:#f2f3f7}.seguimiento-view-switch button{min-height:32px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:#626b79;font:inherit;font-size:.66rem;font-weight:750;cursor:pointer}.seguimiento-view-switch button.active{background:#fff;color:var(--transsa-navy);box-shadow:0 1px 4px rgba(32,36,80,.12)}
 .seguimiento-readonly-badge{padding:8px 11px;border:1px solid #cfd4dc;border-radius:999px;background:#f4f5f8;color:#5a6270;font-size:.72rem;font-weight:700}
 .seguimiento-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.seguimiento-kpis.internal-kpis-six{grid-template-columns:repeat(3,minmax(0,1fr))}
 .seguimiento-kpis article{padding:17px;border:1px solid var(--line);border-top:4px solid var(--transsa-blue);border-radius:14px;background:#fff}
 .seguimiento-kpis article[data-production-filter],.seguimiento-kpis article[data-internal-metric]{cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}.seguimiento-kpis article[data-production-filter]:hover,.seguimiento-kpis article[data-internal-metric]:hover{transform:translateY(-2px);border-color:#b9bbfc;box-shadow:0 8px 22px rgba(15,15,105,.06)}.seguimiento-kpis article.filter-active{border-color:var(--transsa-blue);box-shadow:0 0 0 3px rgba(74,76,251,.09)}
 .seguimiento-kpis article.available{border-top-color:#2b7a5a}
@@ -79,12 +80,13 @@
 .seguimiento-inline-status select[data-update-owner]{max-width:150px}.seguimiento-inline-status select[data-update-priority]{max-width:70px}
 @media(max-width:1050px){
   .seguimiento-kpis{grid-template-columns:1fr 1fr}
+  .seguimiento-kpis.internal-kpis-six{grid-template-columns:1fr 1fr}
   .seguimiento-filters{grid-template-columns:1fr 1fr}
   .internal-filters{grid-template-columns:1fr 1fr}
 }
 @media(max-width:680px){
   .seguimiento-header-actions{justify-content:flex-start}
-  .seguimiento-kpis,.seguimiento-filters,.seguimiento-interpretation{grid-template-columns:1fr}
+  .seguimiento-kpis,.seguimiento-kpis.internal-kpis-six,.seguimiento-filters,.seguimiento-interpretation{grid-template-columns:1fr}
   .seguimiento-internal-intro{align-items:flex-start;flex-direction:column}.seguimiento-internal-legend{grid-template-columns:1fr}
   .seguimiento-filter-heading{align-items:flex-start;flex-direction:column}
   .seguimiento-table-scroll{max-height:none}

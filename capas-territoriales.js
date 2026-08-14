@@ -83,6 +83,66 @@
   const territorialLayers = () => [...applicableIptLayers(), ...catalogLayers()];
   const metricLayers = () => catalogLayers();
 
+  function nationalIptCatalog() {
+    const byType = new Map();
+    iptSource().forEach(group => {
+      latestByType(group.instrumentos || []).forEach((instrument, type) => {
+        if (!byType.has(type)) byType.set(type, { type, communes: new Set(), instruments: [] });
+        const record = byType.get(type);
+        record.communes.add(normalize(group.comuna));
+        record.instruments.push(instrument);
+      });
+    });
+    return [...byType.values()].map(record => ({
+      nombre: record.type || "IPT",
+      categorias: ["Instrumentos de planificación territorial"],
+      owner: record.type === "PRC" ? "Base Transsa / producción SIG" : "Fuente oficial IPT",
+      verificacion: "normativa identificada",
+      _catalogCount: record.communes.size,
+      _catalogDetail: `${record.communes.size} ${record.communes.size === 1 ? "comuna" : "comunas"} con ${record.type || "IPT"} identificado`,
+    }));
+  }
+
+  function catalogReadiness(layer) {
+    if (layer._catalogCount !== undefined) return "IPT auditado";
+    if (layer._candidate) return "Fuente por incorporar";
+    const cross = crossSource().capas?.[layer.nombre];
+    if (cross?.estado === "procesada") return "Cruce ejecutado";
+    const source = coverageSource().fuentes?.[layer.nombre];
+    if (source?.estado && !["sin_archivo", "referencia_incompleta", "formato_no_espacial"].includes(source.estado)) return "Archivo identificado";
+    if (externalSource().capas?.[layer.nombre]) return "Fuente localizada";
+    return "Fuente por acreditar";
+  }
+
+  function renderLayerCatalog() {
+    const host = $("capasCatalogGrid");
+    if (!host) return;
+    const items = [...nationalIptCatalog(), ...catalogLayers()];
+    const groups = new Map();
+    items.forEach(layer => {
+      const category = layer.categorias?.[0] || "Sin categoría";
+      if (!groups.has(category)) groups.set(category, []);
+      groups.get(category).push(layer);
+    });
+    const order = [
+      "Instrumentos de planificación territorial", "Límites y escalas", "Suelo y propiedad",
+      "Movilidad e infraestructura", "Equipamientos y servicios", "Demografía y mercado",
+      "Riesgos y medio ambiente", "Normativa territorial", "Producción Transsa / por clasificar",
+      "Catálogo por incorporar",
+    ];
+    const sortedGroups = [...groups.entries()].sort(([a], [b]) => {
+      const rankA = order.indexOf(a) === -1 ? order.length : order.indexOf(a);
+      const rankB = order.indexOf(b) === -1 ? order.length : order.indexOf(b);
+      return rankA - rankB || a.localeCompare(b, "es");
+    });
+    host.innerHTML = sortedGroups.map(([category, layers]) => {
+      const sorted = layers.slice().sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+      const ready = sorted.filter(layer => ["IPT auditado", "Cruce ejecutado", "Archivo identificado"].includes(catalogReadiness(layer))).length;
+      return `<details class="capas-catalog-group"><summary><span><strong>${escape(category)}</strong><small>${sorted.length} ${sorted.length === 1 ? "capa o tipo" : "capas o tipos"}</small></span><span class="capas-catalog-summary">${ready} con respaldo utilizable</span></summary><div class="capas-catalog-list">${sorted.map(layer => `<article><div><strong>${escape(layer.nombre)}</strong><small>${escape(layer._catalogDetail || layer.owner || "Sin responsable")}</small></div><span class="capas-catalog-readiness">${escape(catalogReadiness(layer))}</span></article>`).join("")}<button type="button" class="capas-catalog-action" data-capas-category="${escape(category)}">Ver esta categoría en la comuna seleccionada</button></div></details>`;
+    }).join("");
+    if ($("capasCatalogCount")) $("capasCatalogCount").textContent = `${items.length} capas o tipos · ${sortedGroups.length} categorías`;
+  }
+
   function communeRows() {
     const rows = communeSource();
     if (rows.length) return rows.map(row => ({ comuna: row.comuna, region: row.region }));
@@ -261,7 +321,7 @@
       productionDetail: `${requiresV2 ? "Reconstrucción TUI V2 pendiente; la V1 queda solo como antecedente." : isPrincipalPrc && override.fecha_estado ? `${override.fecha_estado} · ${override.responsable || "sin responsable"}` : "Estado pendiente de actualización por el equipo."}${stateWarning}`,
       qa,
       qaDetail: requiresV2
-        ? "QA bloqueado hasta reconstruir la zonificación base, separar riesgos e incorporar los atributos al GeoPackage."
+        ? "QA bloqueado hasta reconstruir la zonificación base, separar riesgos y vincular la tabla normativa separada."
         : isPrincipalPrc && Number.isFinite(row?.controles_pendientes)
         ? `${row.controles_pendientes} de ${row.controles_totales} controles pendientes · último QA ${override.fecha_qa || row.ultima_revision || "sin fecha"}.`
         : isPrincipalPrc && override.fecha_qa ? `Cierre ${override.fecha_qa}.` : "Sin cierre de QA registrado para este instrumento.",
@@ -512,7 +572,7 @@
         return a.comuna.localeCompare(b.comuna, "es");
       });
       const open = sorted.some(row => normalize(row.comuna) === normalize(state.commune));
-      return `<details class="capas-region" ${open ? "open" : ""}><summary><span><strong>${escape(region)}</strong><small>${communes.length} ${communes.length === 1 ? "comuna visible" : "comunas visibles"}</small></span><span class="capas-region-summary"><span class="capas-region-count confirmada">${summary.confirmed} comunas con cruce</span><span class="capas-region-count pendiente">${summary.pending} con pendientes</span><span class="capas-region-count alerta">${summary.notApplicable} sin/no aplica</span></span></summary><div class="capas-region-body">${sorted.map(row => `<button type="button" class="capas-commune-mini ${normalize(row.comuna) === normalize(state.commune) ? "selected" : ""}" data-capas-commune="${escape(row.comuna)}"><strong>${escape(row.comuna)}</strong><small>${row.summary.ipt} IPT · ${row.summary.layers} capas territoriales</small><span class="capas-commune-mini-kpis"><span>${row.summary.ipt}</span><span class="${row.summary.confirmed ? "confirmada" : ""}">${row.summary.confirmed}</span><span class="${row.summary.pending ? "pendiente" : ""}">${row.summary.pending}</span><span class="${row.summary.notApplicable ? "alerta" : ""}">${row.summary.notApplicable}</span></span></button>`).join("")}</div></details>`;
+      return `<details class="capas-region" ${open ? "open" : ""}><summary><span><strong>${escape(region)}</strong><small>${communes.length} ${communes.length === 1 ? "comuna visible" : "comunas visibles"}</small></span><span class="capas-region-summary"><span class="capas-region-count confirmada">${summary.confirmed} comunas con cruce</span><span class="capas-region-count pendiente">${summary.pending} con pendientes</span><span class="capas-region-count alerta">${summary.notApplicable} sin/no aplica</span></span></summary><div class="capas-region-body">${sorted.map(row => `<button type="button" class="capas-commune-mini ${normalize(row.comuna) === normalize(state.commune) ? "selected" : ""}" data-capas-commune="${escape(row.comuna)}" data-capas-open-layers="true"><strong>${escape(row.comuna)}</strong><small>${row.summary.ipt} IPT aplicables</small><span class="capas-commune-layer-link">${row.summary.layers} capas · ver detalle</span><span class="capas-commune-mini-kpis"><span>${row.summary.ipt}</span><span class="${row.summary.confirmed ? "confirmada" : ""}">${row.summary.confirmed}</span><span class="${row.summary.pending ? "pendiente" : ""}">${row.summary.pending}</span><span class="${row.summary.notApplicable ? "alerta" : ""}">${row.summary.notApplicable}</span></span></button>`).join("")}</div></details>`;
     }).join("");
     $("capasRegionsCount").textContent = `${regionRows.length} regiones · ${query ? "resultado filtrado" : `${allCommunes} comunas`}`;
   }
@@ -562,6 +622,7 @@
     if ($("capasSelectedLayerTitle")) $("capasSelectedLayerTitle").textContent = commune.comuna;
     const ipt = renderIpt();
     const territorial = renderTerritorial();
+    renderLayerCatalog();
     renderMetrics(ipt, territorial);
     renderRegions();
     renderCrossBanner();
@@ -576,11 +637,20 @@
     $("capasSort")?.addEventListener("change", event => { state.sort = event.target.value; renderTerritorial(); });
     $("capasCoverageFilter")?.addEventListener("change", event => { state.coverage = event.target.value; renderTerritorial(); });
     document.addEventListener("click", event => {
+      const categoryButton = event.target.closest("[data-capas-category]");
+      if (categoryButton) {
+        state.category = categoryButton.dataset.capasCategory;
+        if ($("capasCategoryFilter")) $("capasCategoryFilter").value = state.category;
+        renderTerritorial();
+        document.querySelector(".capas-coverage-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       const button = event.target.closest("[data-capas-commune]");
       if (!button) return;
       state.commune = button.dataset.capasCommune;
       render();
-      $("capasSelectedTitle")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const target = button.dataset.capasOpenLayers ? document.querySelector(".capas-coverage-section") : $("capasSelectedTitle");
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 

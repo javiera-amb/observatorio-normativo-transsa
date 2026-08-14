@@ -17,6 +17,7 @@
     internalMetric: "",
     internalView: new URLSearchParams(window.location.search).get("panel") === "javiera" ? "javiera" : "equipo",
   };
+  const isAdminSession = new URLSearchParams(window.location.search).get("panel") === "javiera";
 
   const $ = id => document.getElementById(id);
   const escape = value => String(value ?? "")
@@ -143,6 +144,10 @@
     if (noCommunalPrcApplies(row) && reported === "pendiente") return "no_aplica";
     return reported;
   };
+  // La vista Propiteq conserva el hecho histórico de que una V1 ya fue
+  // enviada. La vista interna, en cambio, muestra el estado de la nueva TUI V2
+  // que debe reconstruirla; así no se pierde ni la publicación ni la deuda.
+  const publicProductionState = row => historicalV1Sent(row) ? "enviado" : productionState(row);
   const qaPlatformState = row => {
     const override = mergedOverride(row);
     if (noCommunalPrcApplies(row)) return "no_aplica";
@@ -162,6 +167,7 @@
     && row.apto_para_visor === "SI"
     && String(row.estado_fuente || "").includes("sin cambios posteriores detectados")
     && !requiresV2(row)
+    && productionState(row) !== "enviado"
   );
   const directProductionCandidates = () => data().comunas.filter(isDirectProductionCandidate);
   const legacyV2Queue = () => data().comunas.filter(requiresV2);
@@ -231,7 +237,7 @@
     const override = mergedOverride(row);
     if (operational.qa === "no_aplica") return "No existe un PRC comunal que comparar; se mantiene el monitoreo de los IPT superiores aplicables.";
     if (noCommunalPrcApplies(row)) return "No existe un PRC comunal identificado para comparar; se mantiene el monitoreo de los IPT superiores aplicables.";
-    if (requiresV2(row)) return "QA bloqueado: la V1 usa geometrías intersectadas con riesgos y no contiene la tabla normativa completa dentro del GeoPackage.";
+    if (requiresV2(row)) return "QA bloqueado: la V1 usa geometrías intersectadas con riesgos. Debe reconstruirse con geometría normativa base y tabla normativa separada.";
     if (inventoryIsTuiV2(row) && !inventoryV2StructureOk(row)) {
       const bloqueos = inventoryRecord(row).qa_archivo?.estandar_tui_v2?.bloqueos || [];
       return bloqueos.join(" ") || "El archivo TUI V2 no cumple todavía los controles estructurales.";
@@ -321,7 +327,7 @@
     const responsible = override.responsable && !override.responsable.toLocaleLowerCase("es").includes("sin responsable")
       ? override.responsable : "Sin asignar";
     let blocking = internal.bloqueo || "";
-    if (!blocking && operational.requiresV2) blocking = "V1 observada: geometría recortada por riesgos y atributos fuera del GeoPackage";
+    if (!blocking && operational.requiresV2) blocking = "V1 observada: geometría recortada por riesgos; falta reconstrucción con tabla normativa separada";
     else if (!blocking && pendingControls > 0) blocking = `${pendingControls} controles de QA abiertos`;
     else if (!blocking && acts > 0) blocking = `${acts} ${acts === 1 ? "acto posterior por comparar" : "actos posteriores por comparar"}`;
     else if (!blocking && !hasCartography) blocking = "Falta cartografía vinculada";
@@ -334,7 +340,7 @@
       ? 5
       : Math.max(1, Math.min(5, Number(override.prioridad_orden || internal.prioridad_orden || ({ critica: 1, alta: 2, media: 3, baja: 4 })[priority] || 5)));
     let nextAction = internal.proxima_accion || "";
-    if (!nextAction && operational.requiresV2) nextAction = "Reconstruir TUI V2 con zonificación normativa sin intersección de riesgos y tabla de atributos incorporada en el GeoPackage.";
+    if (!nextAction && operational.requiresV2) nextAction = "Reconstruir TUI V2 con zonificación normativa sin intersección de riesgos y tabla normativa separada, vinculada por unidad_normativa_id.";
     else if (!nextAction && pendingControls > 0) nextAction = `Resolver y documentar ${pendingControls} controles antes de aprobar el QA.`;
     else if (!nextAction && acts > 0) nextAction = `Comparar ${acts} ${acts === 1 ? "acto posterior" : "actos posteriores"} con la cartografía SIG.`;
     else if (!nextAction && operational.production === "no_aplica" && officialProcess(row)) nextAction = `${officialProcess(row).etiqueta}: monitorear la fuente municipal y mantener visible el instrumento metropolitano, intercomunal o regional aplicable mientras el PRC no entre en vigencia.`;
@@ -408,11 +414,11 @@
         && (!state.region || row.region === state.region)
         && (!state.consumption || row.consumo_propieteq === state.consumption)
         && (!state.audit || row.estado_auditoria === state.audit)
-        && (!state.production || operational.production === state.production)
+        && (!state.production || publicProductionState(row) === state.production)
         && (!state.qa || operational.qa === state.qa);
     }).sort((a, b) => {
-      const aState = operationalStatus(a).production;
-      const bState = operationalStatus(b).production;
+      const aState = publicProductionState(a);
+      const bState = publicProductionState(b);
       return (productionOrder[aState] ?? 9) - (productionOrder[bState] ?? 9)
         || String(a.region).localeCompare(String(b.region), "es")
         || String(a.comuna).localeCompare(String(b.comuna), "es");
@@ -433,7 +439,9 @@
         && (!state.internalStage || internal.stage === state.internalStage)
         && (!state.internalPriority || String(internal.priorityRank) === String(state.internalPriority))
         && (!state.internalMetric || (state.internalMetric === "con_prc" && Boolean(row.prc_nombre))
-          || (state.internalMetric === "activo" && internal.production === "en_desarrollo")
+          || (state.internalMetric === "v1_reconstruccion" && internal.requiresV2)
+          || (state.internalMetric === "v2_detectada" && internal.model === "tui_v2")
+          || (state.internalMetric === "produccion_directa" && isDirectProductionCandidate(row))
           || (state.internalMetric === "revision_javiera" && internal.production !== "no_aplica" && internal.qa !== "aprobado" && internal.qaPlatform !== "aprobado")
           || state.internalMetric === "total");
     }).sort((a, b) => a.internal.priorityRank - b.internal.priorityRank
@@ -457,6 +465,7 @@
     const audit = row.estado_auditoria || "sin_iniciar";
     const sourceDetail = [inventoryRecord(row).ruta_relativa, row.capa_recomendada, row.archivo_recomendado].filter(Boolean).join(" · ");
     const operational = operationalStatus(row);
+    const publicProduction = publicProductionState(row);
     const group = applicableIptGroup(row);
     const applicableNames = (group?.instrumentos || [])
       .slice()
@@ -487,7 +496,7 @@
           <small title="${escape(sourceDetail)}">${escape(sourceDetail || "Sin archivo o servicio vinculado")}</small>
         </td>
         <td data-label="Estado de producción">
-          <span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span>
+          <span class="seguimiento-operational-pill production ${escape(publicProduction)}">${escape(productionLabels[publicProduction])}</span>
           <small>${escape(operational.statusDate ? `Actualizado: ${operational.statusDate}` : operational.responsible)}</small>
           <small>${escape(operational.requiresV2 ? "Producción TUI V2 aún pendiente; la V1 queda solo como antecedente." : operational.production === "enviado" ? "La carga al visor queda fuera del equipo." : operational.production === "actualizado" ? "Tabla homologada: listo para envío." : operational.production === "en_desarrollo" ? "Trabajo en curso." : "Aún no trabajado.")}</small>
           ${operational.inconsistency ? `<small class="seguimiento-state-warning">QA automático con diferencias.</small>` : ""}
@@ -545,18 +554,20 @@
   }
 
   function renderMetrics() {
-    const statuses = data().comunas.map(operationalStatus);
-    if ($("seguimientoMetricPending")) $("seguimientoMetricPending").textContent = statuses.filter(item => item.production === "pendiente").length;
-    if ($("seguimientoMetricDevelopment")) $("seguimientoMetricDevelopment").textContent = statuses.filter(item => item.production === "en_desarrollo").length;
-    if ($("seguimientoMetricUpdated")) $("seguimientoMetricUpdated").textContent = statuses.filter(item => item.production === "actualizado").length;
-    if ($("seguimientoMetricSent")) $("seguimientoMetricSent").textContent = statuses.filter(item => item.production === "enviado").length;
+    const statuses = data().comunas.map(publicProductionState);
+    if ($("seguimientoMetricPending")) $("seguimientoMetricPending").textContent = statuses.filter(item => item === "pendiente").length;
+    if ($("seguimientoMetricDevelopment")) $("seguimientoMetricDevelopment").textContent = statuses.filter(item => item === "en_desarrollo").length;
+    if ($("seguimientoMetricUpdated")) $("seguimientoMetricUpdated").textContent = statuses.filter(item => item === "actualizado").length;
+    if ($("seguimientoMetricSent")) $("seguimientoMetricSent").textContent = statuses.filter(item => item === "enviado").length;
   }
 
   function renderInternalMetrics() {
     const rows = data().comunas.map(row => internalStatus(row));
     $("seguimientoInternalTotal").textContent = rows.length;
     $("seguimientoInternalWithPrc").textContent = data().comunas.filter(row => Boolean(row.prc_nombre)).length;
-    $("seguimientoInternalActive").textContent = rows.filter(item => item.production === "en_desarrollo" || (item.stage === "qa" && item.qaDate)).length;
+    if ($("seguimientoInternalV1")) $("seguimientoInternalV1").textContent = rows.filter(item => item.requiresV2).length;
+    if ($("seguimientoInternalV2")) $("seguimientoInternalV2").textContent = rows.filter(item => item.model === "tui_v2").length;
+    if ($("seguimientoInternalDirect")) $("seguimientoInternalDirect").textContent = directProductionCandidates().length;
     $("seguimientoInternalJaviera").textContent = rows.filter(item => item.production !== "no_aplica" && item.qa !== "aprobado" && item.qaPlatform !== "aprobado").length;
     const prepublished = rows.filter(item => item.prepublished);
     const legacyV2 = rows.filter(item => item.requiresV2);
@@ -588,7 +599,7 @@
       <td data-label="Estado"><span class="seguimiento-operational-pill production ${escape(operational.production)}">${escape(productionLabels[operational.production])}</span><small>${escape(operational.production === "actualizado" ? "Homologación pendiente de registrar" : "Marcar actualizado después de homologar usos")}</small></td>
       <td data-label="Capa / archivo"><strong>${escape(row.capa_recomendada || "Sin capa")}</strong><small>${escape(row.archivo_recomendado)}</small></td>
       <td data-label="Revisión Javiera"><span class="seguimiento-operational-pill qa ${escape(qaManual)}">${escape(qaManualLabels[qaManual])}</span><small>Solo se usa cuando el control no puede automatizarse.</small></td>
-      <td data-label="Acción obligatoria"><strong>Crear TUI V2 y homologar usos</strong><small>Conservar la geometría normativa base, incorporar los atributos en el GPKG y homologar la columna de usos.</small></td>
+      <td data-label="Acción obligatoria"><strong>Crear TUI V2 y homologar usos</strong><small>Conservar la geometría normativa base y vincularla con una tabla normativa separada mediante unidad_normativa_id.</small></td>
     </tr>`;
   }
 
@@ -607,7 +618,7 @@
       const operational = operationalStatus(row);
       lines.push([
         row.region, row.comuna, row.prc_fecha, row.capa_recomendada, row.archivo_recomendado,
-        operational.production, qaManualState(row), "Crear TUI V2 con geometría base; incorporar atributos y homologar usos"
+        operational.production, qaManualState(row), "Crear TUI V2 con geometría base; crear tabla normativa separada; vincular y homologar usos"
       ].map(csvCell).join(";"));
     });
     const blob = new Blob(["\\ufeff" + lines.join("\\n")], { type: "text/csv;charset=utf-8" });
@@ -629,7 +640,7 @@
         "V1 enviada a Propiteq",
         productionLabels[productionState(row)],
         qaPlatformLabels[qaPlatformState(row)],
-        "Reconstruir zonificación sin intersección de riesgos e incorporar tabla normativa en el GeoPackage",
+        "Reconstruir zonificación sin intersección de riesgos y crear tabla normativa separada vinculada por unidad_normativa_id",
         `IPT_00_PRC_${row.comuna.replaceAll(" ", "")}_TUI_V2_Actualizado.gpkg`,
       ].map(csvCell).join(";"));
     });
@@ -676,6 +687,7 @@
   function renderInternalView() {
     const isJaviera = state.internalView === "javiera";
     document.querySelectorAll("[data-internal-view]").forEach(button => {
+      if (button.dataset.internalView === "javiera") button.hidden = !isAdminSession;
       button.classList.toggle("active", button.dataset.internalView === state.internalView);
     });
     document.querySelectorAll("[data-internal-scope]").forEach(section => {
@@ -694,6 +706,7 @@
   }
 
   function setInternalView(view) {
+    if (view === "javiera" && !isAdminSession) return;
     state.internalView = view === "javiera" ? "javiera" : "equipo";
     const url = new URL(window.location.href);
     url.searchParams.set("vista", "equipo");
@@ -713,7 +726,7 @@
     const currentUser = $("seguimientoCurrentUser")?.value || current.responsable || "";
     const note = $("seguimientoLocalSaveNote");
     if (["actualizado", "enviado"].includes(value) && !inventoryV2StructureOk(row)) {
-      if (note) note.textContent = `${commune}: no puede marcarse “${productionLabels[value]}”. Primero debe existir un GeoPackage TUI V2 con geometría y atributos estructuralmente válidos.`;
+      if (note) note.textContent = `${commune}: no puede marcarse “${productionLabels[value]}”. Primero deben existir una geometría TUI V2 válida y una tabla normativa separada vinculable.`;
       renderInternalTable();
       return;
     }
