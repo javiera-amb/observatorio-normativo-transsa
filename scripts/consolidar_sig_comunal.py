@@ -89,9 +89,8 @@ def load_national_acts(repo: Path) -> list[dict[str, Any]]:
     # Compatibilidad con la segunda versión fragmentada de la base.
     if len(rows) != 1784:
         national_files = [
-            *(data / f"actos_ipt_nacional_{index:02d}.js" for index in range(1, 9)),
-            *(data / f"actos_ipt_nacional_09{letter}.js" for letter in "abcde"),
-            data / "actos_ipt_nacional_10.js",
+            data / f"actos_ipt_nacional_{index:02d}.js"
+            for index in range(1, 11)
         ]
         try:
             fallback_rows = decode_act_files(national_files)

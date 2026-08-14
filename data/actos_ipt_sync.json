@@ -12,5 +12,10 @@
   "vinculados_por_codigo_origen": 275,
   "pendientes_vinculacion": 1509,
   "fecha_maxima_vigencia": "2026-07-07",
-  "archivos_generados": 8
+  "archivos_generados": 10,
+  "archivos_comprimidos": 10,
+  "formato_frontend": "gzip_base64",
+  "sha256_payload_comprimido": "c2cd5182744ba53a439c51982858b4ba5c01bbe272d7deff37329d854174b44d",
+  "crc32_json": "291a3a04",
+  "largo_base64": 101784
 }
