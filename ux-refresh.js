@@ -186,15 +186,16 @@
 
   async function loadNationalIptActs() {
     window.ACTOS_IPT_GZ = "";
+    const historyRelease = "20260814-historial-2";
     const files = Array.from(
       { length: 10 },
-      (_value, index) => `data/actos_ipt_nacional_${String(index + 1).padStart(2, "0")}.js`
+      (_value, index) => `data/actos_ipt_nacional_${String(index + 1).padStart(2, "0")}.js?v=${historyRelease}`
     );
 
     for (let index = 0; index < files.length; index += 1) {
       await loadScript(files[index], `actos-ipt-nacional-${index + 1}`);
     }
-    await loadScript("data/actos_ipt_nacionales_finalizar.js", "actos-ipt-nacional-finalizar");
+    await loadScript(`data/actos_ipt_nacionales_finalizar.js?v=${historyRelease}`, "actos-ipt-nacional-finalizar");
     if (window.ACTOS_IPT_NACIONALES_READY) {
       await window.ACTOS_IPT_NACIONALES_READY;
     }

@@ -10,6 +10,7 @@ import math
 import re
 import tempfile
 import unicodedata
+import zlib
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -215,12 +216,13 @@ def build_rows(records: list[dict[str, str]]) -> list[list[object]]:
     return rows
 
 
-def write_gzip_parts(rows: list[list[object]]) -> None:
+def write_gzip_parts(rows: list[list[object]]) -> dict[str, object]:
     for stale in DATA_DIR.glob("actos_ipt_nacional_*.js"):
         stale.unlink()
 
     payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    encoded = base64.b64encode(gzip.compress(payload, compresslevel=9)).decode("ascii")
+    compressed = gzip.compress(payload, compresslevel=9, mtime=0)
+    encoded = base64.b64encode(compressed).decode("ascii")
     part_size = max(1, math.ceil(len(encoded) / GZIP_PARTS))
     parts = [encoded[index:index + part_size] for index in range(0, len(encoded), part_size)]
     while len(parts) < GZIP_PARTS:
@@ -231,10 +233,21 @@ def write_gzip_parts(rows: list[list[object]]) -> None:
         content = f'window.ACTOS_IPT_GZ=(window.ACTOS_IPT_GZ||"")+{json.dumps(part)};\n'
         (DATA_DIR / f"actos_ipt_nacional_{index:02d}.js").write_text(content, encoding="utf-8")
 
+    rebuilt = "".join(parts)
+    decoded_rows = json.loads(gzip.decompress(base64.b64decode(rebuilt, validate=True)).decode("utf-8"))
+    if decoded_rows != rows:
+        raise RuntimeError("La verificación posterior a la escritura alteró la base nacional IPT.")
+
+    return {
+        "sha256_payload_comprimido": hashlib.sha256(compressed).hexdigest(),
+        "crc32_json": f"{zlib.crc32(payload) & 0xFFFFFFFF:08x}",
+        "largo_base64": len(encoded),
+    }
+
 
 def write_outputs(rows: list[list[object]]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    write_gzip_parts(rows)
+    integrity = write_gzip_parts(rows)
 
     (DATA_DIR / "actos_ipt.js").write_text(
         "// Compatibilidad: la interfaz nacional carga actos_ipt_nacional_01.js a actos_ipt_nacional_10.js.\n",
@@ -263,6 +276,7 @@ def write_outputs(rows: list[list[object]]) -> None:
         "fecha_maxima_vigencia": dates[-1] if dates else "",
         "archivos_comprimidos": GZIP_PARTS,
         "formato_frontend": "gzip_base64",
+        **integrity,
     }
     (DATA_DIR / "actos_ipt_sync.json").write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
