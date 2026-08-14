@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
   <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260814-correcciones-3">
-  <link rel="stylesheet" href="capas-territoriales.css?v=20260814-correcciones-3">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260814-correcciones-4">
 </head>
 <body>
   <header class="topbar">
@@ -561,6 +561,15 @@
           <span id="seguimientoInternalBadge" class="seguimiento-readonly-badge">Tablero del equipo</span>
         </section>
 
+        <section class="seguimiento-kpis internal-kpis internal-kpis-six" data-internal-scope="equipo,javiera" aria-label="Resumen interno de trabajo PRC">
+          <article data-internal-metric="total"><span>Total comunas</span><strong id="seguimientoInternalTotal">0</strong><small>Universo nacional de seguimiento</small></article>
+          <article class="available" data-internal-metric="con_prc"><span>Con PRC identificado</span><strong id="seguimientoInternalWithPrc">0</strong><small>Instrumento comunal localizado</small></article>
+          <article class="review" data-internal-metric="v1_reconstruccion"><span>V1 por reconstruir</span><strong id="seguimientoInternalV1">0</strong><small>Enviadas históricamente, no reutilizables</small></article>
+          <article class="development" data-internal-metric="v2_detectada"><span>TUI V2 detectadas</span><strong id="seguimientoInternalV2">0</strong><small>Con archivos nuevos en OneDrive</small></article>
+          <article class="available" data-internal-metric="produccion_directa"><span>Paso directo posible</span><strong id="seguimientoInternalDirect">0</strong><small>Sin cambios posteriores; falta homologar tabla</small></article>
+          <article class="review" data-internal-metric="revision_javiera"><span>Auditoría pendiente</span><strong id="seguimientoInternalJaviera">0</strong><small>QA o controles no automatizables abiertos</small></article>
+        </section>
+
         <section class="seguimiento-team-panel" data-internal-scope="equipo">
           <div class="seguimiento-team-heading"><div><p class="eyebrow">EQUIPO AUTORIZADO</p><h3>Personas que pueden actualizar el seguimiento</h3><p>La asignación de comunas se carga en los datos operativos. No se crean responsables automáticamente.</p></div><span class="seguimiento-readonly-badge">4 integrantes</span></div>
           <div class="seguimiento-team-grid">
@@ -592,15 +601,6 @@
           <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>Estos casos pueden evitar una comparación de actos posteriores, pero igualmente deben generarse con el estándar TUI V2 y pasar el control estructural.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
           <div class="seguimiento-direct-note">La cuenta disminuye cuando una comuna pasa a “Enviado”. “Sin cambios posteriores” no significa QA aprobado: todavía exige geometría normativa base, tabla normativa separada, clave de unión y homologación de usos.</div>
           <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>Revisión Javiera</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
-        </section>
-
-        <section class="seguimiento-kpis internal-kpis internal-kpis-six" data-internal-scope="equipo,javiera" aria-label="Resumen interno de trabajo PRC">
-          <article data-internal-metric="total"><span>Total comunas</span><strong id="seguimientoInternalTotal">0</strong><small>Universo nacional de seguimiento</small></article>
-          <article class="available" data-internal-metric="con_prc"><span>Con PRC identificado</span><strong id="seguimientoInternalWithPrc">0</strong><small>Instrumento comunal localizado</small></article>
-          <article class="review" data-internal-metric="v1_reconstruccion"><span>V1 por reconstruir</span><strong id="seguimientoInternalV1">0</strong><small>Enviadas históricamente, no reutilizables</small></article>
-          <article class="development" data-internal-metric="v2_detectada"><span>TUI V2 detectadas</span><strong id="seguimientoInternalV2">0</strong><small>Con archivos nuevos en OneDrive</small></article>
-          <article class="available" data-internal-metric="produccion_directa"><span>Paso directo posible</span><strong id="seguimientoInternalDirect">0</strong><small>Sin cambios posteriores; falta homologar tabla</small></article>
-          <article class="review" data-internal-metric="revision_javiera"><span>Auditoría pendiente</span><strong id="seguimientoInternalJaviera">0</strong><small>QA o controles no automatizables abiertos</small></article>
         </section>
 
         <section class="seguimiento-filter-panel internal-filter-panel" data-internal-scope="equipo,javiera">
@@ -651,7 +651,10 @@
       <section class="capas-catalog-section">
         <div class="capas-section-heading">
           <div><p class="eyebrow">BLOQUE 1 · CATÁLOGO NACIONAL</p><h3>Todas las capas, ordenadas por categoría</h3><p>Este inventario reúne los IPT auditados, las capas territoriales existentes y las fuentes por incorporar. Abre una categoría para revisar qué capas contiene, su origen y el estado de adquisición.</p></div>
-          <span id="capasCatalogCount" class="result-count"></span>
+          <div class="capas-catalog-heading-actions">
+            <span id="capasCatalogCount" class="result-count"></span>
+            <button id="capasQaExport" class="secondary-button" type="button" hidden>Descargar registro QA</button>
+          </div>
         </div>
         <div id="capasCatalogGrid" class="capas-catalog-grid"></div>
       </section>
@@ -892,7 +895,7 @@
   <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
   <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
   <script src="data/fuentes_capas_externas.js?v=20260811-fuentes-1"></script>
-  <script src="capas-territoriales.js?v=20260814-correcciones-3"></script>
+  <script src="capas-territoriales.js?v=20260814-correcciones-4"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -900,6 +903,6 @@
   ></script>
   <script src="app.js?v=20260813-correcciones-1"></script>
   <script src="vigencia-regional.js?v=20260813-correcciones-1"></script>
-  <script src="ux-refresh.js?v=20260814-correcciones-4"></script>
+  <script src="ux-refresh.js?v=20260814-correcciones-5"></script>
 </body>
 </html>

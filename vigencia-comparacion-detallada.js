@@ -105,7 +105,7 @@
       .sig-diagnosis{margin-bottom:14px;padding:14px;border-left:4px solid #d7951f;border-radius:0 11px 11px 0;background:#fff7e8}
       .sig-diagnosis strong{display:block;color:#72531b;font-size:.8rem}
       .sig-diagnosis p{margin:5px 0 0;color:#6a5125;font-size:.72rem;line-height:1.5}
-      .sig-action-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .sig-action-list{display:grid;grid-template-columns:1fr;gap:10px}
       .sig-action-card{padding:15px;border:1px solid var(--line);border-left:4px solid var(--transsa-blue);border-radius:13px;background:#fff}
       .sig-action-card.definida,.sig-action-card.definida_parcial,.sig-action-card.verificada{border-left-color:#2b7a5a}
       .sig-action-card.bloqueada_por_planos,.sig-action-card.bloqueada_por_diferencia{border-left-color:#c75b64}
@@ -114,6 +114,7 @@
       .sig-action-identity{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
       .sig-action-code{display:inline-flex;margin-right:7px;padding:4px 7px;border-radius:7px;background:var(--transsa-navy);color:#fff;font-size:.62rem;font-weight:700}
       .sig-action-type{color:var(--transsa-blue);font-size:.66rem;font-weight:700}
+      .sig-action-step{color:var(--muted);font-size:.61rem;font-weight:700}
       .sig-action-status{padding:5px 8px;border-radius:999px;font-size:.62rem;font-weight:700;white-space:nowrap}
       .sig-action-status.definida,.sig-action-status.definida_parcial{color:#176342;background:#e4f5ec}
       .sig-action-status.verificada{color:#176342;background:#e4f5ec}
@@ -132,6 +133,11 @@
       .sig-action-meta span{color:var(--muted);font-size:.58rem;text-transform:uppercase}
       .sig-action-meta strong{margin-top:3px;color:#404858;font-size:.68rem;line-height:1.4}
       .sig-action-result{margin:9px 0 0;padding:9px;border-radius:9px;background:#f5f5ff;color:#303747;font-size:.7rem;line-height:1.45}
+      .sig-action-sources{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+      .sig-action-sources strong{display:block;color:var(--transsa-navy);font-size:.66rem}
+      .sig-action-sources div{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+      .sig-action-sources a{padding:6px 8px;border:1px solid #cfd3ff;border-radius:8px;background:#f5f5ff;color:var(--transsa-blue);font-size:.62rem;font-weight:700;text-decoration:none}
+      .sig-action-sources a:hover{text-decoration:underline}
       .sig-task-control{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
       .sig-task-control span{color:var(--muted);font-size:.63rem;line-height:1.4}
       .sig-task-control button{padding:7px 9px;border:1px solid #cfd3ff;border-radius:8px;background:#f5f5ff;color:var(--transsa-blue);font:inherit;font-size:.62rem;font-weight:750;cursor:pointer}
@@ -367,11 +373,28 @@
     const audit = comparison.auditoria_operativa || {};
     const controls = Array.isArray(audit.controles) ? audit.controles : [];
     const method = Array.isArray(audit.metodo) ? audit.metodo : [];
-    const evidence = [...new Map(controls.flatMap(control => control.evidencias || []).map(item => [item.url, item])).values()];
     if (!actions.length) return "";
-    const blocked = actions.filter(action => String(action.estado || "").startsWith("bloqueada")).length;
-    const verified = actions.filter(action => action.estado === "verificada").length;
-    const completed = actions.filter(action => taskRecord(action.id)?.estado === "realizada" && action.estado !== "verificada").length;
+    const workflow = ["COQ-SIG-01", "COQ-SIG-04", "COQ-SIG-02", "COQ-SIG-03", "COQ-SIG-06", "COQ-SIG-05", "COQ-SIG-07", "COQ-SIG-08"];
+    const orderedActions = actions.slice().sort((a, b) => workflow.indexOf(a.id) - workflow.indexOf(b.id));
+    const controlMap = {
+      "COQ-SIG-01": ["COQ-VAL-01", "COQ-VAL-02"],
+      "COQ-SIG-04": ["COQ-VAL-03"],
+      "COQ-SIG-02": ["COQ-VAL-02", "COQ-VAL-04"],
+      "COQ-SIG-03": ["COQ-VAL-02"],
+      "COQ-SIG-06": ["COQ-VAL-02"],
+      "COQ-SIG-05": ["COQ-VAL-05", "COQ-VAL-02"],
+      "COQ-SIG-07": ["COQ-VAL-06"],
+      "COQ-SIG-08": ["COQ-VAL-03", "COQ-VAL-04"],
+    };
+    const sourcesFor = action => [...new Map(
+      controls
+        .filter(control => (controlMap[action.id] || []).includes(control.id))
+        .flatMap(control => control.evidencias || [])
+        .map(item => [item.url, item])
+    ).values()];
+    const blocked = orderedActions.filter(action => String(action.estado || "").startsWith("bloqueada")).length;
+    const verified = orderedActions.filter(action => action.estado === "verificada").length;
+    const completed = orderedActions.filter(action => taskRecord(action.id)?.estado === "realizada" && action.estado !== "verificada").length;
 
     return `
       <section class="sig-work-section">
@@ -381,7 +404,7 @@
             <p class="section-helper">Cada hallazgo se traduce en una tarea técnica. El equipo marca su ejecución y la plataforma verifica el resultado cuando detecta la nueva entrega.</p>
           </div>
           <div class="sig-work-kpis">
-            <span>${actions.length} acciones</span>
+            <span>${orderedActions.length} acciones</span>
             <span>${verified} verificadas</span>
             <span>${completed} realizadas · esperando QA</span>
             <span>${blocked} bloqueantes</span>
@@ -391,11 +414,11 @@
           <strong>Estado actual: actualizaciones pendientes antes de validar SIG 2026</strong>
           <p>${escape(diagnosis.motivo || "La versión cartográfica disponible aún no acredita equivalencia con el instrumento vigente.")}</p>
         </div>
-        ${method.length ? `<details class="audit-method" open><summary>Cómo se identificaron estas actualizaciones</summary><ol>${method.map(step => `<li>${escape(step)}</li>`).join("")}</ol></details>` : ""}
-        ${evidence.length ? `<div class="audit-evidence-links">${evidence.map(item => `<a href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${escape(item.nombre)} ↗</a>`).join("")}</div>` : ""}
+        ${method.length ? `<details class="audit-method"><summary>Criterio general de auditoría</summary><ol>${method.map(step => `<li>${escape(step)}</li>`).join("")}</ol></details>` : ""}
         <div class="sig-action-list">
-          ${actions.map(action => {
+          ${orderedActions.map((action, index) => {
             const task = taskRecord(action.id);
+            const sources = sourcesFor(action);
             const platformVerified = action.estado === "verificada";
             const teamCompleted = task?.estado === "realizada" && !platformVerified;
             const displayStatus = platformVerified ? "verificada" : teamCompleted ? "en_revision" : action.estado;
@@ -405,6 +428,7 @@
               <div class="sig-action-head">
                 <div class="sig-action-identity">
                   <span class="sig-action-code">${escape(action.id)}</span>
+                  <span class="sig-action-step">Paso ${index + 1} de ${orderedActions.length}</span>
                   <span class="sig-action-type">${escape(actionLabel(action.accion))}</span>
                 </div>
                 <span class="sig-action-status ${escape(displayStatus || "pendiente_revision")}">${escape(displayLabel)}</span>
@@ -420,6 +444,7 @@
                   <div><span>Prioridad</span><strong>${escape(action.prioridad)}</strong></div>
                 </div>
                 <p class="sig-action-result"><strong>Resultado esperado:</strong> ${escape(action.resultado_esperado)}</p>
+                ${sources.length ? `<div class="sig-action-sources"><strong>Archivos y fuentes para esta tarea</strong><div>${sources.map(item => `<a href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${escape(item.nombre)} ↗</a>`).join("")}</div></div>` : ""}
               </details>
               ${platformVerified ? `<div class="sig-task-control realizada"><span>QA automático aprobado por la plataforma.</span></div>` : teamCompleted ? `<div class="sig-task-control realizada"><span>Marcada por ${escape(task.usuario || "Equipo SIG")} el ${escape(task.fecha || "sin fecha")}. La próxima sincronización ejecutará el QA.</span><button type="button" data-sig-task="${escape(action.id)}" data-completed="true">Reabrir</button></div>` : `<div class="sig-task-control"><span>Cuando termines esta corrección, márcala para que quede esperando el QA automático.</span><button type="button" data-sig-task="${escape(action.id)}">Marcar realizada</button></div>`}
             </article>
