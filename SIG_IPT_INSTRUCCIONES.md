@@ -14,7 +14,7 @@ El Inspector SIG IPT recorre la carpeta nacional de cartografía sin modificar l
 
 La ruta configurada por defecto es:
 
-`C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\00_PRC_Actualización Transsa_2026_S2`
+`C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\00_IPT_Nacional`
 
 También se puede arrastrar otra carpeta sobre `REVISAR_CARTOGRAFIA_IPT.bat`.
 
