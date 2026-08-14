@@ -47,6 +47,16 @@ class VigenciaTrazabilidadUiTests(unittest.TestCase):
         self.assertIn("Los seccionales de sectores distintos", view)
         self.assertIn("Escalas superiores y otros instrumentos", view)
 
+    def test_seccionales_aparecen_como_cambios_normativos_en_todas_las_comunas(self):
+        pipeline = (ROOT / "vigencia-pilotos-v2.js").read_text(encoding="utf-8")
+        view = (ROOT / "vigencia-simplificada.js").read_text(encoding="utf-8")
+        self.assertIn('tipo_cambio: "sustitucion_normativa_sectorial"', pipeline)
+        self.assertIn("cambios_normativos:", pipeline)
+        self.assertIn("sectionalChanges", view)
+        self.assertIn('origen_cambio: "plan_seccional"', view)
+        self.assertIn("Ámbito del seccional · zonas por identificar", view)
+        self.assertIn("detalle normativo pendiente", view)
+
 
 if __name__ == "__main__":
     unittest.main()

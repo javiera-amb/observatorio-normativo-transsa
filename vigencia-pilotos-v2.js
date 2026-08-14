@@ -257,6 +257,26 @@
         ...plan,
         relacion_prc: "sustituye_normativa_sectorial",
         descripcion_relacion: "Reemplaza la normativa del PRC dentro de su ámbito territorial de aplicación.",
+        cambios_normativos: Array.isArray(plan.cambios_normativos) && plan.cambios_normativos.length
+          ? plan.cambios_normativos
+          : [{
+              id: `ps-${plan.registro || normalize(plan.nombre)}-sustitucion-prc`,
+              tipo_cambio: "sustitucion_normativa_sectorial",
+              materia: plan.nombre || "Plan seccional",
+              zonas: Array.isArray(plan.zonas) ? plan.zonas : [],
+              etiqueta_antes: "PRC base",
+              etiqueta_despues: validDate(plan.fecha) ? `PS ${plan.fecha.slice(0, 4)}` : "Plan seccional",
+              antes: "Normativa del PRC base aplicable al sector. Falta identificar los códigos y parámetros específicos reemplazados.",
+              despues: "Las zonas y normas del plan seccional prevalecen dentro de su polígono. Falta transcribir y comparar usos, densidad, altura y demás parámetros del expediente oficial.",
+              impacto: "Sustitución normativa sectorial del PRC dentro del ámbito del plan seccional; fuera de ese polígono continúa aplicando el PRC base.",
+              estado_revision: "pendiente_documental",
+              estado_sig: "pendiente_revision",
+              evidencia: [
+                plan.registro ? `Registro Portal IPT ${plan.registro}` : "Registro del plan seccional",
+                plan.fecha || "Sin fecha informada"
+              ].join(" · "),
+              fuente: plan.fuente || "https://portalipt.minvu.cl/instrumentos"
+            }],
         estado_integracion_documental: "pendiente_revision",
         estado_integracion_sig: "pendiente_revision"
       }));

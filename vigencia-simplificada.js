@@ -159,10 +159,55 @@
 
   function normativeChangesTemplate(item) {
     const comparisons = Array.isArray(item?.comparaciones_versiones) ? item.comparaciones_versiones : [];
-    const changes = comparisons.flatMap(comparison =>
+    const comparisonChanges = comparisons.flatMap(comparison =>
       (Array.isArray(comparison?.cambios) ? comparison.cambios : [])
         .map(change => ({ change, comparison }))
     );
+    const sectionals = Array.isArray(item?.marco_comunal_consolidado?.seccionales)
+      ? item.marco_comunal_consolidado.seccionales
+      : (Array.isArray(item?.instrumentos) ? item.instrumentos.filter(plan => plan.tipo_ipt === "PS") : []);
+    const detailedSectionalRegisters = new Set(
+      comparisons
+        .filter(comparison => String(comparison?.tipo_ipt || "") === "PS" && Array.isArray(comparison?.cambios) && comparison.cambios.length)
+        .map(comparison => Number(comparison?.instrumento_nuevo?.registro))
+        .filter(Number.isFinite)
+    );
+    const sectionalChanges = sectionals.flatMap(plan => {
+      if (detailedSectionalRegisters.has(Number(plan.registro))) return [];
+      const planChanges = Array.isArray(plan.cambios_normativos) && plan.cambios_normativos.length
+        ? plan.cambios_normativos
+        : [{
+            tipo_cambio: "sustitucion_normativa_sectorial",
+            materia: plan.nombre || "Plan seccional",
+            zonas: [],
+            etiqueta_antes: "PRC base",
+            etiqueta_despues: validDate(plan.fecha) ? `PS ${plan.fecha.slice(0, 4)}` : "Plan seccional",
+            antes: "Normativa del PRC base aplicable al sector. Falta identificar los códigos y parámetros específicos reemplazados.",
+            despues: "Las zonas y normas del plan seccional prevalecen dentro de su polígono. Falta transcribir y comparar los parámetros del expediente oficial.",
+            impacto: "Sustituye la normativa del PRC dentro del ámbito del plan seccional.",
+            estado_revision: "pendiente_documental",
+            estado_sig: "pendiente_revision",
+            evidencia: plan.registro ? `Registro Portal IPT ${plan.registro}` : "Registro del plan seccional",
+            fuente: plan.fuente || "https://portalipt.minvu.cl/instrumentos"
+          }];
+      return planChanges.map(change => ({
+        change: {
+          ...change,
+          origen_cambio: "plan_seccional",
+          materia: change.materia || plan.nombre || "Plan seccional",
+          etiqueta_antes: change.etiqueta_antes || "PRC base",
+          etiqueta_despues: change.etiqueta_despues || (validDate(plan.fecha) ? `PS ${plan.fecha.slice(0, 4)}` : "Plan seccional"),
+          evidencia: change.evidencia || [plan.registro ? `Registro Portal IPT ${plan.registro}` : "Registro del plan seccional", plan.fecha].filter(Boolean).join(" · "),
+          fuente: change.fuente || plan.fuente || "https://portalipt.minvu.cl/instrumentos"
+        },
+        comparison: {
+          instrumento_anterior: item?.marco_comunal_consolidado?.prc_base || {},
+          instrumento_nuevo: plan,
+          tipo_ipt: "PS"
+        }
+      }));
+    });
+    const changes = [...comparisonChanges, ...sectionalChanges];
 
     if (!changes.length) {
       const hasTransition = comparisons.length > 0;
@@ -187,6 +232,12 @@
       `;
     }
 
+    const documentedChanges = changes.filter(({ change }) => change.estado_revision !== "pendiente_documental").length;
+    const pendingSectionals = changes.filter(({ change }) => change.origen_cambio === "plan_seccional" && change.estado_revision === "pendiente_documental").length;
+    const statusText = pendingSectionals
+      ? `${changes.length} cambios · ${pendingSectionals} ${pendingSectionals === 1 ? "seccional por detallar" : "seccionales por detallar"}`
+      : `${documentedChanges || changes.length} ${changes.length === 1 ? "cambio documentado" : "cambios documentados"}`;
+
     return `
       <section class="detailed-comparison-section normative-change-detail-section">
         <div class="detailed-comparison-heading">
@@ -194,19 +245,21 @@
             <h4>Detalle de cambios normativos</h4>
             <p>Zonas creadas, eliminadas, absorbidas, subdivididas o recodificadas, junto con sus cambios completos de norma.</p>
           </div>
-          <span class="detailed-comparison-status">${changes.length} ${changes.length === 1 ? "cambio documentado" : "cambios documentados"}</span>
+          <span class="detailed-comparison-status">${statusText}</span>
         </div>
         <div class="detailed-change-list">
           ${changes.map(({ change, comparison }) => {
-            const previousYear = comparisonYear(comparison, "instrumento_anterior", "Antes");
-            const currentYear = comparisonYear(comparison, "instrumento_nuevo", "Después");
+            const previousYear = change.etiqueta_antes || comparisonYear(comparison, "instrumento_anterior", "Antes");
+            const currentYear = change.etiqueta_despues || comparisonYear(comparison, "instrumento_nuevo", "Después");
             return `
               <article class="detailed-change-card">
                 <div class="detailed-change-title">
                   <span class="change-type-pill">${escape(changeTypeLabel(change.tipo_cambio))}</span>
                   <strong>${escape(change.materia || "Cambio normativo")}</strong>
                 </div>
-                ${Array.isArray(change.zonas) && change.zonas.length ? `<div class="detailed-change-zones">${change.zonas.map(zone => `<span>${escape(zone)}</span>`).join("")}</div>` : ""}
+                ${Array.isArray(change.zonas) && change.zonas.length
+                  ? `<div class="detailed-change-zones">${change.zonas.map(zone => `<span>${escape(zone)}</span>`).join("")}</div>`
+                  : change.origen_cambio === "plan_seccional" ? `<div class="detailed-change-zones"><span>Ámbito del seccional · zonas por identificar</span></div>` : ""}
                 <div class="before-after-grid">
                   <div class="before-after-box"><span>${escape(previousYear)}</span><p>${escape(change.antes || "Sin antecedente documentado.")}</p></div>
                   <div class="before-after-box"><span>${escape(currentYear)}</span><p>${escape(change.despues || "Sin resultado documentado.")}</p></div>
@@ -215,6 +268,7 @@
                 <details class="change-support-details">
                   <summary>Evidencia y estado de revisión</summary>
                   <div class="change-support-body">
+                    ${change.estado_revision === "pendiente_documental" ? `<span class="change-sig-pill pendiente_revision">detalle normativo pendiente</span>` : ""}
                     ${change.estado_sig ? `<span class="change-sig-pill ${escape(change.estado_sig)}">${escape(change.estado_sig.replaceAll("_", " "))}</span>` : ""}
                     ${change.evidencia ? `<span>${escape(change.evidencia)}</span>` : ""}
                     ${change.fuente ? `<a href="${escape(change.fuente)}" target="_blank" rel="noopener noreferrer">Abrir documento oficial ↗</a>` : ""}
