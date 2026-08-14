@@ -517,16 +517,8 @@
     } else {
       detail.insertAdjacentHTML("beforeend", comparisonTemplate(comparison, item));
     }
-    // Para Coquimbo, "Normativa aplicable y versiones" reemplaza la tarjeta
-    // genérica de planes vigentes; mantener ambas repetía la misma información.
-    planSection?.remove();
-    detail.querySelector(".strategic-reading-section")?.remove();
-    // El mapa genérico solo mostraba el límite comunal y podía interpretarse
-    // como cartografía PRC validada. Se oculta hasta incorporar geometrías IPT.
-    mapSection?.remove();
-    const packageNode = detail.querySelector(".coquimbo-audit-package");
-    const timeline = detail.querySelector(".timeline-section");
-    if (packageNode && timeline) packageNode.insertAdjacentElement("beforebegin", timeline);
+    // La simplificación visual se aplica posteriormente mediante
+    // vigencia-simplificada.js con reglas comunes para todas las comunas.
   }
 
   const originalRenderDetail = renderVigenciaDetail;
