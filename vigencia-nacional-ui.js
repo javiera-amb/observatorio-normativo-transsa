@@ -43,6 +43,19 @@
       .additional-acts { margin-top:8px; border:1px dashed var(--line); border-radius:11px; background:#fff; }
       .additional-acts summary { cursor:pointer; padding:12px 14px; color:var(--transsa-blue); font-size:.75rem; font-weight:700; }
       .additional-acts-list { display:grid; gap:9px; padding:0 12px 12px; }
+      .prc-coverage-lists { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:-30px 0 28px; }
+      .prc-coverage-list { border:1px solid var(--line); border-radius:14px; background:#fff; overflow:hidden; }
+      .prc-coverage-list summary { cursor:pointer; display:flex; justify-content:space-between; gap:12px; padding:14px 16px; color:var(--transsa-navy); font-size:.8rem; font-weight:700; }
+      .prc-coverage-list summary span { color:var(--muted); font-weight:600; }
+      .prc-coverage-list ul { max-height:360px; overflow-y:auto; margin:0; padding:0 12px 12px; list-style:none; }
+      .prc-coverage-list li + li { border-top:1px solid var(--line); }
+      .prc-coverage-item { width:100%; padding:10px 4px; border:0; background:transparent; text-align:left; color:inherit; }
+      button.prc-coverage-item { cursor:pointer; }
+      button.prc-coverage-item:hover strong { color:var(--transsa-blue); }
+      .prc-coverage-item strong,.prc-coverage-item span,.prc-coverage-item small { display:block; }
+      .prc-coverage-item strong { color:var(--transsa-navy); font-size:.75rem; }
+      .prc-coverage-item span { margin-top:3px; color:#4d5565; font-size:.68rem; line-height:1.35; }
+      .prc-coverage-item small { margin-top:3px; color:var(--muted); font-size:.62rem; }
 
       .sig-commune-summary { margin:18px 0; padding:18px; border:1px solid var(--line); border-radius:16px; background:#fff; }
       .sig-commune-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
@@ -70,6 +83,7 @@
         .national-coverage-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
         .national-coverage-copy{grid-column:1/-1;}
         .sig-commune-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+        .prc-coverage-lists{grid-template-columns:1fr;}
       }
       @media(max-width:560px){
         .national-coverage-strip{grid-template-columns:1fr;}
@@ -137,6 +151,66 @@
       <div class="national-coverage-stat"><span>Rectificaciones</span><strong>${Number(types["Rectificación"] || 0).toLocaleString("es-CL")}</strong></div>
     `;
     metricGrid.insertAdjacentElement("afterend", strip);
+  }
+
+  function addPrcCoverageLists() {
+    if (document.getElementById("vigenciaPrcCoverageLists")) return;
+    const rows = Array.isArray(window.SEGUIMIENTO_NORMATIVO?.comunas)
+      ? window.SEGUIMIENTO_NORMATIVO.comunas
+      : [];
+    const summary = document.querySelector(".vigencia-summary");
+    if (!rows.length || !summary) return;
+
+    const instrumentIndex = new Map(vigenciaInstruments().map(item => [
+      `${normalizeKey(item.region)}|${normalizeKey(item.comuna)}`,
+      item,
+    ]));
+    const findInstrument = row => instrumentIndex.get(`${normalizeKey(row.region)}|${normalizeKey(row.comuna)}`)
+      || vigenciaInstruments().find(item => normalizeKey(item.comuna) === normalizeKey(row.comuna));
+    const withPrc = rows.filter(row => String(row.prc_nombre || "").trim());
+    const withoutPrc = rows.filter(row => !String(row.prc_nombre || "").trim());
+    const itemTemplate = (row, hasPrc) => {
+      const item = findInstrument(row);
+      const plans = (item?.instrumentos || [])
+        .filter(plan => String(plan.tipo_ipt || "").toUpperCase() !== "PRC")
+        .sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")));
+      const latestByType = new Map();
+      plans.forEach(plan => {
+        const type = String(plan.tipo_ipt || "IPT").toUpperCase();
+        if (!latestByType.has(type)) latestByType.set(type, plan);
+      });
+      const applicable = [...latestByType.values()]
+        .map(plan => `${plan.tipo_ipt || "IPT"}: ${plan.nombre || "instrumento identificado"}${plan.fecha ? ` (${plan.fecha})` : ""}`)
+        .join(" · ");
+      const body = hasPrc
+        ? `${row.prc_nombre}${row.prc_fecha ? ` · ${row.prc_fecha}` : ""}`
+        : applicable || "Sin PRC comunal; otros IPT superiores todavía deben confirmarse documentalmente.";
+      const content = `<strong>${escapeHtml(row.comuna)}</strong><span>${escapeHtml(body)}</span><small>${escapeHtml(row.region)}</small>`;
+      return `<li>${item?.id
+        ? `<button type="button" class="prc-coverage-item" data-prc-coverage-id="${escapeAttribute(item.id)}">${content}</button>`
+        : `<div class="prc-coverage-item">${content}</div>`}</li>`;
+    };
+
+    const section = document.createElement("section");
+    section.id = "vigenciaPrcCoverageLists";
+    section.className = "prc-coverage-lists";
+    section.innerHTML = `
+      <details class="prc-coverage-list">
+        <summary>Comunas con PRC identificado <span>${withPrc.length}</span></summary>
+        <ul>${withPrc.map(row => itemTemplate(row, true)).join("")}</ul>
+      </details>
+      <details class="prc-coverage-list">
+        <summary>Comunas sin PRC comunal <span>${withoutPrc.length}</span></summary>
+        <ul>${withoutPrc.map(row => itemTemplate(row, false)).join("")}</ul>
+      </details>`;
+    summary.insertAdjacentElement("afterend", section);
+    section.addEventListener("click", event => {
+      const button = event.target.closest("[data-prc-coverage-id]");
+      if (!button) return;
+      vigenciaState.selectedId = button.dataset.prcCoverageId;
+      if (typeof renderVigencia === "function") renderVigencia();
+      document.getElementById("vigenciaWorkspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function addCommuneCoverage(item, detail) {
@@ -283,6 +357,7 @@
   injectStyles();
   configureCommuneOnlySearch();
   addNationalStrip();
+  addPrcCoverageLists();
   loadLocalSigConsolidated();
   if (typeof renderVigencia === "function") renderVigencia();
 })();
