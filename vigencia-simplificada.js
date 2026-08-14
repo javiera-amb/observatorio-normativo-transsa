@@ -131,6 +131,7 @@
     );
 
     if (!changes.length) {
+      const hasTransition = comparisons.length > 0;
       const topics = [...new Set(comparisons.flatMap(comparison =>
         Array.isArray(comparison?.materias_a_comparar) ? comparison.materias_a_comparar : []
       ))];
@@ -141,11 +142,11 @@
               <h4>Detalle de cambios normativos</h4>
               <p>Comparación por zona, uso y parámetro urbanístico.</p>
             </div>
-            <span class="detailed-comparison-status">Comparación pendiente</span>
+            <span class="detailed-comparison-status">${hasTransition ? "Comparación pendiente" : "Sin transición comparable"}</span>
           </div>
           <div class="normative-change-empty">
-            <strong>Aún no hay cambios específicos validados para esta transición.</strong>
-            <p>La plataforma no declarará una zona como creada, eliminada, absorbida o subdividida —ni informará variaciones de densidad, altura u otros parámetros— hasta contrastar las ordenanzas y los planos oficiales.</p>
+            <strong>${hasTransition ? "Aún no hay cambios específicos validados para esta transición." : "No se detectaron dos versiones comparables del mismo instrumento."}</strong>
+            <p>${hasTransition ? "La plataforma no declarará una zona como creada, eliminada, absorbida o subdividida —ni informará variaciones de densidad, altura u otros parámetros— hasta contrastar las ordenanzas y los planos oficiales." : "Sin una versión anterior y una nueva del mismo IPT no corresponde inferir creación, eliminación o cambio de parámetros. Los actos posteriores siguen visibles y trazables en la línea de tiempo."}</p>
             ${topics.length ? `<div class="normative-change-pending-list">${topics.map(topic => `<span>${escape(topic)}</span>`).join("")}</div>` : ""}
           </div>
         </section>
