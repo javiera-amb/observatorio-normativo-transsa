@@ -7,7 +7,7 @@ title Inspector SIG IPT - Transsa Urban Intelligence
 set "REPO=%~dp0"
 if "%REPO:~-1%"=="\" set "REPO=%REPO:~0,-1%"
 
-set "CARPETA_SIG=C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\PRC_Actualización Transsa_2026_S2"
+set "CARPETA_SIG=C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\00_IPT_Nacional"
 
 if not "%~1"=="" set "CARPETA_SIG=%~1"
 

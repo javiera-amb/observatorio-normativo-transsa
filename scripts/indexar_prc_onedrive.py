@@ -41,6 +41,26 @@ def normalizar(valor: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", salida.lower()).strip()
 
 
+def es_segmento_prc(valor: str) -> bool:
+    """Reconoce PRC aunque la carpeta use prefijos como ``01_PRC``."""
+    return "prc" in normalizar(valor).split()
+
+
+def seleccionar_archivos_prc(archivos: list[Path], raiz: Path) -> tuple[list[Path], int]:
+    """Evita mezclar PRI, PRM u otros IPT cuando la raíz es nacional.
+
+    La compatibilidad se conserva para estructuras antiguas dedicadas
+    exclusivamente a PRC que no incluían un segmento llamado ``PRC``.
+    """
+    bajo_prc = [
+        archivo for archivo in archivos
+        if any(es_segmento_prc(parte) for parte in archivo.relative_to(raiz).parts[:-1])
+    ]
+    if not bajo_prc:
+        return archivos, 0
+    return bajo_prc, len(archivos) - len(bajo_prc)
+
+
 def sha256(ruta: Path) -> str:
     digest = hashlib.sha256()
     with ruta.open("rb") as archivo:
@@ -317,7 +337,7 @@ def validar(
 
 def contexto(ruta: Path, raiz: Path) -> dict[str, str | None]:
     partes = list(ruta.relative_to(raiz).parts)
-    indice_prc = next((i for i, parte in enumerate(partes[:-1]) if normalizar(parte) == "prc"), None)
+    indice_prc = next((i for i, parte in enumerate(partes[:-1]) if es_segmento_prc(parte)), None)
     if indice_prc is None:
         return {"region": partes[0] if partes else None, "tipo_ipt": None, "comuna": ruta.parent.name}
     return {
@@ -344,13 +364,18 @@ def main() -> int:
         archivo for archivo in raiz.rglob("*")
         if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES_NORMATIVAS
     )
+    archivos_espaciales = sorted(
+        archivo for archivo in raiz.rglob("*")
+        if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES_ESPACIALES
+    )
+    archivos_espaciales, archivos_no_prc_ignorados = seleccionar_archivos_prc(
+        archivos_espaciales,
+        raiz,
+    )
     tablas_por_carpeta: dict[Path, list[Path]] = {}
     for tabla in tablas_normativas:
         tablas_por_carpeta.setdefault(tabla.parent, []).append(tabla)
-    for ruta in sorted(
-        archivo for archivo in raiz.rglob("*")
-        if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES_ESPACIALES
-    ):
+    for ruta in archivos_espaciales:
         datos_contexto = contexto(ruta, raiz)
         estado = detectar_estado(ruta.name)
         modelo = detectar_modelo(ruta.name)
@@ -404,6 +429,7 @@ def main() -> int:
             "estados_detectados": dict(estados),
             "archivos_tui_v2": sum(archivo["modelo_detectado"] == "tui_v2" for archivo in archivos),
             "archivos_sin_clasificar": sum(archivo["modelo_detectado"] != "tui_v2" for archivo in archivos),
+            "archivos_no_prc_ignorados": archivos_no_prc_ignorados,
             "archivos_tui_v2_estructura_ok": sum(
                 archivo["modelo_detectado"] == "tui_v2"
                 and archivo["qa_archivo"].get("estandar_tui_v2", {}).get("cumple_estructura")

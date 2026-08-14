@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+NUEVA_CARPETA_IPT = "00_IPT_Nacional"
 
 
 def expandir(valor: str) -> Path:
@@ -20,6 +21,29 @@ def expandir(valor: str) -> Path:
 
 def ejecutar(*argumentos: str) -> None:
     subprocess.run([sys.executable, *argumentos], cwd=ROOT, check=True)
+
+
+def resolver_raiz_prc(config: dict[str, str], config_path: Path) -> Path:
+    """Resuelve la raíz vigente y migra configuraciones locales antiguas."""
+    configurada = expandir(config["prc_root"])
+    if configurada.is_dir():
+        return configurada
+
+    nueva = configurada.parent / NUEVA_CARPETA_IPT
+    if nueva.is_dir():
+        config["prc_root"] = str(nueva)
+        config_path.write_text(
+            json.dumps(config, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Ruta IPT actualizada automáticamente: {nueva}")
+        return nueva
+
+    raise SystemExit(
+        f"No existe la carpeta IPT configurada: {configurada}\n"
+        f"Tampoco se encontró la nueva carpeta esperada: {nueva}\n"
+        "Actualice 'prc_root' en _local/rutas_tui.json."
+    )
 
 
 def resolver_limite_comunal(capas_root: Path, configurado: str = "") -> Path:
@@ -67,7 +91,7 @@ def main() -> int:
             f"Falta {args.config}. Copie config/rutas_tui.example.json a _local/rutas_tui.json."
         )
     config = json.loads(args.config.read_text(encoding="utf-8"))
-    prc_root = expandir(config["prc_root"])
+    prc_root = resolver_raiz_prc(config, args.config)
     capas_root = expandir(config["capas_root"])
 
     if args.borradores:
