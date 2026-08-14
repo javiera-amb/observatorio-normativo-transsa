@@ -202,7 +202,7 @@
 
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
-    const vigenciaRelease = "20260814-correcciones-4";
+    const vigenciaRelease = "20260814-correcciones-5";
 
     try {
       await loadScript("data/noticias.js?v=20260813-noticias-1", "data-noticias");
@@ -225,7 +225,7 @@
       await loadScript(`data/fuentes_multifuente_ipt.js?v=${vigenciaRelease}`, "fuentes-multifuente-ipt");
       await loadScript(`vigencia-pilotos-v2.js?v=${vigenciaRelease}`, "vigencia-pilotos");
       await loadScript("vigencia-estrategica.js", "vigencia-estrategica");
-      await loadScript("vigencia-nacional-ui.js", "vigencia-nacional-ui");
+      await loadScript(`vigencia-nacional-ui.js?v=${vigenciaRelease}`, "vigencia-nacional-ui");
       await loadScript(`vigencia-comparacion-detallada.js?v=${vigenciaRelease}`, "vigencia-comparacion-detallada");
       await loadScript(`vigencia-refundidos-fuentes.js?v=${vigenciaRelease}`, "vigencia-refundidos-fuentes");
       await loadScript(`vigencia-simplificada.js?v=${vigenciaRelease}`, "vigencia-simplificada");
