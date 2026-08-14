@@ -35,6 +35,18 @@ class VigenciaTrazabilidadUiTests(unittest.TestCase):
         self.assertLess(regions, selector)
         self.assertLess(selector, detail)
 
+    def test_seccionales_integran_consolidado_sin_compararse_entre_si(self):
+        pipeline = (ROOT / "vigencia-pilotos-v2.js").read_text(encoding="utf-8")
+        view = (ROOT / "vigencia-simplificada.js").read_text(encoding="utf-8")
+        self.assertIn('if (type === "PS" || type === "LU") return false', pipeline)
+        self.assertIn('event.clase_evento !== "comparacion_versiones"', pipeline)
+        self.assertIn("...versionComparisons.map(timelineFromComparison)", pipeline)
+        self.assertIn("Consolidado normativo comunal PRC + seccionales", pipeline)
+        self.assertIn("instrumentos_escala_superior", pipeline)
+        self.assertIn("Consolidado comunal a entregar: PRC +", view)
+        self.assertIn("Los seccionales de sectores distintos", view)
+        self.assertIn("Escalas superiores y otros instrumentos", view)
+
 
 if __name__ == "__main__":
     unittest.main()
