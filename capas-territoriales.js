@@ -27,11 +27,23 @@
   const communeSource = () => window.SEGUIMIENTO_NORMATIVO?.comunas || [];
   const iptSource = () => window.VIGENCIA_CARTOGRAFICA?.instrumentos || [];
   const rawCatalogLayers = () => (layersSource().capas || []).filter(Boolean);
+  const QA_STORAGE_KEY = "tui-capas-qa-javiera-v1";
+  const javieraMode = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("vista") === "equipo" && params.get("panel") === "javiera";
+  };
+  const loadLayerQa = () => {
+    try { return JSON.parse(localStorage.getItem(QA_STORAGE_KEY) || "{}"); }
+    catch (_error) { return {}; }
+  };
+  const saveLayerQa = records => localStorage.setItem(QA_STORAGE_KEY, JSON.stringify(records));
+  const layerQaKey = layer => normalize(layer.nombre);
   const standardizedCategory = layer => {
     const text = normalize(`${layer.nombre} ${(layer.categorias || []).join(" ")}`);
+    if (/(^| )(prc|prm|prms|pri|prdu|ps|lu)( |$)|plan regulador|plan seccional|limite urbano|instrumento de planificacion/.test(text)) return "Instrumentos de planificación territorial";
     if (/division politico|limite|comuna|region/.test(text)) return "Límites y escalas";
     if (/predio|catastro|area homogenea|scraping ah|suelo/.test(text)) return "Suelo y propiedad";
-    if (/metro|transporte|red vial|ferrea|paradero|embalse|caleta|antena/.test(text)) return "Movilidad e infraestructura";
+    if (/(^| )metro( |$)|transporte|red vial|ferrea|paradero|embalse|caleta|antena/.test(text)) return "Movilidad e infraestructura";
     if (/establecimiento|educacion|pdi|bombero|carabinero|deportiva|junta vecinal|equipamiento|poi|supermercado/.test(text)) return "Equipamientos y servicios";
     if (/censo|demograf|barrio|campamento|area poblada|sector oficina|mercado/.test(text)) return "Demografía y mercado";
     if (/amenaza|riesgo|tsunami|volcan|protegida|sitio prioritario|ambiental/.test(text)) return "Riesgos y medio ambiente";
@@ -40,8 +52,9 @@
   };
   const candidateCategory = item => {
     const text = normalize(`${item.nombre} ${item.valor}`);
+    if (/(^| )(prc|prm|prms|pri|prdu|ps|lu)( |$)|plan regulador|plan seccional|instrumento de planificacion/.test(text)) return "Instrumentos de planificación territorial";
     if (/riesgo|humedal|ambient|temperatura|ruido|proteg/.test(text)) return "Riesgos y medio ambiente";
-    if (/metro|movilidad|transporte|ferrea|paradero|vial/.test(text)) return "Movilidad e infraestructura";
+    if (/(^| )metro( |$)|movilidad|transporte|ferrea|paradero|vial/.test(text)) return "Movilidad e infraestructura";
     if (/turis|parque|equipamiento|poi|supermercado/.test(text)) return "Equipamientos y servicios";
     if (/predio|suelo|catastr/.test(text)) return "Suelo y propiedad";
     return "Catálogo por incorporar";
@@ -114,6 +127,46 @@
     return "Fuente por acreditar";
   }
 
+  function layerHasMaterializedFile(layer) {
+    if (layer._catalogCount !== undefined) return true;
+    if (layer._candidate) return false;
+    const cross = crossSource().capas?.[layer.nombre];
+    if (cross?.estado === "procesada") return true;
+    const source = coverageSource().fuentes?.[layer.nombre];
+    return Boolean(source?.estado && !["sin_archivo", "referencia_incompleta", "formato_no_espacial"].includes(source.estado));
+  }
+
+  function catalogQaState(layer) {
+    if (layer._catalogCount !== undefined) return { label: "IPT auditado", className: "qa-approved", file: true, audited: true };
+    const file = layerHasMaterializedFile(layer);
+    if (!file) return { label: "Capa no disponible", className: "qa-missing", file: false, audited: false };
+    const record = loadLayerQa()[layerQaKey(layer)];
+    if (record?.estado === "aprobado") return { label: "QA Javiera aprobado", className: "qa-approved", file: true, audited: true, record };
+    if (normalize(layer.owner).includes("rene")) return { label: "Pendiente QA Javiera", className: "qa-pending", file: true, audited: false };
+    return { label: catalogReadiness(layer), className: "qa-available", file: true, audited: false };
+  }
+
+  function exportLayerQa() {
+    const records = loadLayerQa();
+    const rows = [["capa", "estado", "fecha", "responsable"]];
+    catalogLayers().forEach(layer => {
+      const state = catalogQaState(layer);
+      rows.push([
+        layer.nombre,
+        state.className === "qa-approved" ? "aprobado" : state.className === "qa-missing" ? "sin_capa" : "pendiente",
+        records[layerQaKey(layer)]?.fecha || "",
+        records[layerQaKey(layer)]?.usuario || "",
+      ]);
+    });
+    const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `qa_capas_javiera_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   function renderLayerCatalog() {
     const host = $("capasCatalogGrid");
     if (!host) return;
@@ -137,10 +190,20 @@
     });
     host.innerHTML = sortedGroups.map(([category, layers]) => {
       const sorted = layers.slice().sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
-      const ready = sorted.filter(layer => ["IPT auditado", "Cruce ejecutado", "Archivo identificado"].includes(catalogReadiness(layer))).length;
-      return `<details class="capas-catalog-group"><summary><span><strong>${escape(category)}</strong><small>${sorted.length} ${sorted.length === 1 ? "capa o tipo" : "capas o tipos"}</small></span><span class="capas-catalog-summary">${ready} con respaldo utilizable</span></summary><div class="capas-catalog-list">${sorted.map(layer => `<article><div><strong>${escape(layer.nombre)}</strong><small>${escape(layer._catalogDetail || layer.owner || "Sin responsable")}</small></div><span class="capas-catalog-readiness">${escape(catalogReadiness(layer))}</span></article>`).join("")}<button type="button" class="capas-catalog-action" data-capas-category="${escape(category)}">Ver esta categoría en la comuna seleccionada</button></div></details>`;
+      const states = sorted.map(layer => catalogQaState(layer));
+      const approved = states.filter(item => item.className === "qa-approved").length;
+      const pending = states.filter(item => item.className === "qa-pending").length;
+      const missing = states.filter(item => item.className === "qa-missing").length;
+      return `<details class="capas-catalog-group"><summary><span><strong>${escape(category)}</strong><small>${sorted.length} ${sorted.length === 1 ? "capa o tipo" : "capas o tipos"}</small></span><span class="capas-catalog-summary">${approved} QA listo · ${pending} pendientes · ${missing} sin capa</span></summary><div class="capas-catalog-list">${sorted.map(layer => {
+        const qa = catalogQaState(layer);
+        const qaButton = javieraMode() && layer._catalogCount === undefined
+          ? `<button type="button" class="capas-qa-button" data-layer-qa="${escape(layerQaKey(layer))}" ${qa.file ? "" : "disabled"}>${qa.audited ? "Reabrir QA" : qa.file ? "Marcar QA listo" : "Sin capa para auditar"}</button>`
+          : "";
+        return `<article class="${qa.className}"><div><strong>${escape(layer.nombre)}</strong><small>${escape(layer._catalogDetail || layer.owner || "Sin responsable")}</small>${qa.record?.fecha ? `<small>Revisada por Javiera · ${escape(qa.record.fecha.slice(0, 10))}</small>` : ""}</div><div class="capas-catalog-status"><span class="capas-catalog-readiness">${escape(qa.label)}</span>${qaButton}</div></article>`;
+      }).join("")}<button type="button" class="capas-catalog-action" data-capas-category="${escape(category)}">Ver esta categoría en la comuna seleccionada</button></div></details>`;
     }).join("");
     if ($("capasCatalogCount")) $("capasCatalogCount").textContent = `${items.length} capas o tipos · ${sortedGroups.length} categorías`;
+    if ($("capasQaExport")) $("capasQaExport").hidden = !javieraMode();
   }
 
   function communeRows() {
@@ -636,7 +699,17 @@
     $("capasCategoryFilter")?.addEventListener("change", event => { state.category = event.target.value; renderTerritorial(); });
     $("capasSort")?.addEventListener("change", event => { state.sort = event.target.value; renderTerritorial(); });
     $("capasCoverageFilter")?.addEventListener("change", event => { state.coverage = event.target.value; renderTerritorial(); });
+    $("capasQaExport")?.addEventListener("click", exportLayerQa);
     document.addEventListener("click", event => {
+      const qaButton = event.target.closest("[data-layer-qa]");
+      if (qaButton && javieraMode()) {
+        const records = loadLayerQa();
+        if (records[qaButton.dataset.layerQa]?.estado === "aprobado") delete records[qaButton.dataset.layerQa];
+        else records[qaButton.dataset.layerQa] = { estado: "aprobado", fecha: new Date().toISOString(), usuario: "Javiera" };
+        saveLayerQa(records);
+        renderLayerCatalog();
+        return;
+      }
       const categoryButton = event.target.closest("[data-capas-category]");
       if (categoryButton) {
         state.category = categoryButton.dataset.capasCategory;
