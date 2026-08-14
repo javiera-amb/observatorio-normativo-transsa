@@ -1,16 +1,22 @@
 {
-  "version": 2,
+  "version": 2.1,
   "codigo": "TUI_V2",
-  "nombre": "Estándar PRC TUI versión 2",
+  "nombre": "Estándar PRC TUI versión 2.1",
   "convencion_archivo": "IPT_00_PRC_NombreComuna_TUI_V2_Estado.gpkg",
+  "convencion_tabla_normativa": "IPT_00_PRC_NombreComuna_TUI_V2_Normativa.csv",
+  "formatos_tabla_normativa": [".csv", ".xlsx", ".parquet"],
   "reglas": {
     "geometria_zonificacion": "La capa principal conserva la geometría normativa de cada zona. No se subdivide ni reemplaza mediante intersecciones con inundación, tsunami, remoción en masa u otras amenazas.",
     "capas_riesgo": "Las zonas de riesgo se almacenan como capas independientes y nunca como geometría de la zonificación base.",
-    "atributos": "La tabla normativa y la homologación de usos se guardan dentro del GeoPackage. Un Excel puede conservarse como evidencia, pero no reemplaza la tabla de atributos.",
+    "atributos": "La geometría se entrega en el GeoPackage y la normativa se entrega en una tabla separada. Ambas se relacionan mediante unidad_normativa_id; los atributos descriptivos no se duplican ni se fuerzan dentro del GeoPackage.",
+    "clave_union": "Cada geometría y cada fila normativa debe contener unidad_normativa_id, estable y único dentro del instrumento.",
+    "capas_tematicas": "Uso de suelo, edificación, riesgos y otras materias se conservan como coberturas superpuestas. No se intersectan para crear una geometría única antes de almacenarlas.",
     "qa": "La validez estructural del archivo no aprueba por sí sola el QA normativo. La plataforma debe comparar actos, geometría, atributos y controles pendientes."
   },
   "campos_zona_candidatos": ["zona", "zonificacion", "codigo_zona", "cod_zona", "id_zona", "subzona"],
+  "campos_union_candidatos": ["unidad_normativa_id", "id_normativa", "id_zona", "codigo_zona", "cod_zona"],
   "campos_uso_candidatos": ["uso", "usos", "destino", "actividad"],
   "tokens_riesgo": ["riesgo", "inundacion", "tsunami", "remocion", "volcan", "amenaza"],
-  "minimo_atributos_no_geometricos": 2
+  "minimo_atributos_no_geometricos": 1,
+  "minimo_campos_tabla_normativa": 2
 }

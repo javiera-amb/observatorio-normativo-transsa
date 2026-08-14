@@ -6,7 +6,7 @@ El Inspector SIG IPT recorre la carpeta nacional de cartografía sin modificar l
 
 ## Ejecución
 
-1. Actualizar la rama `feature/noticias-v0.6` en GitHub Desktop.
+1. Actualizar la rama `main` en GitHub Desktop.
 2. Cerrar QGIS si hay muchos GeoPackage abiertos. No es obligatorio, pero evita bloqueos de lectura.
 3. Hacer doble clic en `REVISAR_CARTOGRAFIA_IPT.bat`.
 4. Esperar a que la ventana indique `LISTO`.
@@ -14,7 +14,7 @@ El Inspector SIG IPT recorre la carpeta nacional de cartografía sin modificar l
 
 La ruta configurada por defecto es:
 
-`C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\PRC_Actualización Transsa_2026_S2`
+`C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\00_PRC_Actualización Transsa_2026_S2`
 
 También se puede arrastrar otra carpeta sobre `REVISAR_CARTOGRAFIA_IPT.bat`.
 
@@ -37,9 +37,17 @@ Los planes seccionales con nombres distintos se tratan como instrumentos diferen
 
 Para vincular un seccional se exige coincidencia de comuna, región y una coincidencia razonable de nombre. Los casos dudosos quedan como `vinculo_ambiguo`.
 
-### PRC consolidado
+### PRC consolidado y modelo de entrega
 
 El inventario mantiene cada plan seccional como instrumento trazable. La consolidación espacial se realizará después del inventario: dentro del ámbito de un seccional se aplicará su normativa y fuera de él continuará la normativa del PRC.
+
+La TUI V2.1 no intersecta uso de suelo, edificación y riesgos para fabricar una sola geometría. Esas materias se conservan como coberturas superpuestas. La entrega comunal contiene:
+
+- un GeoPackage con la geometría normativa base y `unidad_normativa_id`;
+- una tabla normativa separada con la misma clave;
+- riesgos y otras capas temáticas independientes.
+
+La intersección para consulta puede ejecutarla el visor o una vista SQL sin alterar la fuente normativa.
 
 ### Estado SIG
 

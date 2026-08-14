@@ -22,8 +22,8 @@
   >
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ux-refresh.css">
-  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260813-correcciones-2">
-  <link rel="stylesheet" href="capas-territoriales.css?v=20260813-correcciones-2">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260814-correcciones-3">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260814-correcciones-3">
 </head>
 <body>
   <header class="topbar">
@@ -535,7 +535,7 @@
       <section class="seguimiento-interpretation">
         <div><span class="seguimiento-dot pending"></span><strong>Pendiente</strong><p>El equipo aún no comienza o no ha informado avance.</p></div>
         <div><span class="seguimiento-dot development"></span><strong>En desarrollo</strong><p>La cartografía está siendo construida, corregida o consolidada.</p></div>
-        <div><span class="seguimiento-dot ready"></span><strong>Actualizado</strong><p>La versión TUI V2 tiene geometría base, atributos incorporados y está lista para enviar a Propiteq.</p></div>
+        <div><span class="seguimiento-dot ready"></span><strong>Actualizado</strong><p>La versión TUI V2 tiene geometría base y tabla normativa separada, vinculadas por una clave común, y está lista para enviar a Propiteq.</p></div>
         <div><span class="seguimiento-dot platform"></span><strong>Enviado</strong><p>La versión TUI V2 sale del equipo y Propiteq queda a cargo de cargarla al visor.</p></div>
       </section>
       <section class="capas-audit-banner seguimiento-definitions">
@@ -573,12 +573,12 @@
 
         <section class="seguimiento-workflow-panel" data-internal-scope="equipo">
           <div><p class="eyebrow">FLUJO DE ACTUALIZACIÓN</p><h3>Qué ocurre cuando se sube un PRC consolidado</h3><p>Subir el archivo inicia la revisión; no cambia por sí solo el estado de producción ni aprueba el QA.</p></div>
-          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso TUI V2</strong><small>Se guarda `IPT_00_PRC_Comuna_TUI_V2_Estado.gpkg` en OneDrive.</small></li><li><span>2</span><strong>Control estructural</strong><small>Se comprueban CRS, geometrías y atributos incorporados dentro del GeoPackage.</small></li><li><span>3</span><strong>Comparación normativa</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores sin recortar la zonificación con riesgos.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma comprueba las correcciones automatizables; el resto queda pendiente para Javiera.</small></li><li><span>5</span><strong>Envío</strong><small>Solo una TUI V2 sin bloqueos puede marcarse “enviada” para la carga de Propiteq.</small></li></ol>
+          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso TUI V2</strong><small>Se guardan el GeoPackage de geometrías y la tabla normativa separada en la carpeta comunal de OneDrive.</small></li><li><span>2</span><strong>Control estructural</strong><small>Se comprueban CRS, geometrías, tabla normativa y la clave común `unidad_normativa_id`.</small></li><li><span>3</span><strong>Comparación normativa</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores sin recortar la zonificación con riesgos.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma comprueba las correcciones automatizables; el resto queda pendiente para Javiera.</small></li><li><span>5</span><strong>Envío</strong><small>Solo una TUI V2 sin bloqueos puede marcarse “enviada” para la carga de Propiteq.</small></li></ol>
         </section>
 
         <section class="seguimiento-v2-alert" data-internal-scope="equipo,javiera">
-          <div><p class="eyebrow">ALERTA CRÍTICA · PRC HISTÓRICOS</p><h3>Las 45 versiones enviadas deben reconstruirse como TUI V2</h3><p>Las V1 se generaron intersectando la zonificación con capas de riesgo: sus polígonos representan fragmentos de esa intersección y no la geometría normativa base. Además, la información normativa quedó fuera de la tabla de atributos del GeoPackage.</p></div>
-          <ul><li><strong>No reutilizar la V1</strong><span>Se conserva solo como antecedente del envío histórico a Propiteq.</span></li><li><strong>Zonificación sin recortes</strong><span>Inundación y otros riesgos quedan como capas independientes.</span></li><li><strong>Atributos dentro del GPKG</strong><span>El Excel puede ser evidencia, pero no la tabla principal.</span></li></ul>
+          <div><p class="eyebrow">ALERTA CRÍTICA · PRC HISTÓRICOS</p><h3>Las 45 versiones enviadas deben reconstruirse como TUI V2</h3><p>Las V1 se generaron intersectando la zonificación con capas de riesgo: sus polígonos representan fragmentos de esa intersección y no la geometría normativa base. La nueva entrega separa geometría y normativa para evitar duplicaciones y facilitar la carga en las dos tablas SQL.</p></div>
+          <ul><li><strong>No reutilizar la V1</strong><span>Se conserva solo como antecedente del envío histórico a Propiteq.</span></li><li><strong>Zonificación sin recortes</strong><span>Uso de suelo, edificación y riesgos permanecen como coberturas superpuestas.</span></li><li><strong>Dos archivos vinculados</strong><span>GeoPackage de geometrías + tabla normativa separada mediante `unidad_normativa_id`.</span></li></ul>
           <button id="seguimientoLegacyV2Download" class="secondary-button" type="button">Descargar cola de reconstrucción</button>
         </section>
 
@@ -590,15 +590,17 @@
 
         <section class="seguimiento-direct-panel" data-internal-scope="equipo,javiera">
           <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>Estos casos pueden evitar una comparación de actos posteriores, pero igualmente deben generarse con el estándar TUI V2 y pasar el control estructural.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
-          <div class="seguimiento-direct-note">La cola excluye automáticamente las 45 V1 observadas. “Sin cambios posteriores” no significa QA aprobado: todavía exige zonificación base, atributos dentro del GeoPackage y homologación de usos.</div>
+          <div class="seguimiento-direct-note">La cuenta disminuye cuando una comuna pasa a “Enviado”. “Sin cambios posteriores” no significa QA aprobado: todavía exige geometría normativa base, tabla normativa separada, clave de unión y homologación de usos.</div>
           <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>Revisión Javiera</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
         </section>
 
-        <section class="seguimiento-kpis internal-kpis" data-internal-scope="equipo,javiera" aria-label="Resumen interno de trabajo PRC">
+        <section class="seguimiento-kpis internal-kpis internal-kpis-six" data-internal-scope="equipo,javiera" aria-label="Resumen interno de trabajo PRC">
           <article data-internal-metric="total"><span>Total comunas</span><strong id="seguimientoInternalTotal">0</strong><small>Universo nacional de seguimiento</small></article>
           <article class="available" data-internal-metric="con_prc"><span>Con PRC identificado</span><strong id="seguimientoInternalWithPrc">0</strong><small>Instrumento comunal localizado</small></article>
-          <article class="development" data-internal-metric="activo"><span>Trabajo activo</span><strong id="seguimientoInternalActive">0</strong><small>En desarrollo, QA o corrección</small></article>
-          <article class="review" data-internal-metric="revision_javiera"><span>Revisión de Javiera</span><strong id="seguimientoInternalJaviera">0</strong><small>Controles no automatizables pendientes</small></article>
+          <article class="review" data-internal-metric="v1_reconstruccion"><span>V1 por reconstruir</span><strong id="seguimientoInternalV1">0</strong><small>Enviadas históricamente, no reutilizables</small></article>
+          <article class="development" data-internal-metric="v2_detectada"><span>TUI V2 detectadas</span><strong id="seguimientoInternalV2">0</strong><small>Con archivos nuevos en OneDrive</small></article>
+          <article class="available" data-internal-metric="produccion_directa"><span>Paso directo posible</span><strong id="seguimientoInternalDirect">0</strong><small>Sin cambios posteriores; falta homologar tabla</small></article>
+          <article class="review" data-internal-metric="revision_javiera"><span>Auditoría pendiente</span><strong id="seguimientoInternalJaviera">0</strong><small>QA o controles no automatizables abiertos</small></article>
         </section>
 
         <section class="seguimiento-filter-panel internal-filter-panel" data-internal-scope="equipo,javiera">
@@ -646,6 +648,14 @@
         </div>
       </div>
 
+      <section class="capas-catalog-section">
+        <div class="capas-section-heading">
+          <div><p class="eyebrow">BLOQUE 1 · CATÁLOGO NACIONAL</p><h3>Todas las capas, ordenadas por categoría</h3><p>Este inventario reúne los IPT auditados, las capas territoriales existentes y las fuentes por incorporar. Abre una categoría para revisar qué capas contiene, su origen y el estado de adquisición.</p></div>
+          <span id="capasCatalogCount" class="result-count"></span>
+        </div>
+        <div id="capasCatalogGrid" class="capas-catalog-grid"></div>
+      </section>
+
       <section class="capas-commune-picker">
         <div>
           <p class="eyebrow">SELECCIONA UNA COMUNA</p>
@@ -657,7 +667,7 @@
 
       <section class="capas-regions-section">
         <div class="capas-section-heading">
-          <div><p class="eyebrow">BLOQUE 1 · COBERTURA NACIONAL</p><h3>Estado por región y comuna</h3><p>Abre una región para revisar las comunas y sus cuatro indicadores. Las cifras sólo se consideran confirmadas cuando existe un cruce geométrico ejecutado.</p></div>
+          <div><p class="eyebrow">BLOQUE 2 · COBERTURA NACIONAL</p><h3>Estado por región y comuna</h3><p>Abre una región para revisar las comunas y sus cuatro indicadores. Pulsa la cantidad de capas para bajar al detalle; una cobertura sólo se confirma con un cruce geométrico ejecutado.</p></div>
           <span id="capasRegionsCount" class="result-count"></span>
         </div>
         <div class="capas-region-filters">
@@ -675,7 +685,7 @@
       </section>
 
       <section class="capas-coverage-section">
-        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 2 · DETALLE TERRITORIAL</p><h3>Capas aplicables a <span id="capasSelectedLayerTitle">la comuna</span></h3><p>PRC, PRI, PRDU, límites, movilidad, equipamientos, riesgos y demás capas se leen en un único catálogo. La categoría ordena la fuente; el cruce comunal determina la cobertura.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 3 · DETALLE TERRITORIAL</p><h3>Capas aplicables a <span id="capasSelectedLayerTitle">la comuna</span></h3><p>PRC, PRI, PRDU, límites, movilidad, equipamientos, riesgos y demás capas se leen en un único catálogo. La categoría ordena la fuente; el cruce comunal determina la cobertura.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
         <div class="capas-audit-banner" id="capasCrossBanner">
           <h3 id="capasCrossBannerTitle">Matriz nacional aún no ejecutada</h3>
           <p id="capasCrossBannerText">El catálogo ya distingue referencias de archivos, archivos incompletos y fichas sin adjunto. Para confirmar cobertura debemos materializar los archivos vigentes, validar CRS y geometría, e intersectarlos con las 346 comunas.</p>
@@ -877,12 +887,12 @@
   <script src="data/inventario_prc_onedrive.js?v=20260813-inventario-v2"></script>
   <script src="data/estado_equipo_versionado.js?v=20260813-equipo-1"></script>
   <script src="data/estado_operativo_datos.js?v=20260813-estados-v4"></script>
-  <script src="seguimiento-consolidado.js?v=20260813-correcciones-2"></script>
+  <script src="seguimiento-consolidado.js?v=20260814-correcciones-3"></script>
   <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
   <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
   <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
   <script src="data/fuentes_capas_externas.js?v=20260811-fuentes-1"></script>
-  <script src="capas-territoriales.js?v=20260813-correcciones-2"></script>
+  <script src="capas-territoriales.js?v=20260814-correcciones-3"></script>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

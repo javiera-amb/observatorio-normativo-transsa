@@ -202,7 +202,7 @@
 
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
-    const vigenciaRelease = "20260813-correcciones-1";
+    const vigenciaRelease = "20260814-correcciones-3";
 
     try {
       await loadScript("data/noticias.js?v=20260813-noticias-1", "data-noticias");

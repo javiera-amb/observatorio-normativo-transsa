@@ -132,6 +132,11 @@
       .sig-action-meta span{color:var(--muted);font-size:.58rem;text-transform:uppercase}
       .sig-action-meta strong{margin-top:3px;color:#404858;font-size:.68rem;line-height:1.4}
       .sig-action-result{margin:9px 0 0;padding:9px;border-radius:9px;background:#f5f5ff;color:#303747;font-size:.7rem;line-height:1.45}
+      .sig-task-control{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+      .sig-task-control span{color:var(--muted);font-size:.63rem;line-height:1.4}
+      .sig-task-control button{padding:7px 9px;border:1px solid #cfd3ff;border-radius:8px;background:#f5f5ff;color:var(--transsa-blue);font:inherit;font-size:.62rem;font-weight:750;cursor:pointer}
+      .sig-task-control.realizada{padding:9px;border:1px solid #cfe8d9;border-radius:9px;background:#f1faf5}
+      .sig-task-control.realizada span{color:#176342;font-weight:700}
       .validation-flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:7px}
       .validation-step{position:relative;padding:11px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);text-align:center}
       .validation-step::before{content:"";display:block;width:9px;height:9px;margin:0 auto 7px;border-radius:50%;background:#b9bbc5}
@@ -194,6 +199,36 @@
     verificada: "Verificada",
     pendiente_revision: "Pendiente de revisión"
   }[value] || typeLabel(value));
+
+  const taskStorageKey = "tui-seguimiento-borradores-v1";
+  const coquimboTaskKey = "Coquimbo|Coquimbo";
+  function taskChanges() {
+    try {
+      const parsed = JSON.parse(window.localStorage?.getItem(taskStorageKey) || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+  function taskRecord(id) {
+    return taskChanges()?.[coquimboTaskKey]?.tareas_completadas?.[id] || null;
+  }
+  function setTaskRecord(id, completed) {
+    const changes = taskChanges();
+    const row = changes[coquimboTaskKey] || {};
+    const tasks = { ...(row.tareas_completadas || {}) };
+    if (completed) {
+      tasks[id] = {
+        estado: "realizada",
+        fecha: new Date().toISOString().slice(0, 10),
+        usuario: document.getElementById("seguimientoCurrentUser")?.value || "Equipo SIG",
+      };
+    } else {
+      delete tasks[id];
+    }
+    changes[coquimboTaskKey] = { ...row, tareas_completadas: tasks };
+    window.localStorage?.setItem(taskStorageKey, JSON.stringify(changes));
+  }
 
   function auditBlockersTemplate(comparison) {
     const audit = comparison.auditoria_operativa || {};
@@ -329,36 +364,50 @@
   function sigWorkTemplate(comparison) {
     const actions = Array.isArray(comparison.acciones_sig) ? comparison.acciones_sig : [];
     const diagnosis = comparison.diagnostico_sig || {};
+    const audit = comparison.auditoria_operativa || {};
+    const controls = Array.isArray(audit.controles) ? audit.controles : [];
+    const method = Array.isArray(audit.metodo) ? audit.metodo : [];
+    const evidence = [...new Map(controls.flatMap(control => control.evidencias || []).map(item => [item.url, item])).values()];
     if (!actions.length) return "";
     const blocked = actions.filter(action => String(action.estado || "").startsWith("bloqueada")).length;
     const verified = actions.filter(action => action.estado === "verificada").length;
+    const completed = actions.filter(action => taskRecord(action.id)?.estado === "realizada" && action.estado !== "verificada").length;
 
     return `
       <section class="sig-work-section">
         <div class="sig-work-summary">
           <div>
-            <h4>Qué hay que hacer en el SIG</h4>
-            <p class="section-helper">Cada cambio normativo se traduce en una tarea técnica verificable.</p>
+            <h4>Actualizaciones pendientes para validar SIG 2026</h4>
+            <p class="section-helper">Cada hallazgo se traduce en una tarea técnica. El equipo marca su ejecución y la plataforma verifica el resultado cuando detecta la nueva entrega.</p>
           </div>
           <div class="sig-work-kpis">
             <span>${actions.length} acciones</span>
             <span>${verified} verificadas</span>
+            <span>${completed} realizadas · esperando QA</span>
             <span>${blocked} bloqueantes</span>
           </div>
         </div>
         <div class="sig-diagnosis">
-          <strong>Diagnóstico actual: no publicar todavía como SIG 2026 validado</strong>
+          <strong>Estado actual: actualizaciones pendientes antes de validar SIG 2026</strong>
           <p>${escape(diagnosis.motivo || "La versión cartográfica disponible aún no acredita equivalencia con el instrumento vigente.")}</p>
         </div>
+        ${method.length ? `<details class="audit-method" open><summary>Cómo se identificaron estas actualizaciones</summary><ol>${method.map(step => `<li>${escape(step)}</li>`).join("")}</ol></details>` : ""}
+        ${evidence.length ? `<div class="audit-evidence-links">${evidence.map(item => `<a href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${escape(item.nombre)} ↗</a>`).join("")}</div>` : ""}
         <div class="sig-action-list">
-          ${actions.map(action => `
+          ${actions.map(action => {
+            const task = taskRecord(action.id);
+            const platformVerified = action.estado === "verificada";
+            const teamCompleted = task?.estado === "realizada" && !platformVerified;
+            const displayStatus = platformVerified ? "verificada" : teamCompleted ? "en_revision" : action.estado;
+            const displayLabel = platformVerified ? "Verificada por plataforma" : teamCompleted ? "Realizada · esperando QA" : statusLabel(action.estado);
+            return `
             <article class="sig-action-card ${escape(action.estado || "pendiente_revision")}">
               <div class="sig-action-head">
                 <div class="sig-action-identity">
                   <span class="sig-action-code">${escape(action.id)}</span>
                   <span class="sig-action-type">${escape(actionLabel(action.accion))}</span>
                 </div>
-                <span class="sig-action-status ${escape(action.estado || "pendiente_revision")}">${escape(statusLabel(action.estado))}</span>
+                <span class="sig-action-status ${escape(displayStatus || "pendiente_revision")}">${escape(displayLabel)}</span>
               </div>
               <h5>${escape(action.objeto)}</h5>
               <p class="sig-action-instruction">${escape(action.instruccion)}</p>
@@ -372,8 +421,9 @@
                 </div>
                 <p class="sig-action-result"><strong>Resultado esperado:</strong> ${escape(action.resultado_esperado)}</p>
               </details>
+              ${platformVerified ? `<div class="sig-task-control realizada"><span>QA automático aprobado por la plataforma.</span></div>` : teamCompleted ? `<div class="sig-task-control realizada"><span>Marcada por ${escape(task.usuario || "Equipo SIG")} el ${escape(task.fecha || "sin fecha")}. La próxima sincronización ejecutará el QA.</span><button type="button" data-sig-task="${escape(action.id)}" data-completed="true">Reabrir</button></div>` : `<div class="sig-task-control"><span>Cuando termines esta corrección, márcala para que quede esperando el QA automático.</span><button type="button" data-sig-task="${escape(action.id)}">Marcar realizada</button></div>`}
             </article>
-          `).join("")}
+          `;}).join("")}
         </div>
       </section>
     `;
@@ -438,9 +488,8 @@
     const internal = new URLSearchParams(window.location.search).get("vista") === "equipo";
     return `<div class="coquimbo-audit-package">
       ${frameworkTemplate(item, comparison)}
-      ${internal ? auditBlockersTemplate(comparison) : ""}
       ${internal ? sigWorkTemplate(comparison) : ""}
-      ${!internal ? `<section class="audit-blockers-section"><div class="audit-alert-heading"><div><h4>SIG 2026 aún no validado</h4><p>La fuente vectorial fue localizada, pero la plataforma todavía debe cerrar los controles documentales, geométricos, de atributos y topología. La vista interna contiene las tareas técnicas y su responsable.</p></div></div></section>` : ""}
+      ${!internal ? `<section class="audit-blockers-section"><div class="audit-alert-heading"><div><h4>Actualizaciones pendientes para validar SIG 2026</h4><p>La fuente vectorial fue localizada, pero la plataforma todavía debe cerrar controles documentales, geométricos, normativos y topológicos. La vista interna contiene las tareas técnicas y su trazabilidad.</p></div></div></section>` : ""}
     </div>`;
   }
 
@@ -471,6 +520,13 @@
     // Para Coquimbo, "Normativa aplicable y versiones" reemplaza la tarjeta
     // genérica de planes vigentes; mantener ambas repetía la misma información.
     planSection?.remove();
+    detail.querySelector(".strategic-reading-section")?.remove();
+    // El mapa genérico solo mostraba el límite comunal y podía interpretarse
+    // como cartografía PRC validada. Se oculta hasta incorporar geometrías IPT.
+    mapSection?.remove();
+    const packageNode = detail.querySelector(".coquimbo-audit-package");
+    const timeline = detail.querySelector(".timeline-section");
+    if (packageNode && timeline) packageNode.insertAdjacentElement("beforebegin", timeline);
   }
 
   const originalRenderDetail = renderVigenciaDetail;
@@ -481,5 +537,11 @@
 
   primeCoquimboData();
   injectStyles();
+  document.addEventListener("click", event => {
+    const button = event.target.closest("[data-sig-task]");
+    if (!button) return;
+    setTaskRecord(button.dataset.sigTask, button.dataset.completed !== "true");
+    renderVigenciaDetail();
+  });
   if (typeof renderVigencia === "function") renderVigencia();
 })();

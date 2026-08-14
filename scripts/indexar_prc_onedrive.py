@@ -9,6 +9,7 @@ GitHub Pages.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import re
@@ -20,7 +21,8 @@ from pathlib import Path
 from typing import Any
 
 
-EXTENSIONES = {".gpkg", ".shp", ".geojson", ".json", ".kml", ".kmz", ".zip", ".parquet"}
+EXTENSIONES_ESPACIALES = {".gpkg", ".shp", ".geojson", ".json", ".kml", ".kmz", ".zip"}
+EXTENSIONES_NORMATIVAS = {".csv", ".xlsx", ".parquet"}
 ESTADOS = {
     "pendiente": "pendiente",
     "en desarrollo": "en_desarrollo",
@@ -67,6 +69,80 @@ def contiene_token(campo: str, tokens: list[str]) -> bool:
     return any(normalizar(token) in limpio for token in tokens)
 
 
+def leer_tabla_normativa(ruta: Path, estandar: dict[str, Any]) -> dict[str, Any]:
+    """Controla el archivo tabular que se cargará como tabla normativa SQL."""
+    salida: dict[str, Any] = {
+        "archivo": ruta.name,
+        "formato": ruta.suffix.lower().lstrip(".").upper(),
+        "valido": False,
+        "columnas": [],
+        "registros": None,
+    }
+    try:
+        if ruta.suffix.lower() == ".csv":
+            with ruta.open("r", encoding="utf-8-sig", newline="") as archivo:
+                muestra = archivo.read(8192)
+                archivo.seek(0)
+                dialecto = csv.Sniffer().sniff(muestra, delimiters=",;\t|") if muestra else csv.excel
+                lector = csv.reader(archivo, dialecto)
+                columnas = next(lector, [])
+                registros = sum(1 for _ in lector)
+        else:
+            import pandas as pd
+
+            if ruta.suffix.lower() == ".xlsx":
+                tabla = pd.read_excel(ruta)
+            else:
+                tabla = pd.read_parquet(ruta)
+            columnas = [str(columna) for columna in tabla.columns]
+            registros = int(len(tabla))
+        claves = [
+            campo for campo in columnas
+            if contiene_token(campo, estandar.get("campos_union_candidatos", ["unidad_normativa_id"]))
+        ]
+        minimo = int(estandar.get("minimo_campos_tabla_normativa", 2))
+        bloqueos = []
+        if len(columnas) < minimo:
+            bloqueos.append(f"La tabla normativa debe contener al menos {minimo} campos.")
+        if not claves:
+            bloqueos.append("La tabla normativa no contiene una clave de unión reconocible, idealmente unidad_normativa_id.")
+        if registros == 0:
+            bloqueos.append("La tabla normativa no contiene registros.")
+        salida.update({
+            "valido": not bloqueos,
+            "columnas": columnas,
+            "registros": registros,
+            "campos_union_detectados": claves,
+            "bloqueos": bloqueos,
+        })
+    except ImportError:
+        salida["error"] = "Falta pandas/openpyxl/pyarrow para leer la tabla normativa."
+    except Exception as exc:
+        salida["error"] = f"{type(exc).__name__}: {exc}"
+    return salida
+
+
+def seleccionar_tabla_normativa(ruta_espacial: Path, candidatas: list[Path]) -> Path | None:
+    """Selecciona el respaldo tabular más reciente dentro de la carpeta comunal."""
+    if not candidatas:
+        return None
+    tokens_espacial = set(normalizar(ruta_espacial.stem).split()) - {
+        "gpkg", "shape", "geometria", "geometrias", "actualizado", "enviado", "pendiente", "desarrollo"
+    }
+
+    def puntaje(ruta: Path) -> tuple[int, int, float, str]:
+        limpio = normalizar(ruta.stem)
+        tokens = set(limpio.split())
+        return (
+            int("normativa" in tokens or "atributos" in tokens),
+            len(tokens_espacial & tokens),
+            ruta.stat().st_mtime,
+            ruta.name,
+        )
+
+    return max(candidatas, key=puntaje)
+
+
 def validar_geometrias(ruta: Path, tablas: list[str]) -> dict[str, Any]:
     try:
         import geopandas as gpd
@@ -104,7 +180,12 @@ def validar_geometrias(ruta: Path, tablas: list[str]) -> dict[str, Any]:
     }
 
 
-def validar_gpkg(ruta: Path, estandar: dict[str, Any], modelo: str) -> dict[str, Any]:
+def validar_gpkg(
+    ruta: Path,
+    estandar: dict[str, Any],
+    modelo: str,
+    tabla_normativa: Path | None = None,
+) -> dict[str, Any]:
     salida: dict[str, Any] = {"formato": "GeoPackage", "valido": False, "capas": []}
     try:
         conexion = sqlite3.connect(ruta.resolve().as_uri() + "?mode=ro", uri=True)
@@ -127,6 +208,10 @@ def validar_gpkg(ruta: Path, estandar: dict[str, Any], modelo: str) -> dict[str,
                 atributos = [campo for campo in columnas if campo not in {geometria, "fid", "ogc_fid"}]
                 campos_zona = [campo for campo in atributos if contiene_token(campo, estandar["campos_zona_candidatos"])]
                 campos_uso = [campo for campo in atributos if contiene_token(campo, estandar["campos_uso_candidatos"])]
+                campos_union = [
+                    campo for campo in atributos
+                    if contiene_token(campo, estandar.get("campos_union_candidatos", ["unidad_normativa_id"]))
+                ]
                 campos_riesgo = [campo for campo in atributos if contiene_token(campo, estandar["tokens_riesgo"])]
                 capas.append({
                     "tabla": tabla,
@@ -138,6 +223,7 @@ def validar_gpkg(ruta: Path, estandar: dict[str, Any], modelo: str) -> dict[str,
                     "campos_atributo": atributos,
                     "campos_zona_candidatos": campos_zona,
                     "campos_uso_candidatos": campos_uso,
+                    "campos_union_candidatos": campos_union,
                     "campos_riesgo_detectados": campos_riesgo,
                 })
             espaciales = [capa for capa in capas if capa["tipo"] == "features"]
@@ -145,23 +231,34 @@ def validar_gpkg(ruta: Path, estandar: dict[str, Any], modelo: str) -> dict[str,
                 espaciales,
                 key=lambda capa: (
                     bool(capa["campos_zona_candidatos"]),
-                    bool(capa["campos_uso_candidatos"]),
+                    bool(capa["campos_union_candidatos"]),
                     capa["registros"],
                 ),
                 default=None,
             )
-            atributos_ok = bool(
+            geometria_identificada = bool(
                 principal
                 and len(principal["campos_atributo"]) >= estandar["minimo_atributos_no_geometricos"]
                 and principal["campos_zona_candidatos"]
-                and principal["campos_uso_candidatos"]
+                and principal["campos_union_candidatos"]
             )
+            qa_tabla_normativa = leer_tabla_normativa(tabla_normativa, estandar) if tabla_normativa else {
+                "archivo": None,
+                "valido": False,
+                "columnas": [],
+                "registros": None,
+                "bloqueos": ["No se encontró la tabla normativa separada."],
+            }
             qa_geometria = validar_geometrias(ruta, [capa["tabla"] for capa in espaciales])
             bloqueos = []
             if modelo != "tui_v2":
                 bloqueos.append("El nombre no declara el estándar TUI_V2.")
-            if not atributos_ok:
-                bloqueos.append("La capa principal no contiene identificación de zona y usos dentro del GeoPackage.")
+            if not geometria_identificada:
+                bloqueos.append("La capa principal no contiene identificación de zona y una clave de unión normativa.")
+            if not qa_tabla_normativa.get("valido"):
+                bloqueos.extend(qa_tabla_normativa.get("bloqueos") or [
+                    "Falta una tabla normativa separada válida y vinculable por unidad_normativa_id."
+                ])
             if qa_geometria["valido"] is False:
                 bloqueos.append("Existen geometrías nulas, vacías, inválidas o sin CRS.")
             elif qa_geometria["valido"] is not True:
@@ -173,8 +270,12 @@ def validar_gpkg(ruta: Path, estandar: dict[str, Any], modelo: str) -> dict[str,
                 "integridad": integridad,
                 "capas": capas,
                 "capa_principal_detectada": principal["tabla"] if principal else None,
-                "atributos_embebidos": atributos_ok,
-                "requiere_homologacion_usos": not bool(principal and principal["campos_uso_candidatos"]),
+                "geometria_identificada": geometria_identificada,
+                "tabla_normativa_separada": qa_tabla_normativa,
+                "requiere_homologacion_usos": not bool(
+                    qa_tabla_normativa.get("columnas")
+                    and any(contiene_token(campo, estandar["campos_uso_candidatos"]) for campo in qa_tabla_normativa["columnas"])
+                ),
                 "qa_geometria": qa_geometria,
                 "estandar_tui_v2": {
                     "modelo_detectado": modelo,
@@ -201,9 +302,14 @@ def validar_shp(ruta: Path) -> dict[str, Any]:
     }
 
 
-def validar(ruta: Path, estandar: dict[str, Any], modelo: str) -> dict[str, Any]:
+def validar(
+    ruta: Path,
+    estandar: dict[str, Any],
+    modelo: str,
+    tabla_normativa: Path | None = None,
+) -> dict[str, Any]:
     if ruta.suffix.lower() == ".gpkg":
-        return validar_gpkg(ruta, estandar, modelo)
+        return validar_gpkg(ruta, estandar, modelo, tabla_normativa)
     if ruta.suffix.lower() == ".shp":
         return validar_shp(ruta)
     return {"formato": ruta.suffix.lower().lstrip(".").upper(), "valido": True, "control": "existencia"}
@@ -234,10 +340,21 @@ def main() -> int:
 
     archivos = []
     estados: Counter[str] = Counter()
-    for ruta in sorted(archivo for archivo in raiz.rglob("*") if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES):
+    tablas_normativas = sorted(
+        archivo for archivo in raiz.rglob("*")
+        if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES_NORMATIVAS
+    )
+    tablas_por_carpeta: dict[Path, list[Path]] = {}
+    for tabla in tablas_normativas:
+        tablas_por_carpeta.setdefault(tabla.parent, []).append(tabla)
+    for ruta in sorted(
+        archivo for archivo in raiz.rglob("*")
+        if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES_ESPACIALES
+    ):
         datos_contexto = contexto(ruta, raiz)
         estado = detectar_estado(ruta.name)
         modelo = detectar_modelo(ruta.name)
+        tabla_normativa = seleccionar_tabla_normativa(ruta, tablas_por_carpeta.get(ruta.parent, []))
         if estado:
             estados[estado] += 1
         stat = ruta.stat()
@@ -250,7 +367,8 @@ def main() -> int:
             "modificado_en": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(timespec="seconds"),
             "tamano_bytes": stat.st_size,
             "sha256": sha256(ruta),
-            "qa_archivo": validar(ruta, estandar, modelo),
+            "tabla_normativa": tabla_normativa.relative_to(raiz).as_posix() if tabla_normativa else None,
+            "qa_archivo": validar(ruta, estandar, modelo, tabla_normativa),
         })
 
     por_comuna: dict[str, list[dict[str, Any]]] = {}
@@ -269,17 +387,19 @@ def main() -> int:
             "ruta_relativa": seleccion["ruta_relativa"],
             "estado_detectado": seleccion["estado_detectado"],
             "modelo_detectado": seleccion["modelo_detectado"],
+            "tabla_normativa": seleccion.get("tabla_normativa"),
             "qa_archivo": seleccion["qa_archivo"],
             "versiones_encontradas": len(candidatos),
         }
 
     salida = {
-        "schema_version": 2,
+        "schema_version": 3,
         "generado_en": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "almacenamiento": "OneDrive Transsa; se publican rutas relativas, nunca la ruta C: del usuario.",
         "estandar_prc": estandar,
         "resumen": {
             "archivos": len(archivos),
+            "tablas_normativas": len(tablas_normativas),
             "comunas": len(comunas),
             "estados_detectados": dict(estados),
             "archivos_tui_v2": sum(archivo["modelo_detectado"] == "tui_v2" for archivo in archivos),
