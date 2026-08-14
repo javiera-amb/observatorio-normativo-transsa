@@ -16,6 +16,25 @@
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
   const planDate = plan => validDate(plan?.fecha) ? plan.fecha : "0000-00-00";
 
+  function injectStyles() {
+    if (document.getElementById("vigenciaSimplificadaStyles")) return;
+    const style = document.createElement("style");
+    style.id = "vigenciaSimplificadaStyles";
+    style.textContent = `
+      .vigencia-workspace { grid-template-columns:minmax(360px,.95fr) minmax(0,1.55fr); }
+      .compact-normative-timeline .timeline { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:9px; margin:0; }
+      .compact-normative-timeline .timeline::before { display:none; }
+      .compact-normative-timeline .timeline-event { display:grid; grid-template-columns:10px minmax(0,1fr); gap:9px; min-width:0; padding:11px; border:1px solid var(--line); border-radius:11px; background:#fff; }
+      .compact-normative-timeline .timeline-node { width:10px; height:10px; margin-top:4px; border-width:2px; }
+      .compact-normative-timeline .timeline-content h4 { margin:4px 0 0; font-size:.72rem; line-height:1.35; }
+      .compact-normative-timeline .timeline-topline { font-size:.62rem; }
+      .compact-normative-timeline .timeline-type { font-size:.62rem; line-height:1.35; }
+      @media(max-width:980px){ .vigencia-workspace{grid-template-columns:1fr;} .vigencia-list-panel{position:static;} }
+      @media(max-width:560px){ .compact-normative-timeline .timeline{grid-template-columns:1fr;} }
+    `;
+    document.head.appendChild(style);
+  }
+
   function roleForPlan(plan, latestByType) {
     const type = String(plan?.tipo_ipt || "IPT").trim();
     const isLatest = latestByType.get(type) === plan;
@@ -94,6 +113,13 @@
 
     detail.querySelector(".strategic-reading-section")?.remove();
 
+    // La cabecera extensa repetía la información que ahora resume la tarjeta
+    // de la comuna seleccionada en la columna izquierda.
+    detail.querySelector(".vigencia-detail-header")?.remove();
+    detail.querySelector(".vigencia-summary-text")?.remove();
+    detail.querySelector(".detail-grid")?.remove();
+    detail.querySelector(".vigencia-alert-list")?.remove();
+
     const frameworkReady = ensureFramework(detail, item);
     if (frameworkReady) detail.querySelector(".commune-plan-section")?.remove();
 
@@ -120,5 +146,6 @@
     simplifyCommuneDetail();
   };
 
+  injectStyles();
   if (typeof renderVigencia === "function") renderVigencia();
 })();
