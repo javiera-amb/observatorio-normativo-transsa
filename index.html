@@ -659,15 +659,6 @@
         <div id="capasCatalogGrid" class="capas-catalog-grid"></div>
       </section>
 
-      <section class="capas-commune-picker">
-        <div>
-          <p class="eyebrow">SELECCIONA UNA COMUNA</p>
-          <h3 id="capasSelectedTitle">Cobertura de Coquimbo</h3>
-          <p>La cobertura territorial solo se confirma con un cruce geométrico. Una referencia en Notion no equivale a presencia efectiva en la comuna y no modifica el estado de auditoría del PRC.</p>
-        </div>
-        <label><span>Comuna</span><select id="capasCommuneSelect"></select></label>
-      </section>
-
       <section class="capas-regions-section">
         <div class="capas-section-heading">
           <div><p class="eyebrow">BLOQUE 2 · COBERTURA NACIONAL</p><h3>Estado por región y comuna</h3><p>Abre una región para revisar las comunas y sus cuatro indicadores. Pulsa la cantidad de capas para bajar al detalle; una cobertura sólo se confirma con un cruce geométrico ejecutado.</p></div>
@@ -678,6 +669,15 @@
           <label><span>Ordenar comunas</span><select id="capasRegionSort"><option value="nombre">Nombre</option><option value="pendientes">Más pendientes</option><option value="confirmadas">Más confirmadas</option></select></label>
         </div>
         <div id="capasRegionGrid" class="capas-region-grid"></div>
+      </section>
+
+      <section class="capas-commune-picker">
+        <div>
+          <p class="eyebrow">SELECCIONA UNA COMUNA</p>
+          <h3 id="capasSelectedTitle">Cobertura de Coquimbo</h3>
+          <p>La cobertura territorial solo se confirma con un cruce geométrico. Una referencia en Notion no equivale a presencia efectiva en la comuna y no modifica el estado de auditoría del PRC.</p>
+        </div>
+        <label><span>Comuna</span><select id="capasCommuneSelect"></select></label>
       </section>
 
       <section class="capas-kpis" aria-label="Resumen de cobertura de la comuna seleccionada">
@@ -903,6 +903,6 @@
   ></script>
   <script src="app.js?v=20260813-correcciones-1"></script>
   <script src="vigencia-regional.js?v=20260813-correcciones-1"></script>
-  <script src="ux-refresh.js?v=20260814-historial-1"></script>
+  <script src="ux-refresh.js?v=20260814-linea-tiempo-1"></script>
 </body>
 </html>
