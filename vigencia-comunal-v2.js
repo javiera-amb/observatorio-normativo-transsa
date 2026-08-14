@@ -52,6 +52,13 @@
       .sig-review-status.no_aplica { color:#56616f; background:#edf0f4; }
       .commune-change-empty { padding:14px; border:1px dashed var(--line); border-radius:10px; color:var(--muted); background:#fff; font-size:.8rem; }
       .commune-boundary-loading { color:var(--muted); }
+      .vigencia-card-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; text-align:left; }
+      .vigencia-card-summary-grid span { min-width:0; padding:7px 8px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+      .vigencia-card-summary-grid small,.vigencia-card-summary-grid strong { display:block; overflow-wrap:anywhere; }
+      .vigencia-card-summary-grid small { color:var(--muted); font-size:.58rem; text-transform:uppercase; letter-spacing:.03em; }
+      .vigencia-card-summary-grid strong { margin-top:3px; color:var(--transsa-navy); font-size:.67rem; line-height:1.3; }
+      .vigencia-instrument-card.selected .vigencia-card-summary-grid span { border-color:#cfd1ff; }
+      .vigencia-card-brief { margin:8px 0 0; color:var(--muted); font-size:.65rem; line-height:1.4; text-align:left; }
       @media(max-width:700px){
         .commune-plan-item{grid-template-columns:auto 1fr}
         .commune-plan-source{grid-column:2;white-space:normal}
@@ -112,6 +119,15 @@
     const changes = Number(item.cantidad_actos || 0);
     const changeLabel = item.indicador_cambios
       || `${changes} ${changes === 1 ? "acto asociado" : "actos asociados"}`;
+    const plans = Array.isArray(item.instrumentos) ? item.instrumentos : [];
+    const datedPlans = plans.filter(plan => /^\d{4}-\d{2}-\d{2}$/.test(String(plan?.fecha || "")));
+    const latestPlan = datedPlans.slice().sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))[0] || plans[0];
+    const prcs = datedPlans.filter(plan => String(plan?.tipo_ipt || "").toUpperCase() === "PRC")
+      .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+    const pending = Number(item.actos_posteriores_pendientes ?? item.cantidad_actos ?? 0);
+    const qaLabel = /actualizado/i.test(String(item.estado_alerta || ""))
+      ? "Sin alerta abierta"
+      : item.estado_alerta || "Por revisar";
     return `
       <button class="vigencia-instrument-card ${selected}" data-vigencia-id="${escapeAttribute(item.id)}">
         <div class="vigencia-card-heading">
@@ -124,6 +140,13 @@
         <div class="vigencia-card-body">
           <span class="vigencia-type-pill">${escapeHtml(types)}</span>
           <p>${Number(item.cantidad_instrumentos || 0)} ${Number(item.cantidad_instrumentos || 0) === 1 ? "plan vigente" : "planes vigentes"}</p>
+          <div class="vigencia-card-summary-grid">
+            <span><small>PRC más reciente</small><strong>${escapeHtml(prcs[0]?.fecha || "No identificado")}</strong></span>
+            <span><small>Último IPT</small><strong>${escapeHtml(latestPlan?.fecha || "Sin fecha")}</strong></span>
+            <span><small>Cambios / controles</small><strong>${pending}</strong></span>
+            <span><small>Estado de revisión</small><strong>${escapeHtml(qaLabel)}</strong></span>
+          </div>
+          <p class="vigencia-card-brief">${escapeHtml(item.resumen_alerta || "Sin observaciones adicionales registradas.")}</p>
         </div>
         <div class="vigencia-card-footer">
           <span class="vigencia-alert-label ${statusClass}">${escapeHtml(item.estado_alerta || "Sin clasificación")}</span>
