@@ -101,3 +101,16 @@ window.FUENTES_CAPAS_EXTERNAS = {
     { nombre: "Población en grilla", categoria: "Demografía", prioridad: "baja", nivel: "internacional", fuente: "WorldPop", cobertura: "Nacional", actualizacion: "Según producto", automatizable: true, url: "https://www.worldpop.org/", valor: "Estimación espacial complementaria al Censo; no reemplaza datos INE." }
   ]
 };
+
+(() => {
+  const load = (src, done) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = () => done && done();
+    s.onerror = () => console.warn("TUI: no se pudo cargar", src);
+    document.head.appendChild(s);
+  };
+  load("data/catalogo_auditoria_tui.js?v=20260817-1", () => {
+    load("catalogo-auditoria-tui.js?v=20260817-1");
+  });
+})();
