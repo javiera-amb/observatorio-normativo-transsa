@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "regla": "Nunca aplicar reemplazos globales de ZONA o CODIGO_PRC. Toda corrección normativa debe quedar acotada a comuna, instrumento/versión, campo, valor original y fuente.",
+  "exact_rules": []
+}
