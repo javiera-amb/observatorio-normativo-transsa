@@ -1,3 +1,4 @@
+import csv
 import tempfile
 import unittest
 from pathlib import Path
@@ -65,10 +66,10 @@ class TablasNormativasEngineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             csv_path = root / "PRC_PRUEBA_35_CAMPOS.csv"
-            csv_path.write_text(
-                ",".join(FIELDS) + "\n" + ",".join(str(self.base_row().get(f, "")) for f in FIELDS) + "\n",
-                encoding="utf-8",
-            )
+            with csv_path.open("w", encoding="utf-8-sig", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=FIELDS)
+                writer.writeheader()
+                writer.writerow(self.base_row())
             result = process_file(csv_path, root / "normalizadas", root / "qa")
             self.assertTrue(Path(result["normalized_path"]).exists())
             self.assertTrue(Path(result["qa_path"]).exists())
