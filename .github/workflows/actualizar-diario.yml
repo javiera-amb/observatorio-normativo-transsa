@@ -72,7 +72,9 @@ jobs:
           node --check ux-refresh.js
           node --check tui-content.js
           node --check tablas-normativas-ipt.js
+          node --check tablas-normativas-ipt-v2.js
           node --check tablas-normativas-fuentes.js
+          node --check data/tablas_normativas_sharepoint.js
 
       - name: Validar portal
         run: python automation/validar_sitio.py

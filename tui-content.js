@@ -6,11 +6,7 @@
   let newsSearch = "";
 
   const escapeText = value => String(value ?? "").replace(/[&<>"']/g, character => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
   }[character]));
 
   function injectStyles() {
@@ -48,60 +44,23 @@
     section.id = "newsIntegratedSection";
     section.className = "news-integrated-section";
     section.innerHTML = `
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">INTELIGENCIA TERRITORIAL</p>
-          <h2>Noticias consolidadas</h2>
-          <p>Noticias vinculadas directamente con desarrollo inmobiliario, mercado de suelo, normativa urbana, vivienda y desarrollo urbano. No reemplazan el acto oficial.</p>
-        </div>
-      </div>
-      <section class="search-panel">
-        <div class="news-toolbar">
-          <div class="news-tabs" role="tablist" aria-label="Alcance de las noticias">
-            <button class="news-tab active" data-news-scope="Chile">Chile</button>
-            <button class="news-tab" data-news-scope="Internacional">Internacional</button>
-            <button class="news-tab" data-news-scope="Todas">Todas</button>
-          </div>
-          <input id="newsSearchInput" class="news-search" type="search" placeholder="Buscar territorio, fuente o tema…">
-        </div>
-        <div id="newsResultCount" class="result-count"></div>
-      </section>
-      <section class="reports-section">
-        <div id="newsGrid" class="news-grid"></div>
-        <div id="newsEmptyState" class="empty-state" hidden>
-          <div>⌕</div>
-          <h3>No hay noticias para esta búsqueda</h3>
-          <p>Cambia el alcance o prueba con otro término.</p>
-        </div>
-      </section>
-    `;
+      <div class="section-heading"><div><p class="eyebrow">INTELIGENCIA TERRITORIAL</p><h2>Noticias consolidadas</h2><p>Noticias vinculadas directamente con desarrollo inmobiliario, mercado de suelo, normativa urbana, vivienda y desarrollo urbano. No reemplazan el acto oficial.</p></div></div>
+      <section class="search-panel"><div class="news-toolbar"><div class="news-tabs" role="tablist" aria-label="Alcance de las noticias"><button class="news-tab active" data-news-scope="Chile">Chile</button><button class="news-tab" data-news-scope="Internacional">Internacional</button><button class="news-tab" data-news-scope="Todas">Todas</button></div><input id="newsSearchInput" class="news-search" type="search" placeholder="Buscar territorio, fuente o tema…"></div><div id="newsResultCount" class="result-count"></div></section>
+      <section class="reports-section"><div id="newsGrid" class="news-grid"></div><div id="newsEmptyState" class="empty-state" hidden><div>⌕</div><h3>No hay noticias para esta búsqueda</h3><p>Cambia el alcance o prueba con otro término.</p></div></section>`;
     dailyModule.appendChild(section);
-
-    section.querySelectorAll("[data-news-scope]").forEach(button => {
-      button.addEventListener("click", () => {
-        newsScope = button.dataset.newsScope;
-        section.querySelectorAll("[data-news-scope]").forEach(item => item.classList.toggle("active", item === button));
-        renderNews();
-      });
-    });
-
-    section.querySelector("#newsSearchInput")?.addEventListener("input", event => {
-      newsSearch = event.target.value.trim().toLowerCase();
+    section.querySelectorAll("[data-news-scope]").forEach(button => button.addEventListener("click", () => {
+      newsScope = button.dataset.newsScope;
+      section.querySelectorAll("[data-news-scope]").forEach(item => item.classList.toggle("active", item === button));
       renderNews();
-    });
+    }));
+    section.querySelector("#newsSearchInput")?.addEventListener("input", event => { newsSearch = event.target.value.trim().toLowerCase(); renderNews(); });
   }
 
   function filteredNews() {
-    return newsItems
-      .filter(item => newsScope === "Todas" || item.alcance === newsScope)
-      .filter(item => {
-        if (!newsSearch) return true;
-        return [
-          item.titulo, item.resumen, item.fuente, item.pais, item.region,
-          ...(item.comunas || []), item.categoria, item.subcategoria
-        ].join(" ").toLowerCase().includes(newsSearch);
-      })
-      .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+    return newsItems.filter(item => newsScope === "Todas" || item.alcance === newsScope).filter(item => {
+      if (!newsSearch) return true;
+      return [item.titulo, item.resumen, item.fuente, item.pais, item.region, ...(item.comunas || []), item.categoria, item.subcategoria].join(" ").toLowerCase().includes(newsSearch);
+    }).sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
   }
 
   function renderNews() {
@@ -109,47 +68,33 @@
     if (!grid) return;
     const items = filteredNews();
     grid.innerHTML = items.map(item => {
-      const territory = item.alcance === "Internacional"
-        ? [item.pais, item.region, ...(item.comunas || [])].filter(Boolean).join(" · ")
-        : [item.region, ...(item.comunas || [])].filter(Boolean).join(" · ");
-      return `
-        <article class="news-card">
-          <div class="news-card-top">
-            <span class="news-badge">${escapeText(item.categoria)}</span>
-            <span class="news-scope">${escapeText(item.alcance)}</span>
-          </div>
-          <h3>${escapeText(item.titulo)}</h3>
-          <p>${escapeText(item.resumen)}</p>
-          ${item.estado_revision === "requires_review" ? `<p class="news-review-note">${escapeText(item.nota_validacion)}</p>` : ""}
-          <div class="news-meta">
-            <span>${escapeText(item.fecha)}</span>
-            <span>${escapeText(item.fuente)}</span>
-            <span>${escapeText(territory)}</span>
-          </div>
-          <a href="${escapeText(item.fuente_url)}" target="_blank" rel="noopener noreferrer">Abrir publicación original →</a>
-        </article>
-      `;
+      const territory = item.alcance === "Internacional" ? [item.pais, item.region, ...(item.comunas || [])].filter(Boolean).join(" · ") : [item.region, ...(item.comunas || [])].filter(Boolean).join(" · ");
+      return `<article class="news-card"><div class="news-card-top"><span class="news-badge">${escapeText(item.categoria)}</span><span class="news-scope">${escapeText(item.alcance)}</span></div><h3>${escapeText(item.titulo)}</h3><p>${escapeText(item.resumen)}</p>${item.estado_revision === "requires_review" ? `<p class="news-review-note">${escapeText(item.nota_validacion)}</p>` : ""}<div class="news-meta"><span>${escapeText(item.fecha)}</span><span>${escapeText(item.fuente)}</span><span>${escapeText(territory)}</span></div><a href="${escapeText(item.fuente_url)}" target="_blank" rel="noopener noreferrer">Abrir publicación original →</a></article>`;
     }).join("");
     document.getElementById("newsResultCount").textContent = `${items.length} ${items.length === 1 ? "noticia" : "noticias"}`;
     document.getElementById("newsEmptyState").hidden = items.length !== 0;
   }
 
-  function loadTablasNormativas() {
-    if (document.querySelector('script[data-tui-module="tablas-normativas-ipt"]')) return;
-    const script = document.createElement("script");
-    script.src = "tablas-normativas-ipt.js?v=20260827-v1";
-    script.dataset.tuiModule = "tablas-normativas-ipt";
-    script.onerror = () => console.error("No se pudo cargar Tablas Normativas IPT.");
-    document.body.appendChild(script);
+  function loadScript(src, marker) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[data-tui-module="${marker}"]`)) { resolve(); return; }
+      const script = document.createElement("script");
+      script.src = src;
+      script.dataset.tuiModule = marker;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+      document.body.appendChild(script);
+    });
   }
 
-  function loadTablasNormativasFuentes() {
-    if (document.querySelector('script[data-tui-module="tablas-normativas-fuentes"]')) return;
-    const script = document.createElement("script");
-    script.src = "tablas-normativas-fuentes.js?v=20260827-v1";
-    script.dataset.tuiModule = "tablas-normativas-fuentes";
-    script.onerror = () => console.error("No se pudo cargar la extensión de fuentes de Tablas Normativas IPT.");
-    document.body.appendChild(script);
+  async function loadTablasNormativas() {
+    try {
+      await loadScript("data/tablas_normativas_sharepoint.js?v=20260827-v1", "tablas-normativas-sharepoint-data");
+      await loadScript("tablas-normativas-ipt-v2.js?v=20260827-v1", "tablas-normativas-ipt-v2");
+      await loadScript("tablas-normativas-fuentes.js?v=20260827-v1", "tablas-normativas-fuentes");
+    } catch (error) {
+      console.error("No se pudo cargar Tablas Normativas IPT.", error);
+    }
   }
 
   function init() {
@@ -157,12 +102,8 @@
     insertNewsModule();
     renderNews();
     loadTablasNormativas();
-    loadTablasNormativasFuentes();
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+  else init();
 })();
