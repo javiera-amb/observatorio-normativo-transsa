@@ -5,7 +5,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from automation.tablas_normativas.engine import FIELDS, audit_table, process_file
+from automation.tablas_normativas.engine import FIELDS, audit_table, load_rule_catalog, process_file
 
 
 class TablasNormativasEngineTests(unittest.TestCase):
@@ -61,6 +61,30 @@ class TablasNormativasEngineTests(unittest.TestCase):
         finding = next(f for f in result["findings"] if f["rule_id"] == "test-octay")
         self.assertEqual(finding["source"], "Ordenanza oficial")
         self.assertEqual(finding["page"], "10")
+
+    def test_penalolen_normaliza_codigo_prms_sin_cambiar_zona(self):
+        row = self.base_row()
+        row["COMUNA"] = "PEÑALOLÉN"
+        row["RIALCOMSII"] = "15152"
+        row["CODIGO_PRC"] = "15152-EQUIPAMIENTO RECREACIONAL Y DEPORTIVO"
+        row["ZONA"] = "EQUIPAMIENTO RECREACIONAL Y DEPORTIVO"
+        catalog = load_rule_catalog(Path("config/tablas_normativas_reglas.json"))
+        result = audit_table(FIELDS.copy(), [row], catalog)
+        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-5.2.4.1")
+        self.assertEqual(result["rows"][0]["ZONA"], "EQUIPAMIENTO RECREACIONAL Y DEPORTIVO")
+        finding = next(f for f in result["findings"] if f["rule_id"] == "pen-prms-code-equip-recreacional")
+        self.assertEqual(finding["confidence"], "ALTA")
+        self.assertIn("5.2.4.1", finding["page"])
+
+    def test_penalolen_no_aplica_equivalencia_espacial_como_regla_global(self):
+        row = self.base_row()
+        row["COMUNA"] = "PEÑALOLÉN"
+        row["CODIGO_PRC"] = "15152-EQ"
+        row["ZONA"] = "EQ"
+        catalog = load_rule_catalog(Path("config/tablas_normativas_reglas.json"))
+        result = audit_table(FIELDS.copy(), [row], catalog)
+        self.assertEqual(result["rows"][0]["ZONA"], "EQ")
+        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-EQ")
 
     def test_process_file_genera_normalizada_qa_y_status(self):
         with tempfile.TemporaryDirectory() as tmp:

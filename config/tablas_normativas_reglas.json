@@ -1,5 +1,94 @@
 {
   "schema_version": 1,
+  "updated_at": "2026-08-27",
   "regla": "Nunca aplicar reemplazos globales de ZONA o CODIGO_PRC. Toda corrección normativa debe quedar acotada a comuna, instrumento/versión, campo, valor original y fuente.",
-  "exact_rules": []
+  "policy": {
+    "auto_apply": "Sólo correcciones de alta confianza respaldadas por un identificador normativo oficial y que no dependan del ámbito espacial.",
+    "no_global_zone_replacement": true,
+    "original_preserved": true
+  },
+  "exact_rules": [
+    {
+      "id": "pen-prms-code-parque-metropolitano",
+      "comuna": "PEÑALOLÉN",
+      "field": "CODIGO_PRC",
+      "original": "15152-PARQUE METROPOLITANO",
+      "corrected": "15152-5.2.2",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "PRMS, Resolución N° 20 GORE RM",
+      "page": "Art. 5.2.2",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1011608",
+      "reason": "La descripción corresponde a la categoría PRMS Parque Metropolitano, cuyo identificador normativo oficial es el artículo 5.2.2. Se normaliza sólo CODIGO_PRC; ZONA conserva su denominación."
+    },
+    {
+      "id": "pen-prms-code-parques-quebradas",
+      "comuna": "PEÑALOLÉN",
+      "field": "CODIGO_PRC",
+      "original": "15152-PARQUES QUEBRADAS",
+      "corrected": "15152-5.2.3.3",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "PRMS, Resolución N° 20 GORE RM",
+      "page": "Art. 5.2.3.3",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1011608",
+      "reason": "La descripción corresponde a la categoría PRMS Parques Quebradas, identificada normativamente por el artículo 5.2.3.3. No se asigna un código O específico porque eso depende de la quebrada concreta."
+    },
+    {
+      "id": "pen-prms-code-equip-recreacional",
+      "comuna": "PEÑALOLÉN",
+      "field": "CODIGO_PRC",
+      "original": "15152-EQUIPAMIENTO RECREACIONAL Y DEPORTIVO",
+      "corrected": "15152-5.2.4.1",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "PRMS, Resolución N° 20 GORE RM",
+      "page": "Art. 5.2.4.1",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1011608",
+      "reason": "La categoría Equipamiento Recreacional y Deportivo está definida en el artículo 5.2.4.1 del PRMS. La eventual conversión de ZONA a EQ-4 o R10 depende del ámbito espacial y no se aplica con esta regla."
+    },
+    {
+      "id": "pen-prms-code-riesgo-remocion",
+      "comuna": "PEÑALOLÉN",
+      "field": "CODIGO_PRC",
+      "original": "15152-RIESGO GEOFISICO ASOCIADO A REMOCION EN MASA",
+      "corrected": "15152-8.2.1.4",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "PRMS, Resolución N° 20 GORE RM",
+      "page": "Art. 8.2.1.4",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1011608",
+      "reason": "La categoría de riesgo geofísico asociado a remoción en masa se regula en el artículo 8.2.1.4 del PRMS. Se normaliza el identificador sin alterar la denominación de ZONA."
+    }
+  ],
+  "spatial_candidates": [
+    {
+      "id": "pen-2017-prms-a-zonas-locales",
+      "comuna": "PEÑALOLÉN",
+      "instrumento": "Decreto 1200/3504",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "requires_spatial_scope": true,
+      "mappings": [
+        ["PRMS Subsector Geográfico 11a tramo c", "R4"],
+        ["PRMS Subsector Geográfico 11 tramo B (parcial)", "R11"],
+        ["PRMS Subsector Geográfico 42", "EQ-2"],
+        ["PRMS Artículo 1° transitorio", "EQ-3"],
+        ["PRMS Equipamiento Recreacional Deportivo, Art. 5.2.4.1", "EQ-4"],
+        ["PRMS Zona de Derrumbes y Asentamiento de Suelo, Art. 8.2.1.2", "EQ-5"]
+      ]
+    },
+    {
+      "id": "pen-2018-cuatro-sectores",
+      "comuna": "PEÑALOLÉN",
+      "instrumento": "Decreto 1200/4405",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1123459",
+      "requires_spatial_scope": true,
+      "mappings": [
+        ["Las Perdices: R1", "R2"],
+        ["Oriental: SM1", "R2"],
+        ["Cancha Tres: EQ", "EQ-1"],
+        ["El Sauzal: R2/R3/SM1/Equipamiento Recreacional y Deportivo", "R10"]
+      ]
+    }
+  ]
 }
