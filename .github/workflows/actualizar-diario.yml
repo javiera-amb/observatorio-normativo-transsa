@@ -6,6 +6,10 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - "*.html"
+      - "*.js"
+      - "*.css"
+      - "data/**"
       - "automation/**"
       - "config/**"
       - "core/**"
@@ -17,6 +21,10 @@ on:
     branches:
       - main
     paths:
+      - "*.html"
+      - "*.js"
+      - "*.css"
+      - "data/**"
       - "automation/**"
       - "config/**"
       - "core/**"
