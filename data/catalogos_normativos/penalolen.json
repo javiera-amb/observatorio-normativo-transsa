@@ -1,0 +1,175 @@
+{
+  "version": "1.0",
+  "fecha_revision": "2026-08-27",
+  "comuna": "PEÑALOLÉN",
+  "rialcomsii": "15152",
+  "estado": "CATALOGO_PARCIAL_EN_CONSTRUCCION",
+  "criterio": {
+    "regla_vigencia": "Aplicar siempre la norma vigente según fecha y ámbito territorial. Un acto posterior puede modificar sólo sectores específicos sin reemplazar el resto del PRC.",
+    "regla_zona": "ZONA conserva la denominación oficial aplicable en el polígono. Las equivalencias espaciales no se aplican globalmente.",
+    "regla_codigo_prc": "Cuando la fila representa una categoría PRMS sin código de zona único y el valor productivo contiene una descripción larga, CODIGO_PRC puede normalizarse con el número del artículo normativo oficial, manteniendo el prefijo comunal 15152. La ZONA no cambia por esta regla.",
+    "regla_conflicto": "Si una equivalencia depende del sector o del plano, se registra como candidata y requiere contraste espacial antes de corregir."
+  },
+  "instrumento_base": {
+    "nombre": "Plan Regulador Comunal de Peñalolén",
+    "acto": "DS N° 55 MINVU",
+    "publicacion": "1989-07-27",
+    "estado": "VIGENTE_CON_MODIFICACIONES",
+    "url": "https://www.bcn.cl/leychile/navegar?i=144349"
+  },
+  "instrumentos": [
+    {
+      "id": "pen-base-1989",
+      "acto": "DS N° 55 MINVU",
+      "fecha_publicacion": "1989-07-27",
+      "ambito": "PRC base comunal",
+      "estado": "vigente_con_modificaciones",
+      "url": "https://www.bcn.cl/leychile/navegar?i=144349"
+    },
+    {
+      "id": "pen-mod-1992-res77",
+      "acto": "Resolución N° 77",
+      "fecha_publicacion": "1992-02-11",
+      "ambito": "Modifica parámetros de R1, R2, EQ, SM1 y Z1 y aspectos viales",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/navegar?i=96190&f=1992-02-11"
+    },
+    {
+      "id": "pen-mod-1999-res45",
+      "acto": "Resolución N° 45",
+      "fecha_publicacion": "1999-09-25",
+      "ambito": "Ampliación urbana / Comunidad Ecológica Peñalolén Alto",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/"
+    },
+    {
+      "id": "pen-mod-2002-cousino-macul",
+      "acto": "Decreto Alcaldicio N° 2100/1250",
+      "fecha_publicacion": "2002-04-18",
+      "ambito": "Parque Cousiño Macul",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=196949"
+    },
+    {
+      "id": "pen-mod-2004-ds129",
+      "acto": "DS N° 129 MINVU",
+      "fecha_publicacion": "2004-11-03",
+      "ambito": "Polígono Av. Tobalaba / El Valle; sustituye Zona AR por R-2",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=232103"
+    },
+    {
+      "id": "pen-mod-2004-ds156",
+      "acto": "DS N° 156 MINVU",
+      "fecha_publicacion": "2004-12-17",
+      "ambito": "Ampliación de límite urbano frente a Av. Grecia",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/"
+    },
+    {
+      "id": "pen-mod-2005-antupiren-alto",
+      "acto": "Decreto Alcaldicio N° 2100/1689",
+      "fecha_publicacion": "2005-05-31",
+      "ambito": "Antupirén Alto",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=238368"
+    },
+    {
+      "id": "pen-mod-2005-parque-comunal",
+      "acto": "Decreto Alcaldicio N° 2100/5247",
+      "fecha_publicacion": "2005-11-26",
+      "ambito": "Av. José Arrieta / Sánchez Fontecilla; incorpora Zona PE",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=244334"
+    },
+    {
+      "id": "pen-mod-2007-las-perdices",
+      "acto": "Decreto Alcaldicio N° 2800/3041",
+      "fecha_publicacion": "2007-06-01",
+      "ambito": "Av. Las Perdices (Antupirén - Los Presidentes)",
+      "estado": "incorporada_al_prc_vigente",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=261377"
+    },
+    {
+      "id": "pen-mod-2017-penalolen-nuevo",
+      "acto": "Decreto Alcaldicio N° 1200/3504",
+      "fecha_publicacion": "2017-08-25",
+      "ambito": "Peñalolén Nuevo Norte y Sur",
+      "estado": "vigente_en_ambito",
+      "url": "https://www.bcn.cl/leychile/navegar?i=1106909"
+    },
+    {
+      "id": "pen-mod-2016-3326",
+      "acto": "Decreto Alcaldicio N° 1200/3326",
+      "fecha_publicacion": "2016-07-27",
+      "ambito": "Antupirén, Las Perdices, Oriental, Cancha Tres, El Sauzal",
+      "estado": "SIN_EFECTO_DESDE_2018",
+      "nota": "No usar como norma vigente; fue dejado sin efecto por Decreto 1200/3867 de 2018."
+    },
+    {
+      "id": "pen-acto-2018-3867",
+      "acto": "Decreto Alcaldicio N° 1200/3867",
+      "fecha_publicacion": "2018-08-28",
+      "ambito": "Deja sin efecto Decreto 1200/3326 de 2016",
+      "estado": "vigente",
+      "url": "https://www.bcn.cl/leychile/navegar?i=1122371"
+    },
+    {
+      "id": "pen-mod-2018-4405",
+      "acto": "Decreto Alcaldicio N° 1200/4405",
+      "fecha_publicacion": "2018-09-28",
+      "ambito": "Las Perdices, Oriental, Cancha Tres y El Sauzal",
+      "estado": "vigente_en_ambito",
+      "nota": "Reconoce la modificación sólo en cuatro sectores; Antupirén queda excluido.",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=1123459"
+    },
+    {
+      "id": "prms-94",
+      "acto": "Resolución N° 20 GORE RM",
+      "fecha_publicacion": "1994-11-04",
+      "ambito": "Plan Regulador Metropolitano de Santiago; aplicación supletoria/intercomunal según territorio",
+      "estado": "vigente_con_modificaciones",
+      "url": "https://www.bcn.cl/leychile/navegar?i=1011608"
+    }
+  ],
+  "nomenclatura_espacial": [
+    {
+      "instrumento": "Decreto 1200/3504 - Peñalolén Nuevo",
+      "requiere_ambito_espacial": true,
+      "equivalencias": [
+        {"origen": "PRMS Subsector Geográfico 11a tramo c", "destino": "R4"},
+        {"origen": "PRMS Subsector Geográfico 11 tramo B (parcial)", "destino": "R11"},
+        {"origen": "PRMS Subsector Geográfico 42", "destino": "EQ-2"},
+        {"origen": "PRMS Artículo 1° transitorio", "destino": "EQ-3"},
+        {"origen": "PRMS Equipamiento Recreacional Deportivo, Art. 5.2.4.1", "destino": "EQ-4"},
+        {"origen": "PRMS Zona de Derrumbes y Asentamiento de Suelo, Art. 8.2.1.2", "destino": "EQ-5"}
+      ],
+      "url": "https://www.bcn.cl/leychile/navegar?i=1106909"
+    },
+    {
+      "instrumento": "Decreto 1200/4405 - modificación parcial 2018",
+      "requiere_ambito_espacial": true,
+      "equivalencias": [
+        {"sector": "Las Perdices", "origen": "R1", "destino": "R2"},
+        {"sector": "Oriental", "origen": "SM1", "destino": "R2"},
+        {"sector": "Cancha Tres", "origen": "EQ", "destino": "EQ-1"},
+        {"sector": "El Sauzal", "origen": "R2 / R3 / SM1 / Equipamiento Recreacional y Deportivo PRMS", "destino": "R10"}
+      ],
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=1123459"
+    }
+  ],
+  "identificadores_prms": [
+    {"zona": "PARQUE METROPOLITANO", "articulo": "5.2.2", "url": "https://www.bcn.cl/leychile/navegar?i=1011608"},
+    {"zona": "PARQUES QUEBRADAS", "articulo": "5.2.3.3", "url": "https://www.bcn.cl/leychile/navegar?i=1011608"},
+    {"zona": "EQUIPAMIENTO RECREACIONAL Y DEPORTIVO", "articulo": "5.2.4.1", "url": "https://www.bcn.cl/leychile/navegar?i=1011608"},
+    {"zona": "RIESGO GEOFISICO ASOCIADO A REMOCION EN MASA", "articulo": "8.2.1.4", "url": "https://www.bcn.cl/leychile/navegar?i=1011608"},
+    {"zona": "EQUIPAMIENTO COMUNITARIO DE NIVEL COMUNAL CON VIVIENDA", "articulo": "1° transitorio", "url": "https://www.bcn.cl/leychile/navegar?i=1011608", "estado_codigo": "pendiente_convencion"}
+  ],
+  "pendientes": [
+    "Completar URL oficial específica de Resolución 45/1999 y DS 156/2004 en el catálogo.",
+    "Extraer y estructurar las tablas de parámetros de todas las zonas y modificaciones vigentes.",
+    "Resolver el significado productivo de códigos especiales 444, 555 y 888 antes de reemplazarlos.",
+    "Vincular las equivalencias espaciales a la geometría/sector para evitar reemplazos globales.",
+    "Validar PAGE y FUENTE por fila contra documento y página/Artículo oficial."
+  ]
+}
