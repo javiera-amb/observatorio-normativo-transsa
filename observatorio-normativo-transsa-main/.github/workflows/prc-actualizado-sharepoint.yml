@@ -1,0 +1,105 @@
+name: PRC actualizado desde SharePoint
+
+on:
+  repository_dispatch:
+    types: [prc_actualizado_sharepoint]
+  workflow_dispatch:
+    inputs:
+      archivo:
+        description: Nombre del archivo *_ACTUALIZADO.gpkg
+        required: true
+        type: string
+      ruta:
+        description: Ruta relativa del archivo en SharePoint
+        required: true
+        type: string
+      url:
+        description: URL del archivo en SharePoint
+        required: false
+        type: string
+      comuna:
+        description: Comuna (opcional si viene en la ruta)
+        required: false
+        type: string
+      region:
+        description: Región (opcional si viene en la ruta)
+        required: false
+        type: string
+      modificado_en:
+        description: Fecha/hora de modificación ISO
+        required: false
+        type: string
+
+concurrency:
+  group: prc-actualizado-sharepoint
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar-tui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolver payload
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo 'ARCHIVO=${{ github.event.client_payload.archivo }}' >> "$GITHUB_ENV"
+            echo 'RUTA=${{ github.event.client_payload.ruta }}' >> "$GITHUB_ENV"
+            echo 'URL_SP=${{ github.event.client_payload.url }}' >> "$GITHUB_ENV"
+            echo 'COMUNA=${{ github.event.client_payload.comuna }}' >> "$GITHUB_ENV"
+            echo 'REGION=${{ github.event.client_payload.region }}' >> "$GITHUB_ENV"
+            echo 'MODIFICADO_EN=${{ github.event.client_payload.modificado_en }}' >> "$GITHUB_ENV"
+          else
+            echo 'ARCHIVO=${{ inputs.archivo }}' >> "$GITHUB_ENV"
+            echo 'RUTA=${{ inputs.ruta }}' >> "$GITHUB_ENV"
+            echo 'URL_SP=${{ inputs.url }}' >> "$GITHUB_ENV"
+            echo 'COMUNA=${{ inputs.comuna }}' >> "$GITHUB_ENV"
+            echo 'REGION=${{ inputs.region }}' >> "$GITHUB_ENV"
+            echo 'MODIFICADO_EN=${{ inputs.modificado_en }}' >> "$GITHUB_ENV"
+          fi
+
+      - name: Validar archivo actualizado
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re
+          nombre = os.environ.get('ARCHIVO', '')
+          if not re.search(r'_ACTUALIZADO\.gpkg$', nombre, flags=re.I):
+              raise SystemExit(f'El evento no corresponde a un *_ACTUALIZADO.gpkg: {nombre}')
+          print(f'Archivo válido: {nombre}')
+          PY
+
+      - name: Registrar estado en inventario TUI
+        shell: bash
+        run: |
+          python scripts/registrar_prc_actualizado.py \
+            --archivo "$ARCHIVO" \
+            --ruta "$RUTA" \
+            --url "$URL_SP" \
+            --comuna "$COMUNA" \
+            --region "$REGION" \
+            --modificado-en "$MODIFICADO_EN"
+
+      - name: Publicar cambio
+        shell: bash
+        run: |
+          if git diff --quiet -- data/inventario_prc_onedrive.js index.html; then
+            echo "Sin cambios que publicar."
+            exit 0
+          fi
+          git config user.name "tui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin main
+          git add data/inventario_prc_onedrive.js index.html
+          git commit -m "data: PRC actualizado desde SharePoint - $ARCHIVO"
+          git push origin main

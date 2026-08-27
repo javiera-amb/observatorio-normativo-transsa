@@ -1,0 +1,264 @@
+(() => {
+  "use strict";
+
+  if (window.location.protocol === "file:") {
+    const hash = window.location.hash || "";
+    window.location.replace(`http://127.0.0.1:8000/${hash}`);
+    return;
+  }
+
+  function setModule(moduleName) {
+    if (typeof window.switchModule === "function") {
+      window.switchModule(moduleName);
+    } else {
+      document.querySelector(`[data-module="${moduleName}"]`)?.click();
+    }
+  }
+
+  function focusAndSearch(moduleName, inputId, value) {
+    setModule(moduleName);
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    setTimeout(() => {
+      input.focus({ preventScroll: true });
+      input.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  }
+
+  function initHomeSearch() {
+    const input = document.getElementById("homeSearchInput");
+    const iptButton = document.getElementById("homeSearchIpt");
+    const dailyButton = document.getElementById("homeSearchDaily");
+    if (!input || !iptButton || !dailyButton) return;
+
+    const query = () => input.value.trim();
+
+    iptButton.addEventListener("click", () => {
+      focusAndSearch("vigencia", "vigenciaSearchInput", query());
+    });
+
+    dailyButton.addEventListener("click", () => {
+      focusAndSearch("diario", "searchInput", query());
+    });
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        iptButton.click();
+      }
+    });
+  }
+
+  function makeMetricInteractive(metricId, moduleName, selectId, filterValue, targetSelector) {
+    const card = document.getElementById(metricId)?.closest(".metric-card, .ipt-kpi");
+    if (!card) return;
+
+    card.dataset.filterAction = filterValue;
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `Filtrar por ${filterValue}`);
+
+    const activate = () => {
+      setModule(moduleName);
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const active = select.value === filterValue;
+      select.value = active ? "" : filterValue;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      card.classList.toggle("filter-active", !active);
+      document.querySelector(targetSelector)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    card.addEventListener("click", activate);
+    card.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        activate();
+      }
+    });
+  }
+
+  function improveEmptyStates() {
+    const replacements = [
+      ["iptEmptyState", "Los reportes mensuales aparecerán aquí cuando existan registros disponibles."],
+      ["annualEmptyState", "El archivo histórico se mostrará aquí cuando termine su carga y validación."],
+      ["vigenciaEmptyState", "Las comunas aparecerán aquí cuando exista información normativa y cartográfica para evaluar."]
+    ];
+
+    replacements.forEach(([id, message]) => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      const paragraph = element.querySelector("p");
+      if (paragraph) paragraph.textContent = message;
+      element.querySelector(".template-link")?.classList.add("admin-only");
+    });
+  }
+
+  function loadScript(src, key = src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[data-tui-extension="${key}"]`)) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = src;
+      script.dataset.tuiExtension = key;
+      script.onload = resolve;
+      script.onerror = () => {
+        script.remove();
+        reject(new Error(`No se pudo cargar ${src}`));
+      };
+      document.body.appendChild(script);
+    });
+  }
+
+  function loadStylesheet(href, key) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`link[data-tui-style="${key}"]`)) {
+        resolve();
+        return;
+      }
+
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      link.dataset.tuiStyle = key;
+      link.onload = resolve;
+      link.onerror = () => {
+        link.remove();
+        reject(new Error(`No se pudo cargar ${href}`));
+      };
+      document.head.appendChild(link);
+    });
+  }
+
+  async function ensureLeaflet() {
+    if (typeof window.L !== "undefined") return true;
+
+    const candidates = [
+      {
+        css: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+        js: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+        key: "unpkg"
+      },
+      {
+        css: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css",
+        js: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
+        key: "jsdelivr"
+      },
+      {
+        css: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css",
+        js: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
+        key: "cdnjs"
+      }
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        await Promise.all([
+          loadStylesheet(candidate.css, `leaflet-${candidate.key}`),
+          loadScript(candidate.js, `leaflet-${candidate.key}`)
+        ]);
+        if (typeof window.L !== "undefined") return true;
+      } catch (error) {
+        console.warn(error.message);
+      }
+    }
+
+    return false;
+  }
+
+  function showMapFallback() {
+    const container = document.getElementById("territorialMap");
+    if (!container || container.querySelector("iframe")) return;
+    container.innerHTML = `
+      <iframe
+        title="Mapa interactivo de Chile"
+        src="https://www.openstreetmap.org/export/embed.html?bbox=-76.2%2C-56.2%2C-66.0%2C-17.2&amp;layer=mapnik"
+        style="width:100%;height:100%;min-height:520px;border:0;border-radius:16px;"
+        loading="eager"
+      ></iframe>
+    `;
+  }
+
+  async function loadNationalIptActs() {
+    window.ACTOS_IPT_GZ = "";
+    const historyRelease = "20260814-historial-2";
+    const files = Array.from(
+      { length: 10 },
+      (_value, index) => `data/actos_ipt_nacional_${String(index + 1).padStart(2, "0")}.js?v=${historyRelease}`
+    );
+
+    for (let index = 0; index < files.length; index += 1) {
+      await loadScript(files[index], `actos-ipt-nacional-${index + 1}`);
+    }
+    await loadScript(`data/actos_ipt_nacionales_finalizar.js?v=${historyRelease}`, "actos-ipt-nacional-finalizar");
+    if (window.ACTOS_IPT_NACIONALES_READY) {
+      await window.ACTOS_IPT_NACIONALES_READY;
+    }
+  }
+
+  async function loadContentExtensions() {
+    const leafletReady = await ensureLeaflet();
+    const vigenciaRelease = "20260814-linea-tiempo-1";
+
+    try {
+      await loadScript("data/noticias.js?v=20260813-noticias-1", "data-noticias");
+      await loadScript("tui-content.js?v=20260813-correcciones-1", "tui-content");
+    } catch (error) {
+      console.error("No se pudo cargar el módulo de noticias:", error);
+    }
+
+    try {
+      await loadNationalIptActs();
+    } catch (error) {
+      console.error("No se pudo cargar el historial nacional de actos IPT:", error);
+      window.ACTOS_IPT_NACIONALES = { resumen: { total: 0 }, actos: [], error: error.message };
+    }
+
+    try {
+      await loadScript(`vigencia-comunal-v2.js?v=${vigenciaRelease}`, "vigencia-comunal");
+      await loadScript("data/comparaciones_ipt.js", "comparaciones-ipt");
+      await loadScript(`data/comparacion_coquimbo_detallada_v2.js?v=${vigenciaRelease}`, "comparacion-coquimbo-detallada");
+      await loadScript(`data/fuentes_multifuente_ipt.js?v=${vigenciaRelease}`, "fuentes-multifuente-ipt");
+      await loadScript(`vigencia-pilotos-v2.js?v=${vigenciaRelease}`, "vigencia-pilotos");
+      await loadScript(`vigencia-estrategica.js?v=${vigenciaRelease}`, "vigencia-estrategica");
+      await loadScript(`vigencia-nacional-ui.js?v=${vigenciaRelease}`, "vigencia-nacional-ui");
+      await loadScript(`vigencia-comparacion-detallada.js?v=${vigenciaRelease}`, "vigencia-comparacion-detallada");
+      await loadScript(`vigencia-refundidos-fuentes.js?v=${vigenciaRelease}`, "vigencia-refundidos-fuentes");
+      await loadScript(`vigencia-simplificada.js?v=${vigenciaRelease}`, "vigencia-simplificada");
+      if (typeof renderVigencia === "function") renderVigencia();
+    } catch (error) {
+      console.error("No se pudo cargar la vista comunal de IPT:", error);
+    }
+
+    const renderMap = typeof window.renderTerritorialMap === "function"
+      ? window.renderTerritorialMap
+      : (typeof renderTerritorialMap === "function" ? renderTerritorialMap : null);
+
+    if (leafletReady && renderMap) {
+      setTimeout(() => renderMap(), 120);
+      setTimeout(() => renderMap(), 500);
+    } else {
+      showMapFallback();
+    }
+  }
+
+  function init() {
+    initHomeSearch();
+    makeMetricInteractive("metricChanges", "diario", "statusFilter", "Con novedades", "#reportes");
+    makeMetricInteractive("vigenciaMetricReview", "vigencia", "vigenciaStatusFilter", "Revisión necesaria", ".vigencia-workspace");
+    makeMetricInteractive("vigenciaMetricAlert", "vigencia", "vigenciaStatusFilter", "Desactualizado", ".vigencia-workspace");
+    improveEmptyStates();
+    loadContentExtensions();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
+})();

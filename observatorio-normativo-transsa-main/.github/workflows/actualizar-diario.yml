@@ -1,0 +1,67 @@
+name: Validar módulos locales TUI
+
+# Ollama y la recolección real se ejecutan en el computador local de Transsa.
+# GitHub Actions valida código, configuración, pruebas y compatibilidad del portal.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "automation/**"
+      - "config/**"
+      - "core/**"
+      - "scripts/**"
+      - "tests/**"
+      - "docs/**"
+      - ".github/workflows/actualizar-diario.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "automation/**"
+      - "config/**"
+      - "core/**"
+      - "scripts/**"
+      - "tests/**"
+      - "docs/**"
+      - ".github/workflows/actualizar-diario.yml"
+
+concurrency:
+  group: validar-tui-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    name: Validar código, fuentes y portal
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: automation/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r automation/requirements.txt
+
+      - name: Validar registro de fuentes de noticias
+        run: python scripts/validate_news_sources.py
+
+      - name: Ejecutar pruebas automáticas
+        run: python -m unittest discover -s tests -v
+
+      - name: Validar portal
+        run: python automation/validar_sitio.py
+
+      - name: Confirmar modalidad local
+        run: |
+          echo "Validación correcta."
+          echo "La recolección real, Ollama y la publicación diaria continúan ejecutándose localmente."

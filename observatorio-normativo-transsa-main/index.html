@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="Transsa Urban Intelligence: seguimiento normativo urbano, instrumentos de planificación territorial y vigencia cartográfica para Chile">
+  <meta name="theme-color" content="#0f0f69">
+  <title>Transsa Urban Intelligence</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="ux-refresh.css">
+  <link rel="stylesheet" href="seguimiento-consolidado.css?v=20260814-correcciones-3">
+  <link rel="stylesheet" href="capas-territoriales.css?v=20260814-correcciones-4">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Inicio">
+      <span class="brand-symbol" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </span>
+      <span class="brand-copy">
+        <strong>transsa</strong>
+        <small>Urban Intelligence · Estudios Inmobiliarios</small>
+      </span>
+    </a>
+
+    <nav class="module-nav" aria-label="Módulos de Transsa Urban Intelligence">
+      <button class="module-tab active" data-module="seguimiento">Seguimiento PRC</button>
+      <button class="module-tab" data-module="vigencia">IPT y vigencia</button>
+      <button class="module-tab" data-module="capas">Cobertura territorial</button>
+      <button class="module-tab" data-module="diario">Noticias y cambios</button>
+    </nav>
+
+    <span class="private-badge">
+      <span class="status-dot"></span>
+      Portal interno
+    </span>
+  </header>
+
+  <main>
+    <section class="intro tui-overview">
+      <div class="tui-overview-heading">
+        <div>
+          <p class="eyebrow">TRANSSA URBAN INTELLIGENCE</p>
+          <h1>Control normativo y cobertura territorial, en una sola vista.</h1>
+        </div>
+        <div class="home-search" role="search" aria-label="Buscar comuna, IPT o acto">
+          <input id="homeSearchInput" type="search" placeholder="Buscar comuna, PRC, modificación o capa…" aria-label="Buscar comuna, IPT o acto normativo">
+          <button id="homeSearchIpt" class="primary-button">Buscar IPT</button>
+          <button id="homeSearchDaily" class="secondary-button">Buscar cambios</button>
+        </div>
+      </div>
+      <div class="tui-overview-grid" aria-label="Resumen de secciones">
+        <button data-module-jump="seguimiento"><span>01</span><strong>Seguimiento PRC</strong><small>Producción, responsables, QA automático y envío.</small></button>
+        <button data-module-jump="vigencia"><span>02</span><strong>IPT y vigencia</strong><small>Instrumentos, versiones, actos y alertas por comuna.</small></button>
+        <button data-module-jump="capas"><span>03</span><strong>Cobertura territorial</strong><small>Capas cruzadas, fuentes, fechas y disponibilidad real.</small></button>
+        <button data-module-jump="diario"><span>04</span><strong>Noticias y cambios</strong><small>Publicaciones oficiales y contexto territorial reciente.</small></button>
+      </div>
+    </section>
+
+    <section id="module-diario" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">ACTUALIZACIÓN DIARIA · 08:30</p>
+          <h2>Cambios normativos recientes</h2>
+          <p>Publicaciones del Diario Oficial con incidencia en planificación, construcción, vivienda y mercado inmobiliario.</p>
+        </div>
+      </div>
+
+      <section class="daily-feature">
+        <aside class="latest-card" id="latestCard" aria-label="Último reporte diario">
+          <div class="skeleton large"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton short"></div>
+        </aside>
+
+        <div class="metrics" aria-label="Resumen diario">
+          <article class="metric-card">
+            <span>Reportes disponibles</span>
+            <strong id="metricTotal">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Con novedades</span>
+            <strong id="metricChanges">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Comunas identificadas</span>
+            <strong id="metricCommunes">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Última actualización</span>
+            <strong id="metricDate">—</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="search-panel" id="buscador">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSULTA</p>
+            <h2>Buscar publicaciones</h2>
+            <p class="section-description">
+              Filtra por territorio, escala, materia o estado.
+            </p>
+          </div>
+          <button id="clearFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="filters">
+          <label class="search-field">
+            <span>Buscar</span>
+            <input id="searchInput" type="search" placeholder="Comuna, organismo, norma o materia…">
+          </label>
+          <label>
+            <span>Escala</span>
+            <select id="scaleFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Materia</span>
+            <select id="categoryFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="statusFilter">
+              <option value="">Todos</option>
+              <option value="Con novedades">Con novedades</option>
+              <option value="Sin novedades">Sin novedades</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section id="reportes" class="reports-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SEGUIMIENTO DIARIO</p>
+            <h2>Reportes recientes</h2>
+            <p class="section-description">
+              Cada ficha resume la publicación, su alcance territorial y sus implicancias prácticas.
+            </p>
+          </div>
+          <span id="resultCount" class="result-count"></span>
+        </div>
+
+        <div id="reportGrid" class="report-grid"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <div>⌕</div>
+          <h3>No encontramos resultados</h3>
+          <p>Prueba con otra comuna, organismo o materia.</p>
+        </div>
+      </section>
+    </section>
+
+    <section id="module-ipt" class="module-panel" hidden aria-hidden="true">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">ACTUALIZACIÓN MENSUAL · DÍA 1</p>
+          <h2>Reportes de instrumentos de planificación territorial</h2>
+          <p>
+            Seguimiento nacional de modificaciones, enmiendas, aprobaciones,
+            promulgaciones y procesos en tramitación de IPT.
+          </p>
+        </div>
+      </div>
+
+      <section class="ipt-summary">
+        <article class="ipt-kpi">
+          <span>Reportes mensuales</span>
+          <strong id="iptMetricReports">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Cambios registrados</span>
+          <strong id="iptMetricChanges">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Comunas con cambios</span>
+          <strong id="iptMetricCommunes">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Último período</span>
+          <strong id="iptMetricPeriod">—</strong>
+        </article>
+      </section>
+
+      <section class="search-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSULTA IPT</p>
+            <h2>Historial mensual</h2>
+            <p class="section-description">
+              Revisa el resumen mensual y accede a los documentos consolidados.
+            </p>
+          </div>
+          <button id="clearIptFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="ipt-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="iptSearchInput" type="search" placeholder="Comuna, región, tipo de IPT o acto…">
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="iptRegionFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="iptStateFilter">
+              <option value="">Todos</option>
+              <option value="Vigente">Vigente</option>
+              <option value="En tramitación">En tramitación</option>
+              <option value="Consulta">Consulta</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="reports-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSOLIDADO NACIONAL</p>
+            <h2>Reportes IPT</h2>
+          </div>
+          <span id="iptResultCount" class="result-count"></span>
+        </div>
+
+        <div id="iptReportGrid" class="ipt-report-grid"></div>
+
+        <div id="iptEmptyState" class="empty-state">
+          <div>IPT</div>
+          <h3>Aún no hay reportes IPT sincronizados</h3>
+          <p>Los reportes mensuales aparecerán aquí cuando existan registros disponibles.</p>
+        </div>
+      </section>
+    </section>
+
+    <section id="module-historico" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">ARCHIVO NORMATIVO</p>
+          <h2>Histórico anual</h2>
+          <p>
+            Consolidado de publicaciones del Diario Oficial y cambios en
+            instrumentos de planificación territorial por año y territorio.
+          </p>
+        </div>
+      </div>
+
+      <section class="annual-summary">
+        <article class="ipt-kpi">
+          <span>Registros históricos</span>
+          <strong id="annualMetricItems">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Comunas identificadas</span>
+          <strong id="annualMetricCommunes">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Regiones cubiertas</span>
+          <strong id="annualMetricRegions">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Año disponible</span>
+          <strong id="annualMetricYear">—</strong>
+        </article>
+      </section>
+
+      <section class="search-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSULTA HISTÓRICA</p>
+            <h2>Buscar en el archivo</h2>
+            <p class="section-description">
+              Filtra por mes, módulo, región, comuna, materia o estado.
+            </p>
+          </div>
+          <button id="clearAnnualFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="annual-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="annualSearchInput" type="search" placeholder="Comuna, norma, IPT, organismo o materia…">
+          </label>
+          <label>
+            <span>Mes</span>
+            <select id="annualMonthFilter"><option value="">Todos</option></select>
+          </label>
+          <label>
+            <span>Módulo</span>
+            <select id="annualModuleFilter">
+              <option value="">Todos</option>
+              <option value="Diario Oficial">Diario Oficial</option>
+              <option value="IPT">IPT</option>
+            </select>
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="annualRegionFilter"><option value="">Todas</option></select>
+          </label>
+        </div>
+      </section>
+
+      <section class="reports-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSOLIDADO ANUAL</p>
+            <h2>Histórico disponible</h2>
+          </div>
+          <span id="annualResultCount" class="result-count"></span>
+        </div>
+
+        <div id="annualReportGrid" class="annual-report-grid"></div>
+
+        <div id="annualEmptyState" class="empty-state">
+          <div>2025</div>
+          <h3>El histórico aún no ha sido cargado</h3>
+          <p>El archivo histórico se mostrará aquí cuando termine su carga y validación.</p>
+        </div>
+      </section>
+    </section>
+
+    <section id="module-mapa" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">VISUALIZACIÓN TERRITORIAL</p>
+          <h2>Mapa de cambios normativos</h2>
+          <p>
+            Explora la distribución territorial de publicaciones del Diario
+            Oficial, actualizaciones IPT e información histórica.
+          </p>
+        </div>
+      </div>
+
+      <section class="map-layout">
+        <aside class="map-sidebar">
+          <div class="map-filter-card">
+            <p class="eyebrow">FILTROS DEL MAPA</p>
+
+            <label>
+              <span>Fuente</span>
+              <select id="mapModuleFilter">
+                <option value="">Todas</option>
+                <option value="Diario Oficial">Diario Oficial</option>
+                <option value="IPT">Actualizaciones IPT</option>
+                <option value="Histórico">Histórico anual</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Período</span>
+              <select id="mapPeriodFilter">
+                <option value="">Todos</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Región</span>
+              <select id="mapRegionFilter">
+                <option value="">Todas</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Buscar territorio</span>
+              <input id="mapSearchInput" type="search" placeholder="Región, comuna o materia…">
+            </label>
+
+            <button id="clearMapFilters" class="secondary-button map-clear-button">
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div class="map-stat-grid">
+            <article class="map-stat">
+              <span>Registros visibles</span>
+              <strong id="mapMetricItems">0</strong>
+            </article>
+            <article class="map-stat">
+              <span>Regiones</span>
+              <strong id="mapMetricRegions">0</strong>
+            </article>
+            <article class="map-stat">
+              <span>Comunas</span>
+              <strong id="mapMetricCommunes">0</strong>
+            </article>
+          </div>
+
+          <div class="map-legend">
+            <p class="eyebrow">LECTURA</p>
+            <div><span class="legend-dot small"></span> 1 a 2 registros</div>
+            <div><span class="legend-dot medium"></span> 3 a 5 registros</div>
+            <div><span class="legend-dot large"></span> 6 o más registros</div>
+          </div>
+        </aside>
+
+        <div class="map-main">
+          <div id="territorialMap" class="territorial-map" aria-label="Mapa interactivo de Chile"></div>
+
+          <div class="map-results-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">DETALLE TERRITORIAL</p>
+                <h3 id="mapResultsTitle">Todos los territorios</h3>
+              </div>
+              <span id="mapResultCount" class="result-count"></span>
+            </div>
+
+            <div id="mapResultsList" class="map-results-list"></div>
+
+            <div id="mapEmptyState" class="empty-state" hidden>
+              <div>⌖</div>
+              <h3>No hay resultados para estos filtros</h3>
+              <p>Prueba con otra región, comuna o período.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="module-seguimiento" class="module-panel active">
+      <div class="module-header seguimiento-header">
+        <div>
+          <p class="eyebrow">SEGUIMIENTO PRC</p>
+          <h2>Estado, responsables y QA por comuna</h2>
+        </div>
+        <div class="seguimiento-header-actions">
+          <div class="seguimiento-view-switch" role="group" aria-label="Tipo de vista de seguimiento">
+            <button class="active" type="button" data-seguimiento-view="propiteq">Vista Propiteq</button>
+            <button type="button" data-seguimiento-view="equipo">Vista interna</button>
+          </div>
+          <a class="secondary-button" href="https://github.com/javiera-amb/observatorio-normativo-transsa/edit/main/data/estado_operativo_datos.js" target="_blank" rel="noopener noreferrer" title="Acceso de administración en GitHub">Administrar datos ↗</a>
+          <button id="seguimientoDownloadCsv" class="secondary-button" type="button">Descargar CSV</button>
+        </div>
+      </div>
+
+      <div id="seguimientoExternalView">
+      <section class="seguimiento-kpis production-kpis" aria-label="Estado de producción informado por el equipo">
+        <article class="pending" data-production-filter="pendiente"><span>Pendiente</span><strong id="seguimientoMetricPending">0</strong><small>No iniciado o no informado</small></article>
+        <article class="development" data-production-filter="en_desarrollo"><span>En desarrollo</span><strong id="seguimientoMetricDevelopment">0</strong><small>El equipo está construyendo la capa</small></article>
+        <article class="ready" data-production-filter="actualizado"><span>Actualizado</span><strong id="seguimientoMetricUpdated">0</strong><small>Listo para pasar a producción</small></article>
+        <article class="platform" data-production-filter="enviado"><span>Enviado</span><strong id="seguimientoMetricSent">0</strong><small>La carga al visor queda a cargo de Propiteq</small></article>
+      </section>
+
+      <section class="seguimiento-filter-panel">
+        <div class="seguimiento-filter-heading">
+          <div>
+            <p class="eyebrow">CONSULTA CONSOLIDADA</p>
+            <h3>Estado por comuna</h3>
+          </div>
+          <span id="seguimientoResultCount" class="result-count"></span>
+        </div>
+        <div class="seguimiento-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="seguimientoSearch" type="search" placeholder="Comuna, región, PRC o motivo…">
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="seguimientoRegion"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Auditoría</span>
+            <select id="seguimientoAudit">
+              <option value="">Todas</option>
+              <option value="auditoria_avanzada">Auditoría avanzada</option>
+              <option value="control_preliminar">Control preliminar</option>
+              <option value="pendiente_revision">Pendiente de revisión</option>
+              <option value="sin_cartografia">Sin cartografía</option>
+              <option value="sin_iniciar">Sin iniciar</option>
+            </select>
+          </label>
+          <label>
+            <span>Estado del equipo</span>
+            <select id="seguimientoProduction">
+              <option value="">Todas</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="en_desarrollo">En desarrollo</option>
+              <option value="actualizado">Actualizado</option>
+              <option value="enviado">Enviado</option>
+            </select>
+          </label>
+          <label>
+            <span>QA</span>
+            <select id="seguimientoQa">
+              <option value="">Todos</option>
+              <option value="pendiente">QA pendiente</option>
+              <option value="observaciones">QA con observaciones</option>
+              <option value="aprobado">QA aprobado</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="seguimiento-table-section">
+        <div class="seguimiento-table-scroll">
+          <table class="seguimiento-table">
+            <thead>
+              <tr>
+                <th>Región / comuna</th>
+                <th>IPT vigente identificado</th>
+                <th>Cartografía</th>
+                <th>Estado de producción</th>
+                <th>Traspaso a Propiteq</th>
+                <th>QA automático de la plataforma</th>
+                <th>Cambios / controles</th>
+                <th>Último QA</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="seguimientoTableBody"></tbody>
+          </table>
+        </div>
+        <div id="seguimientoEmpty" class="empty-state" hidden>
+          <div>IPT</div>
+          <h3>No hay comunas para estos filtros</h3>
+          <p>Prueba con otra región o estado de disponibilidad.</p>
+        </div>
+      </section>
+
+      <section class="seguimiento-interpretation">
+        <div><span class="seguimiento-dot pending"></span><strong>Pendiente</strong><p>El equipo aún no comienza o no ha informado avance.</p></div>
+        <div><span class="seguimiento-dot development"></span><strong>En desarrollo</strong><p>La cartografía está siendo construida, corregida o consolidada.</p></div>
+        <div><span class="seguimiento-dot ready"></span><strong>Actualizado</strong><p>La versión TUI V2 tiene geometría base y tabla normativa separada, vinculadas por una clave común, y está lista para enviar a Propiteq.</p></div>
+        <div><span class="seguimiento-dot platform"></span><strong>Enviado</strong><p>La versión TUI V2 sale del equipo y Propiteq queda a cargo de cargarla al visor.</p></div>
+      </section>
+      <section class="capas-audit-banner seguimiento-definitions">
+        <h3>Cómo leer “cambios / controles” y “último QA”</h3>
+        <p>Un “acto posterior” es una modificación, enmienda, rectificación o acto normativo asociado al instrumento base cuya incorporación al SIG debe comprobarse. Los “controles” son verificaciones concretas de normativa, geometría, atributos, topología, fuentes y publicación. “Último QA” es la fecha de la última auditoría técnica registrada; no es la fecha de edición del archivo ni de Notion. “Sin PRC comunal” es una condición calculada, no un quinto estado de producción: la comuna queda en monitoreo y se muestran los PRM, PRI o PRDU superiores que sí aplican.</p>
+      </section>
+      </div>
+
+      <div id="seguimientoInternalView" hidden>
+        <section class="seguimiento-internal-intro">
+          <div>
+            <span>USO INTERNO</span>
+            <h3 id="seguimientoInternalTitle">Mi tablero de tareas</h3>
+            <p id="seguimientoInternalDescription">Selecciona tu nombre, filtra tus comunas y marca el estado de producción. Puedes exportar los cambios para incorporarlos al registro versionado del equipo.</p>
+            <div class="seguimiento-internal-switch" role="tablist" aria-label="Panel interno">
+              <button class="active" type="button" data-internal-view="equipo">Mi trabajo</button>
+              <button type="button" data-internal-view="javiera">Control Javiera</button>
+            </div>
+            <label class="seguimiento-current-user"><span>Estoy trabajando como</span><select id="seguimientoCurrentUser"><option value="">Todo el equipo</option><option value="Cristóbal">Cristóbal</option><option value="Annabel">Annabel</option><option value="Fernanda">Fernanda</option><option value="Javiera">Javiera</option></select></label>
+            <button id="seguimientoDownloadLocalChanges" class="secondary-button seguimiento-local-download" type="button">Descargar borradores</button>
+            <p id="seguimientoLocalSaveNote" class="seguimiento-local-save-note">Los estados se guardan localmente hasta exportarlos e incorporarlos al registro compartido de Git.</p>
+          </div>
+          <span id="seguimientoInternalBadge" class="seguimiento-readonly-badge">Tablero del equipo</span>
+        </section>
+
+        <section class="seguimiento-kpis internal-kpis internal-kpis-six" data-internal-scope="equipo,javiera" aria-label="Resumen interno de trabajo PRC">
+          <article data-internal-metric="total"><span>Total comunas</span><strong id="seguimientoInternalTotal">0</strong><small>Universo nacional de seguimiento</small></article>
+          <article class="available" data-internal-metric="con_prc"><span>Con PRC identificado</span><strong id="seguimientoInternalWithPrc">0</strong><small>Instrumento comunal localizado</small></article>
+          <article class="review" data-internal-metric="v1_reconstruccion"><span>V1 por reconstruir</span><strong id="seguimientoInternalV1">0</strong><small>Enviadas históricamente, no reutilizables</small></article>
+          <article class="development" data-internal-metric="v2_detectada"><span>TUI V2 detectadas</span><strong id="seguimientoInternalV2">0</strong><small>Con archivos nuevos en OneDrive</small></article>
+          <article class="available" data-internal-metric="produccion_directa"><span>Paso directo posible</span><strong id="seguimientoInternalDirect">0</strong><small>Sin cambios posteriores; falta homologar tabla</small></article>
+          <article class="review" data-internal-metric="revision_javiera"><span>Auditoría pendiente</span><strong id="seguimientoInternalJaviera">0</strong><small>QA o controles no automatizables abiertos</small></article>
+        </section>
+
+        <section class="seguimiento-team-panel" data-internal-scope="equipo">
+          <div class="seguimiento-team-heading"><div><p class="eyebrow">EQUIPO AUTORIZADO</p><h3>Personas que pueden actualizar el seguimiento</h3><p>La asignación de comunas se carga en los datos operativos. No se crean responsables automáticamente.</p></div><span class="seguimiento-readonly-badge">4 integrantes</span></div>
+          <div class="seguimiento-team-grid">
+            <article><strong>Cristóbal</strong><span>Producción SIG</span></article>
+            <article><strong>Annabel</strong><span>Producción SIG</span></article>
+            <article><strong>Fernanda</strong><span>Producción SIG</span></article>
+            <article><strong>Javiera</strong><span>Administración y QA</span></article>
+          </div>
+        </section>
+
+        <section class="seguimiento-workflow-panel" data-internal-scope="equipo">
+          <div><p class="eyebrow">FLUJO DE ACTUALIZACIÓN</p><h3>Qué ocurre cuando se sube un PRC consolidado</h3><p>Subir el archivo inicia la revisión; no cambia por sí solo el estado de producción ni aprueba el QA.</p></div>
+          <ol class="seguimiento-workflow"><li><span>1</span><strong>Ingreso TUI V2</strong><small>Se guardan el GeoPackage de geometrías y la tabla normativa separada en la carpeta comunal de OneDrive.</small></li><li><span>2</span><strong>Control estructural</strong><small>Se comprueban CRS, geometrías, tabla normativa y la clave común `unidad_normativa_id`.</small></li><li><span>3</span><strong>Comparación normativa</strong><small>Se revisan modificaciones, enmiendas, seccionales y actos posteriores sin recortar la zonificación con riesgos.</small></li><li><span>4</span><strong>QA automático + revisión Javiera</strong><small>La plataforma comprueba las correcciones automatizables; el resto queda pendiente para Javiera.</small></li><li><span>5</span><strong>Envío</strong><small>Solo una TUI V2 sin bloqueos puede marcarse “enviada” para la carga de Propiteq.</small></li></ol>
+        </section>
+
+        <section class="seguimiento-v2-alert" data-internal-scope="equipo,javiera">
+          <div><p class="eyebrow">ALERTA CRÍTICA · PRC HISTÓRICOS</p><h3>Las 45 versiones enviadas deben reconstruirse como TUI V2</h3><p>Las V1 se generaron intersectando la zonificación con capas de riesgo: sus polígonos representan fragmentos de esa intersección y no la geometría normativa base. La nueva entrega separa geometría y normativa para evitar duplicaciones y facilitar la carga en las dos tablas SQL.</p></div>
+          <ul><li><strong>No reutilizar la V1</strong><span>Se conserva solo como antecedente del envío histórico a Propiteq.</span></li><li><strong>Zonificación sin recortes</strong><span>Uso de suelo, edificación y riesgos permanecen como coberturas superpuestas.</span></li><li><strong>Dos archivos vinculados</strong><span>GeoPackage de geometrías + tabla normativa separada mediante `unidad_normativa_id`.</span></li></ul>
+          <button id="seguimientoLegacyV2Download" class="secondary-button" type="button">Descargar cola de reconstrucción</button>
+        </section>
+
+        <section class="seguimiento-legacy-panel" data-internal-scope="equipo,javiera">
+          <div><p class="eyebrow">INVENTARIO SIG · ONEDRIVE + GIT</p><h3><span id="seguimientoPrepublishedHeadline">Inventario pendiente de sincronización</span></h3><p>El envío V1 se conserva como historia de publicación. El estado operativo mostrado por la plataforma corresponde ahora a la versión TUI V2 que debe construirse, validarse y reemplazarla.</p></div>
+          <div class="seguimiento-legacy-kpis"><span><strong id="seguimientoPrepublishedCount">0</strong><small>V1 enviadas históricamente</small></span><span><strong id="seguimientoLegacyV2Required">0</strong><small>requieren reconstrucción V2</small></span><span><strong id="seguimientoTuiV2Detected">0</strong><small>archivos TUI V2 detectados</small></span><span><strong id="seguimientoTuiV2StructureOk">0</strong><small>V2 con estructura técnica correcta</small></span><span><strong id="seguimientoInventoryDeclared">0</strong><small>carpetas SIG indexadas</small></span></div>
+          <div class="seguimiento-drive-row"><span>Archivos SIG</span><a id="seguimientoDriveLink" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Abrir inventario versionado</a><small id="seguimientoDriveStatus">Ejecuta la sincronización local para indexar los archivos de OneDrive.</small></div>
+        </section>
+
+        <section class="seguimiento-direct-panel" data-internal-scope="equipo,javiera">
+          <div class="seguimiento-filter-heading"><div><p class="eyebrow">ACCIÓN DIRECTA</p><h3>PRC sin cambios posteriores detectados</h3><p>Estos casos pueden evitar una comparación de actos posteriores, pero igualmente deben generarse con el estándar TUI V2 y pasar el control estructural.</p></div><button id="seguimientoDirectDownload" class="secondary-button" type="button">Descargar lista CSV</button></div>
+          <div class="seguimiento-direct-note">La cuenta disminuye cuando una comuna pasa a “Enviado”. “Sin cambios posteriores” no significa QA aprobado: todavía exige geometría normativa base, tabla normativa separada, clave de unión y homologación de usos.</div>
+          <div class="seguimiento-table-scroll"><table class="seguimiento-table seguimiento-direct-table"><thead><tr><th>Región / comuna</th><th>IPT</th><th>Estado</th><th>Capa / archivo</th><th>Revisión Javiera</th><th>Acción obligatoria</th></tr></thead><tbody id="seguimientoDirectBody"></tbody></table></div>
+        </section>
+
+        <section class="seguimiento-filter-panel internal-filter-panel" data-internal-scope="equipo,javiera">
+          <div class="seguimiento-filter-heading"><div><p class="eyebrow">GESTIÓN OPERATIVA</p><h3>Cola nacional de trabajo</h3></div><span id="seguimientoInternalCount" class="result-count"></span></div>
+          <div class="seguimiento-filters internal-filters">
+            <label><span>Buscar</span><input id="seguimientoInternalSearch" type="search" placeholder="Comuna, responsable, etapa o tarea…"></label>
+            <label><span>Región</span><select id="seguimientoInternalRegion"><option value="">Todas</option></select></label>
+            <label><span>Responsable</span><select id="seguimientoInternalOwner"><option value="">Todos</option><option value="__sin_asignar__">Sin asignar</option><option value="Cristóbal">Cristóbal</option><option value="Annabel">Annabel</option><option value="Fernanda">Fernanda</option><option value="Javiera">Javiera</option></select></label>
+            <label><span>Etapa técnica</span><select id="seguimientoInternalStage"><option value="">Todas</option><option value="levantamiento">Levantamiento de fuentes</option><option value="comparacion">Comparación normativa</option><option value="actualizacion_sig">Actualización SIG</option><option value="qa">QA</option><option value="publicacion">Publicación</option><option value="monitoreo">Monitoreo sin PRC comunal</option></select></label>
+            <label><span>Prioridad asignada</span><select id="seguimientoInternalPriority"><option value="">Todas</option><option value="1">1 · Urgente</option><option value="2">2 · Alta</option><option value="3">3 · Media</option><option value="4">4 · Baja</option><option value="5">5 · Monitoreo</option></select></label>
+          </div>
+        </section>
+
+        <section class="seguimiento-table-section internal-table-section" data-internal-scope="equipo,javiera">
+          <div class="seguimiento-table-scroll">
+            <table class="seguimiento-table internal-table">
+              <thead><tr><th>Comuna</th><th>Responsable</th><th>Etapa técnica</th><th>Estado / avance</th><th>QA automático de la plataforma</th><th>Revisión Javiera</th><th>Alertas y bloqueos</th><th>Próxima acción</th><th>Última actividad</th><th></th></tr></thead>
+              <tbody id="seguimientoInternalBody"></tbody>
+            </table>
+          </div>
+          <div id="seguimientoInternalEmpty" class="empty-state" hidden><div>PRC</div><h3>No hay trabajo para estos filtros</h3><p>Prueba con otra etapa, prioridad o responsable.</p></div>
+        </section>
+
+        <section class="seguimiento-internal-legend" data-internal-scope="equipo,javiera">
+          <div><strong>Estado de producción TUI V2</strong><p>Lo informa el equipo: pendiente, en desarrollo, actualizado o enviado. Una V1 enviada históricamente no cuenta como V2 enviada.</p></div>
+          <div><strong>Revisión Javiera</strong><p>Control interno que realiza Javiera cuando la plataforma no puede comprobar una condición o requiere interpretación. No se muestra en la vista pública.</p></div>
+          <div><strong>QA automático de la plataforma</strong><p>Comparación que ejecuta esta plataforma entre el PRC actualizado y las correcciones detectadas. Es el único QA mostrado en la vista pública: aprobado, con diferencias o pendiente de revisión de Javiera.</p></div>
+          <div><strong>Etapa técnica</strong><p>Indica dónde está el trabajo: fuentes, comparación normativa, actualización SIG, QA o publicación.</p></div>
+          <div><strong>QA pendiente Javiera</strong><p>Se activa cuando existe un control que no puede resolverse automáticamente; Javiera debe revisar evidencia, normativa, geometría, atributos o topología y registrar el resultado.</p></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="module-capas" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">COBERTURA DE DATOS · IPT + CAPAS TERRITORIALES</p>
+          <h2>Qué información tiene cada comuna</h2>
+          <p>Consulta los IPT aplicables y las capas territoriales disponibles, con la fecha normativa, fecha del dato y última edición del catálogo.</p>
+        </div>
+        <div class="capas-header-actions">
+          <span class="seguimiento-readonly-badge">Inventario + control operativo</span>
+          <a class="capas-source-link" href="https://github.com/javiera-amb/observatorio-normativo-transsa/edit/main/data/estado_operativo_datos.js" target="_blank" rel="noopener noreferrer">Actualizar estados ↗</a>
+          <a class="capas-source-link" href="https://app.notion.com/p/1ee631a6d38f80e9a55cc8115fcf4069?pvs=204" target="_blank" rel="noopener noreferrer">Abrir Diccionario de Datos ↗</a>
+        </div>
+      </div>
+
+      <section class="capas-catalog-section">
+        <div class="capas-section-heading">
+          <div><p class="eyebrow">BLOQUE 1 · CATÁLOGO NACIONAL</p><h3>Todas las capas, ordenadas por categoría</h3><p>Este inventario reúne los IPT auditados, las capas territoriales existentes y las fuentes por incorporar. Abre una categoría para revisar qué capas contiene, su origen y el estado de adquisición.</p></div>
+          <div class="capas-catalog-heading-actions">
+            <span id="capasCatalogCount" class="result-count"></span>
+            <button id="capasQaExport" class="secondary-button" type="button" hidden>Descargar registro QA</button>
+          </div>
+        </div>
+        <div id="capasCatalogGrid" class="capas-catalog-grid"></div>
+      </section>
+
+      <section class="capas-regions-section">
+        <div class="capas-section-heading">
+          <div><p class="eyebrow">BLOQUE 2 · COBERTURA NACIONAL</p><h3>Estado por región y comuna</h3><p>Abre una región para revisar las comunas y sus cuatro indicadores. Pulsa la cantidad de capas para bajar al detalle; una cobertura sólo se confirma con un cruce geométrico ejecutado.</p></div>
+          <span id="capasRegionsCount" class="result-count"></span>
+        </div>
+        <div class="capas-region-filters">
+          <label><span>Buscar comuna o región</span><input id="capasRegionSearch" type="search" placeholder="Coquimbo, Biobío, Santiago…"></label>
+          <label><span>Ordenar comunas</span><select id="capasRegionSort"><option value="nombre">Nombre</option><option value="pendientes">Más pendientes</option><option value="confirmadas">Más confirmadas</option></select></label>
+        </div>
+        <div id="capasRegionGrid" class="capas-region-grid"></div>
+      </section>
+
+      <section class="capas-commune-picker">
+        <div>
+          <p class="eyebrow">SELECCIONA UNA COMUNA</p>
+          <h3 id="capasSelectedTitle">Cobertura de Coquimbo</h3>
+          <p>La cobertura territorial solo se confirma con un cruce geométrico. Una referencia en Notion no equivale a presencia efectiva en la comuna y no modifica el estado de auditoría del PRC.</p>
+        </div>
+        <label><span>Comuna</span><select id="capasCommuneSelect"></select></label>
+      </section>
+
+      <section class="capas-kpis" aria-label="Resumen de cobertura de la comuna seleccionada">
+        <article><span>IPT aplicables</span><strong id="capasMetricIpt">0</strong><small id="capasMetricIptTypes">Sin registros</small></article>
+        <article class="verified"><span>Cobertura confirmada</span><strong id="capasMetricCovered">0</strong><small>Intersección ejecutada con elementos</small></article>
+        <article class="review"><span>Cruce bloqueado / pendiente</span><strong id="capasMetricPending">0</strong><small>Falta archivo o ejecutar el proceso</small></article>
+        <article class="alert"><span>Sin elementos / no aplica</span><strong id="capasMetricNotApplicable">0</strong><small>Cruce en cero, fuera de alcance o no es capa</small></article>
+      </section>
+
+      <section class="capas-coverage-section">
+        <div class="capas-section-heading"><div><p class="eyebrow">BLOQUE 3 · DETALLE TERRITORIAL</p><h3>Capas aplicables a <span id="capasSelectedLayerTitle">la comuna</span></h3><p>PRC, PRI, PRDU, límites, movilidad, equipamientos, riesgos y demás capas se leen en un único catálogo. La categoría ordena la fuente; el cruce comunal determina la cobertura.</p></div><span id="capasTerritorialCount" class="result-count"></span></div>
+        <div class="capas-audit-banner" id="capasCrossBanner">
+          <h3 id="capasCrossBannerTitle">Matriz nacional aún no ejecutada</h3>
+          <p id="capasCrossBannerText">El catálogo ya distingue referencias de archivos, archivos incompletos y fichas sin adjunto. Para confirmar cobertura debemos materializar los archivos vigentes, validar CRS y geometría, e intersectarlos con las 346 comunas.</p>
+        </div>
+        <div class="capas-coverage-filters">
+          <label><span>Buscar capa</span><input id="capasSearch" type="search" placeholder="Metro, predios, riesgos, establecimientos…"></label>
+          <label><span>Tipo de capa</span><select id="capasCategoryFilter"><option value="">Todos</option></select></label>
+          <label><span>Estado de cobertura</span><select id="capasCoverageFilter"><option value="">Todos</option><option value="confirmada">Cobertura confirmada</option><option value="sin_elementos">Sin elementos</option><option value="bloqueada">Cruce bloqueado</option><option value="pendiente">Cruce pendiente</option><option value="no_aplica">No aplica</option><option value="proceso">Proceso, no capa</option><option value="error">Error de cruce</option></select></label>
+          <label><span>Ordenar por</span><select id="capasSort"><option value="categoria">Categoría</option><option value="nombre">Nombre</option><option value="estado">Estado de cobertura</option><option value="fecha">Fecha del dato</option></select></label>
+        </div>
+        <div class="capas-table-scroll"><table class="capas-coverage-table"><thead><tr><th>Capa</th><th>Cobertura en la comuna</th><th>Fuente / archivo espacial</th><th>Estado del equipo</th><th>QA de la capa</th><th>Fecha del dato</th></tr></thead><tbody id="capasCoverageBody"></tbody></table></div>
+        <div id="capasCoverageEmpty" class="empty-state" hidden><div>GIS</div><h3>Sin capas para este filtro</h3><p>Prueba con otro estado o término de búsqueda.</p></div>
+      </section>
+
+      <section class="capas-method">
+        <div><p class="eyebrow">CÓMO LEER ESTA PÁGINA</p><h3>Disponibilidad no es validación</h3></div>
+        <ol>
+          <li>Los IPT se identifican con fuentes oficiales; el estado cartográfico del PRC proviene de la base Transsa en construcción.</li>
+          <li>Notion sirve como inventario inicial de capas territoriales, no como prueba suficiente de vigencia, cobertura o calidad.</li>
+          <li>Las capas desarrolladas por Transsa se identifican con su linaje: fuente original, método de obtención y transformación interna. Por ejemplo, una base predial puede registrarse como “scraping público · corrección Transsa”.</li>
+          <li>“Cobertura confirmada” significa que el archivo vigente intersecta la comuna y se registró la cantidad de elementos.</li>
+          <li>“Sin elementos” es un resultado válido: el archivo fue procesado y el cruce dio cero para esa comuna.</li>
+          <li>“Cruce bloqueado” significa que Notion puede nombrar el archivo, pero la geometría todavía no está disponible para el proceso.</li>
+          <li>El equipo actualiza uno de cuatro estados: pendiente, en desarrollo, actualizado o enviado.</li>
+          <li>La vista pública muestra solo el QA automático de esta plataforma; el QA manual de Javiera queda en la vista interna.</li>
+          <li>La auditoría normativa detallada se consulta en “Seguimiento PRC” e “IPT y vigencia”.</li>
+        </ol>
+      </section>
+    </section>
+
+    <section id="module-vigencia" class="module-panel">
+      <div class="module-header">
+        <div>
+          <p class="eyebrow">CONTROL DE CONSISTENCIA IPT</p>
+          <h2>IPT, líneas de tiempo y vigencia cartográfica</h2>
+          <p>
+            Compara la trayectoria normativa de cada instrumento con la versión
+            cartográfica registrada y genera alertas cuando existen actos
+            posteriores sin evidencia de incorporación.
+          </p>
+        </div>
+        <div class="vigencia-downloads" id="vigenciaDownloads"></div>
+      </div>
+
+      <section class="vigencia-summary">
+        <article class="ipt-kpi">
+          <span>Comunas evaluadas</span>
+          <strong id="vigenciaMetricTotal">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Con PRC identificado</span>
+          <strong id="vigenciaMetricOk">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Con actos o controles abiertos</span>
+          <strong id="vigenciaMetricReview">0</strong>
+        </article>
+        <article class="ipt-kpi">
+          <span>Sin PRC comunal identificado</span>
+          <strong id="vigenciaMetricAlert">0</strong>
+        </article>
+      </section>
+
+      <section class="vigencia-source-note">
+        <strong>Indicadores sincronizados con Seguimiento PRC.</strong>
+        <span>“Con PRC identificado” acredita que la base normativa localizó un instrumento comunal, no que su GeoPackage esté aprobado. “Sin PRC comunal” no significa que la comuna carezca de planificación: la ficha muestra los PRM, PRI o PRDU superiores que sí aplican.</span>
+      </section>
+
+      <section class="vigencia-regions-section">
+        <div class="capas-section-heading">
+          <div><p class="eyebrow">RESUMEN NACIONAL</p><h3>IPT por región y comuna</h3><p>Abre una región para ubicar rápidamente cada comuna. La ficha distingue instrumentos aplicables, actos posteriores y controles que todavía requieren revisión.</p></div>
+          <span id="vigenciaRegionsCount" class="result-count"></span>
+        </div>
+        <div class="vigencia-region-filters">
+          <label><span>Buscar comuna o región</span><input id="vigenciaRegionSearch" type="search" placeholder="Coquimbo, Biobío, Santiago…"></label>
+          <label><span>Ordenar comunas</span><select id="vigenciaRegionSort"><option value="nombre">Nombre</option><option value="pendientes">Más controles pendientes</option><option value="instrumentos">Más instrumentos</option></select></label>
+        </div>
+        <div id="vigenciaRegionGrid" class="vigencia-region-grid"></div>
+      </section>
+
+      <section class="search-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">FILTROS</p>
+            <h2>Buscar instrumento</h2>
+            <p class="section-description">
+              Filtra por región, comuna, tipo de IPT y estado de alerta.
+            </p>
+          </div>
+          <button id="clearVigenciaFilters" class="text-button">Limpiar filtros</button>
+        </div>
+
+        <div class="vigencia-filters">
+          <label>
+            <span>Buscar</span>
+            <input id="vigenciaSearchInput" type="search" placeholder="Comuna, PRC, modificación, zona o decreto…">
+          </label>
+          <label>
+            <span>Región</span>
+            <select id="vigenciaRegionFilter"><option value="">Todas</option></select>
+          </label>
+          <label>
+            <span>Tipo de IPT</span>
+            <select id="vigenciaTypeFilter"><option value="">Todos</option></select>
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="vigenciaStatusFilter">
+              <option value="">Todos</option>
+              <option value="Actualizado">Actualizado</option>
+              <option value="Probablemente actualizado">Probablemente actualizado</option>
+              <option value="Revisión necesaria">Revisión necesaria</option>
+              <option value="Desactualizado">Desactualizado</option>
+              <option value="Sin cartografía">Sin cartografía</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="vigencia-workspace">
+        <aside class="vigencia-list-panel">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">INSTRUMENTOS</p>
+              <h3>Estado por comuna</h3>
+            </div>
+            <span id="vigenciaResultCount" class="result-count"></span>
+          </div>
+
+          <div id="vigenciaInstrumentList" class="vigencia-instrument-list"></div>
+
+          <div id="vigenciaEmptyState" class="empty-state">
+            <div>IPT</div>
+            <h3>Aún no hay instrumentos evaluados</h3>
+            <p>Los instrumentos aparecerán aquí cuando exista información normativa y cartográfica para evaluar.</p>
+            <a class="template-link admin-only" href="config/cartografia_ipt_ejemplo.json" download>
+              Descargar plantilla del catálogo
+            </a>
+          </div>
+        </aside>
+
+        <div class="vigencia-detail-panel">
+          <div id="vigenciaDetail" class="vigencia-detail-empty">
+            <div class="vigencia-empty-symbol">↗</div>
+            <h3>Selecciona un instrumento</h3>
+            <p>
+              Aquí se mostrará la línea de tiempo, la versión del shape,
+              los actos pendientes y la comparación espacial disponible.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="method-card">
+        <div>
+          <p class="eyebrow">CÓMO INTERPRETAR LAS ALERTAS</p>
+          <h3>La fecha es un control preliminar, no una prueba definitiva</h3>
+        </div>
+        <div class="method-status-grid">
+          <div><span class="vigencia-status actualizado"></span><strong>Actualizado</strong><p>Comparación espacial validada.</p></div>
+          <div><span class="vigencia-status probable"></span><strong>Probablemente actualizado</strong><p>No hay actos pendientes, pero falta validación espacial.</p></div>
+          <div><span class="vigencia-status revision"></span><strong>Revisión necesaria</strong><p>Hay actos posteriores sin evidencia suficiente.</p></div>
+          <div><span class="vigencia-status desactualizado"></span><strong>Desactualizado</strong><p>Existe evidencia explícita o espacial de omisión.</p></div>
+          <div><span class="vigencia-status sin-cartografia"></span><strong>Sin cartografía</strong><p>No existe shape registrado para comparar.</p></div>
+        </div>
+      </section>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="footer-brand">
+      <strong>transsa</strong>
+      <span>Urban Intelligence · Departamento de Estudios Inmobiliarios</span>
+    </div>
+    <p>Seguimiento normativo y territorial para decisiones inmobiliarias.</p>
+  </footer>
+
+  <dialog id="reportDialog">
+    <form method="dialog" class="dialog-card">
+      <button class="dialog-close" aria-label="Cerrar">×</button>
+      <div id="dialogContent"></div>
+    </form>
+  </dialog>
+
+  <dialog id="iptDialog">
+    <form method="dialog" class="dialog-card ipt-dialog-card">
+      <button class="dialog-close" aria-label="Cerrar">×</button>
+      <div id="iptDialogContent"></div>
+    </form>
+  </dialog>
+
+  <script src="data/reportes.js?v=20260813-noticias-1"></script>
+  <script src="data/ipt_reportes.js"></script>
+  <script src="data/historicos.js"></script>
+  <script src="data/vigencia_cartografica.js"></script>
+  <script src="data/seguimiento_normativo.js?v=20260811-seguimiento-1"></script>
+  <script src="data/avance_bases_inicial.js?v=20260813-importacion-1"></script>
+  <script src="data/inventario_prc_onedrive.js?v=20260813-inventario-v2"></script>
+  <script src="data/estado_equipo_versionado.js?v=20260813-equipo-1"></script>
+  <script src="data/estado_operativo_datos.js?v=20260813-estados-v4"></script>
+  <script src="seguimiento-consolidado.js?v=20260814-correcciones-3"></script>
+  <script src="data/capas_territoriales.js?v=20260811-capas-1"></script>
+  <script src="data/cobertura_capas_comunal.js?v=20260811-fuentes-1"></script>
+  <script src="data/cobertura_capas_resultados.js?v=20260811-cruce-nacional-2"></script>
+  <script src="data/fuentes_capas_externas.js?v=20260811-fuentes-1"></script>
+  <script src="capas-territoriales.js?v=20260814-correcciones-4"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="app.js?v=20260813-correcciones-1"></script>
+  <script src="vigencia-regional.js?v=20260813-correcciones-1"></script>
+  <script src="ux-refresh.js?v=20260814-linea-tiempo-1"></script>
+</body>
+</html>

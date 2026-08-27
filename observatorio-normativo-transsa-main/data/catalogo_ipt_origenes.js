@@ -1,0 +1,1 @@
+window.CATALOGO_IPT_ORIGENES = {"fecha_carga":"2026-08-06","fuente":"Portal IPT MINVU - exportación de instrumentos de origen","resumen":{"total":854,"vigentes":465,"derogados":336,"en_desarrollo":46,"desistidos":7},"instrumentos":[]};

@@ -1,0 +1,110 @@
+{
+  "event_id": "EVT-20260806-ENVIRONMENTA-7B9C75F7B9",
+  "event_type": "environmental_assessment",
+  "title": "Extracto de resolución exenta número 20261600135, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto Construcción Puente Cerro Negro, comunas de Quillón y Bulnes, Región de Ñuble",
+  "event_date": "2026-08-06",
+  "published_at": "2026-08-06",
+  "summary": "Servicio de Evaluación Ambiental de la Región de Ñuble abrió por 20 días hábiles un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Construcción Puente Cerro Negro, comunas de Quillón y Bulnes, Región del Ñuble”, cuyo titular o proponente es Joaquín Dagá Kunze, en representación de Ministerio de Obras Públicas.",
+  "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla la construcción y operación de una obra de infraestructura vial destinada a dar continuidad a la Ruta N-884, mediante la construcción de un puente de aproximadamente 160 metros de longitud sobre el río Itata y sus respectivos accesos viales, con el objeto de establecer una conectividad permanente y segura entre las comunas de Quillón y Bulnes, reemplazando el actual sistema de cruce mediante la Balsa Cerro Negro. Asimismo, el proyecto contempla la ejecución de obras complementarias, entre ellas la habilitación de la Plaza Balsa Cerro Negro, obras de drenaje y saneamiento, defensas fluviales, obras de seguridad vial e instalación de faenas, entre otras. El Proyecto emplazará sus obras en las comunas de Quillón y Bulnes, provincia de Diguillín, Región del Ñuble.",
+  "practical_implications": "El proceso de participación ciudadana quedó abierto por 20 días hábiles, computados desde el día hábil siguiente a la publicación en el Diario Oficial. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+  "impacted_parties": "Comunidades de Quillón y Bulnes, Ministerio de Obras Públicas, Servicio de Evaluación Ambiental, y cualquier persona natural o jurídica interesada.",
+  "recommended_action": "Monitorear las observaciones ciudadanas, la evolución de la evaluación ambiental y las eventuales medidas o condiciones que puedan incidir en la ejecución del proyecto.",
+  "relevance_level": "medium",
+  "impact_level": "unknown",
+  "confidence": 0.95,
+  "review_status": "preliminary",
+  "is_featured": false,
+  "category": "environmental_assessment",
+  "territory": {
+    "scale": "communal",
+    "country": "Chile",
+    "region": "Región de Ñuble",
+    "commune": "Bulnes",
+    "province": "Diguillín",
+    "locality": "",
+    "codigo_ine": "",
+    "codigo_sii": "",
+    "relationship_type": "direct",
+    "is_primary": true
+  },
+  "source": {
+    "document_id": "DOC-DIARIO-OFICIAL-DE--CDC5EF10B0",
+    "source_id": "SRC-OFFICIAL-AFBBD84C",
+    "source_name": "Servicio de Evaluación Ambiental de la Región de Ñuble",
+    "title": "Extracto de resolución exenta número 20261600135, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto Construcción Puente Cerro Negro, comunas de Quillón y Bulnes, Región de Ñuble",
+    "published_at": "2026-08-06",
+    "url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/06/44518/01/2849941.pdf",
+    "external_id": "2849941",
+    "edition": "44.518.",
+    "document_type": "Resolución exenta",
+    "document_number": "20261600135",
+    "source_type": "official",
+    "reliability_level": "primary",
+    "collection_method": "local_pipeline",
+    "base_url": "https://www.diariooficial.interior.gob.cl/",
+    "local_path": "documentos/diario_oficial/2026/08/2026-08-06/CVE-2849941.pdf",
+    "mime_type": "application/pdf",
+    "raw_text_path": "documentos/diario_oficial/2026/08/2026-08-06/CVE-2849941.txt",
+    "captured_at": "2026-08-06T13:59:48+00:00"
+  },
+  "additional_territories": [],
+  "topics": [
+    "environmental_assessment",
+    "participacion_ciudadana",
+    "impacto_ambiental",
+    "infraestructura_vial"
+  ],
+  "topic_families": {},
+  "market_segments": [
+    "infraestructura",
+    "logistica"
+  ],
+  "actors": [
+    "Ministerio del Medio Ambiente",
+    "Ministerio de Obras Públicas",
+    "Servicio de Evaluación Ambiental"
+  ],
+  "projects": [
+    "Construcción Puente Cerro Negro"
+  ],
+  "tags": [
+    "participacion_ciudadana",
+    "impacto_ambiental",
+    "infraestructura_vial",
+    "ollama_preliminary",
+    "hybrid_classification"
+  ],
+  "related_event_ids": [],
+  "recommended_action_code": "monitor",
+  "requires_review_reason": "",
+  "version": 1,
+  "created_at": "2026-08-06T13:59:48+00:00",
+  "updated_at": "2026-08-06T13:59:48+00:00",
+  "validated_at": null,
+  "validated_by": null,
+  "legacy_payload": {
+    "ai_provider": "ollama",
+    "ai_model": "qwen3:8b",
+    "es_relevante": true,
+    "classification_reason": "Regla de alta precisión: evaluación ambiental explícita.",
+    "ai_event_type_raw": "news",
+    "official_act": {
+      "official_issuer": "Servicio de Evaluación Ambiental de la Región de Ñuble",
+      "publication_source": "Diario Oficial de la República de Chile",
+      "act_type": "Resolución exenta",
+      "act_number": "20261600135",
+      "act_date": "2026-07-27",
+      "procedure_stage": "Apertura de participación ciudadana dentro de una evaluación ambiental en curso",
+      "participation_days": 20,
+      "participation_start_rule": "Desde el día hábil siguiente a la publicación en el Diario Oficial",
+      "legal_basis": "Artículo 30 bis de la Ley N.º 19.300; Artículos 94 y 95 del DS N.º 40/2012 (Reglamento del SEIA)",
+      "project_name": "Construcción Puente Cerro Negro, comunas de Quillón y Bulnes, Región del Ñuble",
+      "project_holder": "Joaquín Dagá Kunze, en representación de Ministerio de Obras Públicas",
+      "project_description": "la construcción y operación de una obra de infraestructura vial destinada a dar continuidad a la Ruta N-884, mediante la construcción de un puente de aproximadamente 160 metros de longitud sobre el río Itata y sus respectivos accesos viales, con el objeto de establecer una conectividad permanente y segura entre las comunas de Quillón y Bulnes, reemplazando el actual sistema de cruce mediante la Balsa Cerro Negro. Asimismo, el proyecto contempla la ejecución de obras complementarias, entre ellas la habilitación de la Plaza Balsa Cerro Negro, obras de drenaje y saneamiento, defensas fluviales, obras de seguridad vial e instalación de faenas, entre otras. El Proyecto emplazará sus obras en las comunas de Quillón y Bulnes, provincia de Diguillín, Región del Ñuble.",
+      "location_detail": "Comunas de Quillón y Bulnes, provincia de Diguillín, Región del Ñuble",
+      "region": "Región de Ñuble",
+      "province": "Diguillín"
+    },
+    "publication_source": "Diario Oficial de la República de Chile"
+  }
+}

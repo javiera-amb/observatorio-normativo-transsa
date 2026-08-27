@@ -1,0 +1,134 @@
+name: IPT actualizado desde SharePoint
+
+on:
+  repository_dispatch:
+    types: [ipt_actualizado_sharepoint]
+  workflow_dispatch:
+    inputs:
+      archivo:
+        description: Nombre del archivo *_ACTUALIZADO.gpkg o *_ACTUALIZADO_vN.gpkg
+        required: true
+        type: string
+      ruta:
+        description: Ruta relativa del archivo en SharePoint
+        required: true
+        type: string
+      url:
+        description: URL del archivo en SharePoint
+        required: false
+        type: string
+      modificado_en:
+        description: Fecha/hora de modificación ISO
+        required: false
+        type: string
+
+concurrency:
+  group: ipt-actualizado-sharepoint
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar-tui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolver payload
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo 'ARCHIVO=${{ github.event.client_payload.archivo }}' >> "$GITHUB_ENV"
+            echo 'RUTA=${{ github.event.client_payload.ruta }}' >> "$GITHUB_ENV"
+            echo 'URL_SP=${{ github.event.client_payload.url }}' >> "$GITHUB_ENV"
+            echo 'MODIFICADO_EN=${{ github.event.client_payload.modificado_en }}' >> "$GITHUB_ENV"
+          else
+            echo 'ARCHIVO=${{ inputs.archivo }}' >> "$GITHUB_ENV"
+            echo 'RUTA=${{ inputs.ruta }}' >> "$GITHUB_ENV"
+            echo 'URL_SP=${{ inputs.url }}' >> "$GITHUB_ENV"
+            echo 'MODIFICADO_EN=${{ inputs.modificado_en }}' >> "$GITHUB_ENV"
+          fi
+
+      - name: Clasificar IPT y versión
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re
+          nombre = os.environ.get('ARCHIVO', '')
+          ruta = os.environ.get('RUTA', '').replace('\\', '/')
+          m = re.search(r'_ACTUALIZADO(?:_v(\d+))?\.gpkg$', nombre, flags=re.I)
+          if not m:
+              raise SystemExit(
+                  f'El archivo no corresponde a *_ACTUALIZADO.gpkg o *_ACTUALIZADO_vN.gpkg: {nombre}'
+              )
+          version = int(m.group(1)) if m.group(1) else 1
+          if '/PRC/' in ruta.upper():
+              tipo = 'prc'
+          elif re.search(r'/(PRI|PRM[^/]*)/', ruta, flags=re.I):
+              tipo = 'pri_prm'
+          else:
+              raise SystemExit(f'No se pudo clasificar la ruta como PRC o PRI/PRM: {ruta}')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              f.write(f'TIPO_IPT={tipo}\n')
+              f.write(f'VERSION_IPT={version}\n')
+          print(f'Tipo detectado: {tipo} | versión: V{version}')
+          PY
+
+      - name: Registrar PRC actualizado
+        if: env.TIPO_IPT == 'prc'
+        shell: bash
+        run: |
+          python scripts/registrar_prc_actualizado.py \
+            --archivo "$ARCHIVO" \
+            --ruta "$RUTA" \
+            --url "$URL_SP" \
+            --modificado-en "$MODIFICADO_EN"
+
+      - name: Registrar PRI PRM actualizado
+        if: env.TIPO_IPT == 'pri_prm'
+        shell: bash
+        run: |
+          node scripts/registrar_pri_prm_actualizado.mjs \
+            --archivo "$ARCHIVO" \
+            --ruta "$RUTA" \
+            --url "$URL_SP" \
+            --modificado-en "$MODIFICADO_EN"
+
+      - name: Forzar recarga PRI PRM
+        if: env.TIPO_IPT == 'pri_prm'
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, datetime
+          p = Path('data/estado_operativo_datos.js')
+          t = p.read_text(encoding='utf-8')
+          tag = 'auto-' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+          t2, n = re.subn(r'data/estado_pri_prm\.js\?v=[^"\']+', f'data/estado_pri_prm.js?v={tag}', t)
+          if n:
+              p.write_text(t2, encoding='utf-8')
+              print(f'Cache PRI/PRM actualizado: {tag}')
+          else:
+              print('No se encontró versionado de estado_pri_prm.js; se continúa sin error.')
+          PY
+
+      - name: Publicar cambio
+        shell: bash
+        run: |
+          if git diff --quiet -- data/inventario_prc_onedrive.js data/estado_pri_prm.js data/estado_operativo_datos.js index.html; then
+            echo "Sin cambios que publicar."
+            exit 0
+          fi
+          git config user.name "tui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin main
+          git add data/inventario_prc_onedrive.js data/estado_pri_prm.js data/estado_operativo_datos.js index.html
+          git commit -m "data: IPT actualizado desde SharePoint - $ARCHIVO"
+          git push origin main

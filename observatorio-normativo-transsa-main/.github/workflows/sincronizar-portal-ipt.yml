@@ -1,0 +1,69 @@
+name: Sincronizar Portal IPT diario
+
+on:
+  schedule:
+    - cron: "45 12 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/noticias-v0.6
+    paths:
+      - "scripts/sincronizar_portal_ipt.py"
+      - ".github/workflows/sincronizar-portal-ipt.yml"
+
+concurrency:
+  group: sincronizar-portal-ipt-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar navegador de sincronización
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Descargar y procesar Portal IPT
+        run: python scripts/sincronizar_portal_ipt.py
+
+      - name: Validar archivos generados
+        run: |
+          test -f data/actos_ipt.js
+          test -f data/actos_ipt_sync.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          metadata = json.loads(Path('data/actos_ipt_sync.json').read_text(encoding='utf-8'))
+          total = int(metadata.get('total', 0))
+          if total < 1:
+              raise SystemExit('La sincronización no generó actos IPT.')
+          print(f'Actos IPT generados: {total}')
+          PY
+
+      - name: Publicar cambios detectados
+        run: |
+          if git diff --quiet -- data/actos_ipt.js data/actos_ipt_*.js data/actos_ipt_sync.json; then
+            echo "No hay cambios en el Portal IPT."
+            exit 0
+          fi
+          git config user.name "tui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/actos_ipt.js data/actos_ipt_*.js data/actos_ipt_sync.json
+          git commit -m "data: sincronizar modificaciones Portal IPT"
+          git push origin "HEAD:${{ github.ref_name }}"

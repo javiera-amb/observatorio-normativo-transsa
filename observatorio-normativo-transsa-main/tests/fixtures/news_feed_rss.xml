@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fuente de prueba TUI</title>
+    <link>https://ejemplo.cl/</link>
+    <description>Noticias de prueba</description>
+    <item>
+      <title>Nuevo proyecto inmobiliario sumará viviendas e infraestructura</title>
+      <link>https://ejemplo.cl/proyecto?utm_source=rss</link>
+      <guid>tui-fixture-1</guid>
+      <pubDate>Thu, 06 Aug 2026 12:00:00 -0400</pubDate>
+      <description><![CDATA[La inversión contempla permisos de edificación y equipamiento urbano.]]></description>
+    </item>
+    <item>
+      <title>Campeonato de fútbol define sus finalistas</title>
+      <link>https://ejemplo.cl/deportes</link>
+      <guid>tui-fixture-2</guid>
+      <pubDate>Thu, 06 Aug 2026 11:00:00 -0400</pubDate>
+      <description>La selección jugará el domingo.</description>
+    </item>
+  </channel>
+</rss>

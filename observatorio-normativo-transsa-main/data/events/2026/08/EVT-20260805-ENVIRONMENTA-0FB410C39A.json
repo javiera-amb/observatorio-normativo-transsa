@@ -1,0 +1,111 @@
+{
+  "event_id": "EVT-20260805-ENVIRONMENTA-0FB410C39A",
+  "event_type": "environmental_assessment",
+  "title": "Extracto de resolución exenta número 20260800181, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto: Modificación de Puerto de Coronel y de su Centro Logístico, Mediante Adecuaciones Operacionales, Dragado en Muelles Norte y Sur, y Ampliación Zona para Mercancías Clasificadas IMO",
+  "event_date": "2026-08-05",
+  "published_at": "2026-08-05",
+  "summary": "Servicio de Evaluación Ambiental de la Región del Biobío abrió por 20 días hábiles un proceso de participación ciudadana dentro de la evaluación ambiental de la Declaración de Impacto Ambiental del proyecto “Modificación de Puerto de Coronel y de su Centro Logístico, Mediante Adecuaciones Operacionales, Dragado en Muelles Norte y Sur, y Ampliación Zona para Mercancías Clasificadas IMO”, cuyo titular o proponente es Compañía Puerto de Coronel S.A.",
+  "why_it_matters": "La publicación abre una etapa de participación ciudadana dentro de una evaluación ambiental que ya se encuentra en curso. El proyecto es relevante porque contempla actualizar y/o adecuar algunas operaciones del Terminal Puerto de Coronel y su Centro Logístico, abarcando su infraestructura e instalaciones de apoyo. Asimismo, realizar actividades de dragado de profundización y mantención en Muelle Norte y Muelle Sur, lo cual permitirá a Puerto de Coronel atender naves de mayor calado, habilitando el atraque y desatraque de naves de mayor capacidad, y, en consecuencia, aumentar la capacidad de carga y contenedores a movilizar. Considera una vida útil de 50 años.",
+  "practical_implications": "El proceso de participación ciudadana quedó abierto por 20 días hábiles, computados desde el día hábil siguiente a la publicación en el Diario Oficial. Durante ese periodo, la comunidad y las personas interesadas podrán presentar observaciones ante el Servicio de Evaluación Ambiental.",
+  "impacted_parties": "Comunidad de Coronel, Compañía Puerto de Coronel S.A., autoridades regionales y nacionales, y actores del sector portuario.",
+  "recommended_action": "Monitorear la evaluación ambiental, los plazos del proyecto y las eventuales condiciones aplicables a los dragados y adecuaciones portuarias; seguir sus efectos sobre la actividad logística, el transporte y la demanda de infraestructura en el territorio afectado.",
+  "relevance_level": "medium",
+  "impact_level": "unknown",
+  "confidence": 0.95,
+  "review_status": "preliminary",
+  "is_featured": false,
+  "category": "environmental_assessment",
+  "territory": {
+    "scale": "communal",
+    "country": "Chile",
+    "region": "Región del Biobío",
+    "commune": "Coronel",
+    "province": "Concepción",
+    "locality": "Playa Negra y sector El Manco",
+    "codigo_ine": "",
+    "codigo_sii": "",
+    "relationship_type": "direct",
+    "is_primary": true
+  },
+  "source": {
+    "document_id": "DOC-DIARIO-OFICIAL-DE--6C68580A6F",
+    "source_id": "SRC-OFFICIAL-B456A2F8",
+    "source_name": "Servicio de Evaluación Ambiental de la Región del Biobío",
+    "title": "Extracto de resolución exenta número 20260800181, de 2026.- Inicia proceso de participación ciudadana en Declaración de Impacto Ambiental del proyecto: Modificación de Puerto de Coronel y de su Centro Logístico, Mediante Adecuaciones Operacionales, Dragado en Muelles Norte y Sur, y Ampliación Zona para Mercancías Clasificadas IMO",
+    "published_at": "2026-08-05",
+    "url": "https://www.diariooficial.interior.gob.cl/publicaciones/2026/08/05/44517/01/2849183.pdf",
+    "external_id": "2849183",
+    "edition": "44.517.",
+    "document_type": "Resolución exenta",
+    "document_number": "20260800181",
+    "source_type": "official",
+    "reliability_level": "primary",
+    "collection_method": "local_pipeline",
+    "base_url": "https://www.diariooficial.interior.gob.cl/",
+    "local_path": "documentos/diario_oficial/2026/08/2026-08-05/CVE-2849183.pdf",
+    "mime_type": "application/pdf",
+    "raw_text_path": "documentos/diario_oficial/2026/08/2026-08-05/CVE-2849183.txt",
+    "captured_at": "2026-08-05T21:50:25+00:00"
+  },
+  "additional_territories": [],
+  "topics": [
+    "environmental_assessment",
+    "participacion_ciudadana",
+    "evaluacion_ambiental",
+    "proyecto_portuario"
+  ],
+  "topic_families": {},
+  "market_segments": [
+    "logistica",
+    "infraestructura"
+  ],
+  "actors": [
+    "Compañía Puerto de Coronel S.A.",
+    "Servicio de Evaluación Ambiental",
+    "Ministerio del Medio Ambiente"
+  ],
+  "projects": [
+    "Modificación de Puerto de Coronel y de su Centro Logístico"
+  ],
+  "tags": [
+    "participacion_ciudadana",
+    "evaluacion_ambiental",
+    "proyecto_portuario",
+    "ollama_preliminary",
+    "hybrid_classification"
+  ],
+  "related_event_ids": [],
+  "recommended_action_code": "monitor",
+  "requires_review_reason": "",
+  "version": 1,
+  "created_at": "2026-08-05T21:50:25+00:00",
+  "updated_at": "2026-08-05T21:50:25+00:00",
+  "validated_at": null,
+  "validated_by": null,
+  "legacy_payload": {
+    "ai_provider": "ollama",
+    "ai_model": "qwen3:8b",
+    "es_relevante": true,
+    "classification_reason": "Regla de alta precisión: evaluación ambiental explícita.",
+    "ai_event_type_raw": "news",
+    "official_act": {
+      "official_issuer": "Servicio de Evaluación Ambiental de la Región del Biobío",
+      "publication_source": "Diario Oficial de la República de Chile",
+      "act_type": "Resolución exenta",
+      "act_number": "20260800181",
+      "act_date": "2026-07-29",
+      "procedure_stage": "Apertura de participación ciudadana dentro de una evaluación ambiental en curso",
+      "participation_days": 20,
+      "participation_start_rule": "Desde el día hábil siguiente a la publicación en el Diario Oficial",
+      "legal_basis": "Artículo 30 bis de la Ley N.º 19.300; Artículos 94 y 95 del DS N.º 40/2012 (Reglamento del SEIA)",
+      "project_name": "Modificación de Puerto de Coronel y de su Centro Logístico, Mediante Adecuaciones Operacionales, Dragado en Muelles Norte y Sur, y Ampliación Zona para Mercancías Clasificadas IMO",
+      "project_holder": "Compañía Puerto de Coronel S.A",
+      "project_description": "actualizar y/o adecuar algunas operaciones del Terminal Puerto de Coronel y su Centro Logístico, abarcando su infraestructura e instalaciones de apoyo. Asimismo, realizar actividades de dragado de profundización y mantención en Muelle Norte y Muelle Sur, lo cual permitirá a Puerto de Coronel atender naves de mayor calado, habilitando el atraque y desatraque de naves de mayor capacidad, y, en consecuencia, aumentar la capacidad de carga y contenedores a movilizar. Considera una vida útil de 50 años.",
+      "location_detail": "el sector denominado playa Negra de la Bahía Coronel y en el sector El Manco, comuna de Coronel, provincia de Concepción, Región del Biobío",
+      "region": "Región del Biobío",
+      "commune": "Coronel",
+      "province": "Concepción"
+    },
+    "publication_source": "Diario Oficial de la República de Chile"
+  }
+}

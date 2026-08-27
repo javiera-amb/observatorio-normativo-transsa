@@ -1,0 +1,1 @@
+window.IPT_REPORTES = [];

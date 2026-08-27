@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "instrumentos": [],
+  "actos_manuales": [],
+  "parametros": {
+    "umbral_actualizado": 0.95,
+    "umbral_desactualizado": 0.7,
+    "considerar_actos_en_tramitacion": false
+  }
+}

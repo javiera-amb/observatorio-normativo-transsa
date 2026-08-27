@@ -1,0 +1,115 @@
+name: PRI PRM actualizado desde SharePoint
+
+on:
+  repository_dispatch:
+    types: [pri_prm_actualizado_sharepoint]
+  workflow_dispatch:
+    inputs:
+      archivo:
+        description: Nombre del archivo *_ACTUALIZADO.gpkg
+        required: true
+        type: string
+      ruta:
+        description: Ruta relativa del archivo en SharePoint
+        required: true
+        type: string
+      url:
+        description: URL del archivo en SharePoint
+        required: false
+        type: string
+      region:
+        description: Región (opcional; se deriva de la ruta)
+        required: false
+        type: string
+      tipo:
+        description: Tipo real del instrumento (PRI, PRMS, PRMV...)
+        required: false
+        type: string
+      nombre:
+        description: Nombre del instrumento (opcional)
+        required: false
+        type: string
+      modificado_en:
+        description: Fecha/hora de modificación ISO
+        required: false
+        type: string
+
+concurrency:
+  group: pri-prm-actualizado-sharepoint
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar-tui-pri-prm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolver payload
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo 'ARCHIVO=${{ github.event.client_payload.archivo }}' >> "$GITHUB_ENV"
+            echo 'RUTA=${{ github.event.client_payload.ruta }}' >> "$GITHUB_ENV"
+            echo 'URL_SP=${{ github.event.client_payload.url }}' >> "$GITHUB_ENV"
+            echo 'REGION=${{ github.event.client_payload.region }}' >> "$GITHUB_ENV"
+            echo 'TIPO=${{ github.event.client_payload.tipo }}' >> "$GITHUB_ENV"
+            echo 'NOMBRE=${{ github.event.client_payload.nombre }}' >> "$GITHUB_ENV"
+            echo 'MODIFICADO_EN=${{ github.event.client_payload.modificado_en }}' >> "$GITHUB_ENV"
+          else
+            echo 'ARCHIVO=${{ inputs.archivo }}' >> "$GITHUB_ENV"
+            echo 'RUTA=${{ inputs.ruta }}' >> "$GITHUB_ENV"
+            echo 'URL_SP=${{ inputs.url }}' >> "$GITHUB_ENV"
+            echo 'REGION=${{ inputs.region }}' >> "$GITHUB_ENV"
+            echo 'TIPO=${{ inputs.tipo }}' >> "$GITHUB_ENV"
+            echo 'NOMBRE=${{ inputs.nombre }}' >> "$GITHUB_ENV"
+            echo 'MODIFICADO_EN=${{ inputs.modificado_en }}' >> "$GITHUB_ENV"
+          fi
+
+      - name: Validar evento PRI PRM
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re
+          nombre = os.environ.get('ARCHIVO', '')
+          ruta = os.environ.get('RUTA', '')
+          if not re.search(r'_ACTUALIZADO\.gpkg$', nombre, flags=re.I):
+              raise SystemExit(f'El archivo no corresponde a un cierre *_ACTUALIZADO.gpkg: {nombre}')
+          if not re.search(r'/(PRI|PRM[^/]*)/', ruta.replace('\\','/'), flags=re.I):
+              raise SystemExit(f'La ruta no pertenece a una carpeta PRI/PRM: {ruta}')
+          print(f'Evento válido: {nombre}')
+          PY
+
+      - name: Registrar instrumento actualizado
+        shell: bash
+        run: |
+          node scripts/registrar_pri_prm_actualizado.mjs \
+            --archivo "$ARCHIVO" \
+            --ruta "$RUTA" \
+            --url "$URL_SP" \
+            --region "$REGION" \
+            --tipo "$TIPO" \
+            --nombre "$NOMBRE" \
+            --modificado-en "$MODIFICADO_EN"
+
+      - name: Publicar cambio
+        shell: bash
+        run: |
+          if git diff --quiet -- data/estado_pri_prm.js; then
+            echo "Sin cambios que publicar."
+            exit 0
+          fi
+          git config user.name "tui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin main
+          git add data/estado_pri_prm.js
+          git commit -m "data: PRI PRM actualizado desde SharePoint - $ARCHIVO"
+          git push origin main
