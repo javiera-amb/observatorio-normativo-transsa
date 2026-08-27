@@ -134,10 +134,20 @@
     document.getElementById("newsEmptyState").hidden = items.length !== 0;
   }
 
+  function loadTablasNormativas() {
+    if (document.querySelector('script[data-tui-module="tablas-normativas-ipt"]')) return;
+    const script = document.createElement("script");
+    script.src = "tablas-normativas-ipt.js?v=20260827-v1";
+    script.dataset.tuiModule = "tablas-normativas-ipt";
+    script.onerror = () => console.error("No se pudo cargar Tablas Normativas IPT.");
+    document.body.appendChild(script);
+  }
+
   function init() {
     injectStyles();
     insertNewsModule();
     renderNews();
+    loadTablasNormativas();
   }
 
   if (document.readyState === "loading") {
