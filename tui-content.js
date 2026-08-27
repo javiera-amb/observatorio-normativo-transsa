@@ -143,11 +143,21 @@
     document.body.appendChild(script);
   }
 
+  function loadTablasNormativasFuentes() {
+    if (document.querySelector('script[data-tui-module="tablas-normativas-fuentes"]')) return;
+    const script = document.createElement("script");
+    script.src = "tablas-normativas-fuentes.js?v=20260827-v1";
+    script.dataset.tuiModule = "tablas-normativas-fuentes";
+    script.onerror = () => console.error("No se pudo cargar la extensión de fuentes de Tablas Normativas IPT.");
+    document.body.appendChild(script);
+  }
+
   function init() {
     injectStyles();
     insertNewsModule();
     renderNews();
     loadTablasNormativas();
+    loadTablasNormativasFuentes();
   }
 
   if (document.readyState === "loading") {
