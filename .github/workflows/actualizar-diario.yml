@@ -66,6 +66,14 @@ jobs:
       - name: Ejecutar pruebas automáticas
         run: python -m unittest discover -s tests -v
 
+      - name: Validar JavaScript del portal
+        run: |
+          node --check app.js
+          node --check ux-refresh.js
+          node --check tui-content.js
+          node --check tablas-normativas-ipt.js
+          node --check tablas-normativas-fuentes.js
+
       - name: Validar portal
         run: python automation/validar_sitio.py
 
