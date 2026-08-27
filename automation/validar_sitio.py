@@ -79,10 +79,10 @@ def load_vigencia_source_rows() -> list:
     if not raw.startswith("window.VIGENCIA_IPT_ROWS=[];"):
         raise ValueError("Formato inválido: vigencia_cartografica.js")
 
-references = [
-    reference.split("?", 1)[0].split("#", 1)[0]
-    for reference in re.findall(r'src="([^"]+)"', raw)
-]
+    references = [
+        reference.split("?", 1)[0].split("#", 1)[0]
+        for reference in re.findall(r'src="([^"]+)"', raw)
+    ]
     required_references = {
         "data/vigencia_finalizar.js",
         "data/comparaciones_ipt.js",
