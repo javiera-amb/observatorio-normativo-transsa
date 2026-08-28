@@ -1,0 +1,91 @@
+{
+  "version": "1.0",
+  "fecha_revision": "2026-08-28",
+  "comuna": "PEÑALOLÉN",
+  "rialcomsii": "15152",
+  "estado": "PARCIAL_AUDITADO",
+  "criterio": "Este catálogo representa unidades normativas confirmadas en fichas/ordenanza oficial. No reemplaza automáticamente normas que dependen de ámbito espacial o de modificaciones aún no estructuradas.",
+  "zonas_auditadas": {
+    "R1": {
+      "fuente": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20r1.pdf",
+      "estado": "AUDITADA",
+      "unidades": [
+        {"tipo":"VIVIENDA","sub_predial":200,"frente":8,"ocupacion":0.60,"construccion":1.00,"dens_hab_ha":196,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 8 M","antejardin":"3 M CALLE; 2 M PASAJE"},
+        {"tipo":"EQUIPAMIENTO","escala":"REGIONAL E INTERURBANA","sub_predial":800,"frente":20,"ocupacion":0.40,"construccion":0.80,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5},
+        {"tipo":"EQUIPAMIENTO","escala":"COMUNAL","sub_predial":400,"frente":15,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 8 M","antejardin":3},
+        {"tipo":"EQUIPAMIENTO","escala":"VECINAL","sub_predial":200,"frente":10,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":3}
+      ]
+    },
+    "R2": {
+      "fuente": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20r2.pdf",
+      "estado": "AUDITADA",
+      "unidades": [
+        {"tipo":"VIVIENDA","sub_predial":100,"frente":8,"ocupacion":0.70,"construccion":1.40,"dens_hab_ha":450,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 8 M","antejardin":2},
+        {"tipo":"EQUIPAMIENTO","escala":"REGIONAL E INTERURBANA","sub_predial":600,"frente":20,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5},
+        {"tipo":"EQUIPAMIENTO","escala":"COMUNAL","sub_predial":400,"frente":15,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 8 M","antejardin":5},
+        {"tipo":"EQUIPAMIENTO","escala":"VECINAL","sub_predial":160,"frente":9,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":"NO SE EXIGE"}
+      ],
+      "observacion_tabla_canonica": "La tabla canónica contiene una fila de ACTIVIDADES PRODUCTIVAS que no aparece en la ficha R2 auditada; se mantiene como conflicto pendiente hasta identificar el instrumento/ámbito que la origina."
+    },
+    "R3": {
+      "fuente": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20r3.pdf",
+      "estado": "AUDITADA",
+      "unidades": [
+        {"tipo":"VIVIENDA","sub_predial":160,"frente":8,"ocupacion":0.50,"construccion":1.00,"dens_hab_ha":200,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 8 M","antejardin":"3 M; 5 M FRENTE A VESPUCIO Y QUILÍN"},
+        {"tipo":"EQUIPAMIENTO","escala":"REGIONAL E INTERURBANA","sub_predial":800,"frente":20,"ocupacion":0.40,"construccion":0.80,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5},
+        {"tipo":"EQUIPAMIENTO","escala":"COMUNAL","sub_predial":400,"frente":15,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO","altura":"AISLADO SEGÚN OGUC; CONTINUO 8 M","antejardin":3},
+        {"tipo":"EQUIPAMIENTO","escala":"VECINAL","sub_predial":200,"frente":10,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":3},
+        {"tipo":"INDUSTRIA Y ALMACENAMIENTO INOFENSIVO","sub_predial":5000,"frente":50,"ocupacion":0.40,"construccion":0.40,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5}
+      ],
+      "observacion_tabla_canonica": "La tabla canónica no contiene una unidad separada para Industria y Almacenamiento Inofensivo y duplica Vivienda por sistema/altura. Requiere reconstrucción de la unidad normativa."
+    },
+    "CC": {
+      "fuente": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20CC.pdf",
+      "fuente_respaldo": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Ordenanza_Plan_Regulador_Comunal.pdf",
+      "estado": "AUDITADA",
+      "unidades": [
+        {"tipo":"EQUIPAMIENTO","escala":"REGIONAL E INTERURBANA","sub_predial":5000,"frente":25,"ocupacion":0.10,"construccion":0.20,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":10},
+        {"tipo":"EQUIPAMIENTO","escala":"COMUNAL Y VECINAL","sub_predial":2000,"frente":25,"ocupacion":0.14,"construccion":0.28,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":10}
+      ]
+    },
+    "SM-1": {
+      "fuente": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20SM1.pdf",
+      "fuente_respaldo": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Ordenanza_Plan_Regulador_Comunal.pdf",
+      "estado": "AUDITADA_BASE_CON_MODIFICACIONES_INCORPORADAS_EN_FICHA",
+      "unidades": [
+        {"tipo":"VIVIENDA","sub_predial":120,"frente":7,"ocupacion":0.70,"construccion":2.80,"dens_hab_ha":385,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE"},
+        {"tipo":"EQUIPAMIENTO","escala":"REGIONAL E INTERURBANA","sub_predial":600,"frente":20,"ocupacion":0.70,"construccion":1.40,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE"},
+        {"tipo":"EQUIPAMIENTO","escala":"COMUNAL","sub_predial":400,"frente":15,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE"},
+        {"tipo":"EQUIPAMIENTO","escala":"VECINAL","sub_predial":120,"frente":8,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE"}
+      ]
+    },
+    "SM-2": {
+      "fuente": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20SM2.pdf",
+      "fuente_respaldo": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Ordenanza_Plan_Regulador_Comunal.pdf",
+      "estado": "AUDITADA",
+      "unidades": [
+        {"tipo":"VIVIENDA","sub_predial":120,"frente":7,"ocupacion":0.70,"construccion":2.80,"dens_hab_ha":385,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE; 5 M EN AV. TOBALABA"},
+        {"tipo":"EQUIPAMIENTO","escala":"REGIONAL E INTERURBANA","sub_predial":600,"frente":20,"ocupacion":0.70,"construccion":1.40,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE; 10 M EN AV. TOBALABA"},
+        {"tipo":"EQUIPAMIENTO","escala":"COMUNAL","sub_predial":400,"frente":15,"ocupacion":0.70,"construccion":1.40,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE; 5 M EN AV. TOBALABA"},
+        {"tipo":"EQUIPAMIENTO","escala":"VECINAL","sub_predial":120,"frente":8,"ocupacion":0.70,"construccion":1.20,"agrupamiento":"AISLADO; PAREADO; CONTINUO","altura":"AISLADO/PAREADO SEGÚN OGUC; CONTINUO 10 M","antejardin":"NO SE EXIGE; 5 M EN AV. TOBALABA"},
+        {"tipo":"INDUSTRIA Y ALMACENAMIENTO INOFENSIVO","sub_predial":1500,"frente":25,"ocupacion":0.70,"construccion":1.00,"agrupamiento":"AISLADO","rasante":"SEGÚN OGUC","distanciamiento":"SEGÚN ART. 14 ORDENANZA","altura":"SEGÚN OGUC","antejardin":10}
+      ]
+    },
+    "I.E": {
+      "fuente": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20IE.pdf",
+      "estado": "AUDITADA",
+      "unidades": [
+        {"tipo":"EQUIPAMIENTO","escala":"REGIONAL E INTERURBANA","sub_predial":2000,"frente":50,"ocupacion":0.50,"construccion":1.00,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5},
+        {"tipo":"EQUIPAMIENTO","escala":"COMUNAL","sub_predial":600,"frente":20,"ocupacion":0.50,"construccion":1.00,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5},
+        {"tipo":"EQUIPAMIENTO","escala":"VECINAL","sub_predial":400,"frente":15,"ocupacion":0.50,"construccion":1.00,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5},
+        {"tipo":"INDUSTRIA Y ALMACENAMIENTO INOFENSIVO","sub_predial":800,"frente":20,"ocupacion":0.70,"construccion":1.50,"agrupamiento":"AISLADO","altura":"SEGÚN OGUC","antejardin":5}
+      ],
+      "observacion_tabla_canonica": "Las unidades de 800 m2 y 2.000 m2 tienen ESPECIF_GENERAL/ESPECIF_ESPECIF/UPERM cruzados en la tabla canónica; corrección de alta confianza incorporada al motor v2."
+    }
+  },
+  "cobertura": {
+    "zonas_auditadas": 7,
+    "zonas_tabla_canonica": 34,
+    "pendientes_prioritarios": ["R4","R5","R6","R7","R10","R11","EQ","EQ-1","EQ-2","EQ-3","EQ-4","EQ-5","ZHM-1","ZHM-2","ZHM-3","ZHM-4","ZHM-5","Z-E","PE","Z.1","E1","E1a","E2","A.R.1","A.R.3","11-B","11b-F","11b-F2","K","categorías PRMS"]
+  }
+}
