@@ -18,7 +18,7 @@ class TablasNormativasEngineTests(unittest.TestCase):
             "ZONA": "Z1",
             "CONSTRUCCION": "0,8",
             "OCUPACION": "0,6",
-            "PISOS_MAX": 4,
+            "PISOS_MAX": "4",
             "ALTURA_MIN": 3,
             "ALTURA_MAX": 12,
             "AGRUPAMIENTO": "pareado / aislado",
@@ -30,7 +30,10 @@ class TablasNormativasEngineTests(unittest.TestCase):
         result = audit_table(FIELDS.copy(), [row])
         self.assertEqual(list(result["rows"][0].keys()), FIELDS)
         self.assertEqual(result["rows"][0]["CONSTRUCCION"], 0.8)
+        self.assertEqual(result["rows"][0]["PISOS_MAX"], 4)
         self.assertEqual(result["rows"][0]["AGRUPAMIENTO"], "AISLADO; PAREADO")
+        self.assertEqual(result["input_rows"], 1)
+        self.assertEqual(result["output_rows"], 1)
         self.assertTrue(any(f["status"] == "NORMALIZACIÓN DE FORMATO" for f in result["findings"]))
 
     def test_no_corrige_ocr_sin_fuente(self):
@@ -40,7 +43,7 @@ class TablasNormativasEngineTests(unittest.TestCase):
         self.assertEqual(result["rows"][0]["CONSTRUCCION"], "P.2")
         self.assertTrue(any(f["field"] == "CONSTRUCCION" and f["status"] == "POSIBLE ERROR" for f in result["findings"]))
 
-    def test_regla_fuente_especifica_puede_autocorregir(self):
+    def test_regla_fuente_especifica_puede_autocorregir_campo_no_codigo(self):
         row = self.base_row()
         row["COMUNA"] = "Puerto Octay"
         row["CONSTRUCCION"] = "P.2"
@@ -62,31 +65,60 @@ class TablasNormativasEngineTests(unittest.TestCase):
         self.assertEqual(finding["source"], "Ordenanza oficial")
         self.assertEqual(finding["page"], "10")
 
-    def test_penalolen_normaliza_codigo_prms_sin_cambiar_zona(self):
+    def test_codigo_prc_se_preserva_si_regla_no_autoriza_cambio(self):
         row = self.base_row()
         row["COMUNA"] = "PEÑALOLÉN"
-        row["RIALCOMSII"] = "15152"
-        row["CODIGO_PRC"] = "15152-EQUIPAMIENTO RECREACIONAL Y DEPORTIVO"
-        row["ZONA"] = "EQUIPAMIENTO RECREACIONAL Y DEPORTIVO"
+        row["CODIGO_PRC"] = "15152-PARQUE METROPOLITANO"
+        row["ZONA"] = "PARQUE METROPOLITANO"
+        catalog = {"exact_rules": [{
+            "id": "regla-no-autorizada",
+            "comuna": "PEÑALOLÉN",
+            "field": "CODIGO_PRC",
+            "original": "15152-PARQUE METROPOLITANO",
+            "corrected": "15152-5.2.2",
+            "confidence": "ALTA",
+            "auto_apply": True,
+            "source": "PRMS",
+            "reason": "Sólo homogeneización."
+        }]}
+        result = audit_table(FIELDS.copy(), [row], catalog)
+        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-PARQUE METROPOLITANO")
+        finding = next(f for f in result["findings"] if f["rule_id"] == "regla-no-autorizada")
+        self.assertEqual(finding["status"], "POSIBLE ERROR")
+
+    def test_codigo_prc_solo_cambia_con_autorizacion_explicita_y_contexto(self):
+        row = self.base_row()
+        row["COMUNA"] = "PEÑALOLÉN"
+        row["CODIGO_PRC"] = "15152-SM-1"
+        row["ZONA"] = "R11"
         catalog = load_rule_catalog(Path("config/tablas_normativas_reglas.json"))
         result = audit_table(FIELDS.copy(), [row], catalog)
-        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-5.2.4.1")
-        self.assertEqual(result["rows"][0]["ZONA"], "EQUIPAMIENTO RECREACIONAL Y DEPORTIVO")
-        finding = next(f for f in result["findings"] if f["rule_id"] == "pen-prms-code-equip-recreacional")
+        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-R11")
+        finding = next(f for f in result["findings"] if f["rule_id"] == "pen-r11-codigo-prc-confirmado")
+        self.assertEqual(finding["status"], "ERROR CONFIRMADO")
         self.assertEqual(finding["confidence"], "ALTA")
-        self.assertIn("5.2.4.1", finding["page"])
 
-    def test_penalolen_no_aplica_equivalencia_espacial_como_regla_global(self):
+    def test_regla_condicionada_no_se_aplica_fuera_de_zona(self):
         row = self.base_row()
         row["COMUNA"] = "PEÑALOLÉN"
-        row["CODIGO_PRC"] = "15152-EQ"
-        row["ZONA"] = "EQ"
+        row["CODIGO_PRC"] = "15152-SM-1"
+        row["ZONA"] = "R1"
         catalog = load_rule_catalog(Path("config/tablas_normativas_reglas.json"))
         result = audit_table(FIELDS.copy(), [row], catalog)
-        self.assertEqual(result["rows"][0]["ZONA"], "EQ")
-        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-EQ")
+        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-SM-1")
 
-    def test_process_file_genera_normalizada_qa_y_status(self):
+    def test_filas_con_atributos_iguales_se_conservan(self):
+        row1 = self.base_row()
+        row2 = self.base_row().copy()
+        result = audit_table(FIELDS.copy(), [row1, row2])
+        self.assertEqual(result["input_rows"], 2)
+        self.assertEqual(result["output_rows"], 2)
+        self.assertEqual(len(result["rows"]), 2)
+        duplicate_finding = next(f for f in result["findings"] if f["field"] == "FILA")
+        self.assertEqual(duplicate_finding["status"], "POSIBLE ERROR")
+        self.assertIn("no se fusionan ni eliminan", duplicate_finding["reason"])
+
+    def test_process_file_genera_normalizada_qa_status_y_misma_cantidad_filas(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             csv_path = root / "PRC_PRUEBA_35_CAMPOS.csv"
@@ -94,13 +126,17 @@ class TablasNormativasEngineTests(unittest.TestCase):
                 writer = csv.DictWriter(handle, fieldnames=FIELDS)
                 writer.writeheader()
                 writer.writerow(self.base_row())
+                writer.writerow(self.base_row())
             result = process_file(csv_path, root / "normalizadas", root / "qa")
             self.assertTrue(Path(result["normalized_path"]).exists())
             self.assertTrue(Path(result["qa_path"]).exists())
             self.assertTrue(Path(result["status_path"]).exists())
+            self.assertEqual(result["input_rows"], 2)
+            self.assertEqual(result["output_rows"], 2)
             wb = load_workbook(result["normalized_path"], read_only=True)
-            headers = [cell.value for cell in next(wb.active.iter_rows(max_row=1))]
-            self.assertEqual(headers, FIELDS)
+            rows = list(wb.active.iter_rows(values_only=True))
+            self.assertEqual(len(rows) - 1, 2)
+            self.assertEqual(list(rows[0]), FIELDS)
 
 
 if __name__ == "__main__":
