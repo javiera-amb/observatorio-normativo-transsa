@@ -152,6 +152,66 @@
       "page": "22",
       "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Ordenanza_Plan_Regulador_Comunal.pdf",
       "reason": "Industria y Almacenamiento Inofensivo en S.M.2 exige antejardín mínimo de 10 m."
+    },
+    {
+      "id": "pen-eq-equipamiento-subpredial-5000",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ", "SUB_PREDIAL": "500", "OCUPACION": "0.1", "CONSTRUCCION": "0.2"},
+      "field": "SUB_PREDIAL",
+      "original": "500",
+      "corrected": 5000,
+      "status": "ERROR CONFIRMADO",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Municipalidad de Peñalolén - ficha oficial Zona EQ",
+      "page": "Condiciones de subdivisión y edificación - Equipamiento regional/interurbano y comunal",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/respaldo/Zona%20EQ.pdf",
+      "reason": "La ficha municipal establece superficie predial mínima de 5.000 m2 para equipamiento de escala regional/interurbana y comunal; 500 es un error de digitación."
+    },
+    {
+      "id": "pen-r11-codigo-prc",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R11", "CODIGO_PRC": "15152-SM-1"},
+      "field": "CODIGO_PRC",
+      "original": "15152-SM-1",
+      "corrected": "15152-R11",
+      "status": "ERROR CONFIRMADO",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Art. 31 - incorporación Zona R11",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "La fila pertenece a ZONA R11 y el instrumento 2017 incorpora expresamente R11; el código SM-1 es inconsistente con la unidad normativa."
+    },
+    {
+      "id": "pen-r10-fuente-2019-a-2018",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R10", "FUENTE": "DIARIO OFICIAL 28.09.19"},
+      "field": "FUENTE",
+      "original": "DIARIO OFICIAL 28.09.19",
+      "corrected": "DIARIO OFICIAL 28.09.18",
+      "status": "ERROR CONFIRMADO",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/4405",
+      "page": "Publicación Diario Oficial 28-09-2018",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1123459",
+      "reason": "La modificación que crea R10 fue publicada en el Diario Oficial el 28 de septiembre de 2018; 2019 es un error en la referencia de fuente."
+    },
+    {
+      "id": "pen-r10-fuente-2020-a-2018",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R10", "FUENTE": "DIARIO OFICIAL 28.09.20"},
+      "field": "FUENTE",
+      "original": "DIARIO OFICIAL 28.09.20",
+      "corrected": "DIARIO OFICIAL 28.09.18",
+      "status": "ERROR CONFIRMADO",
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/4405",
+      "page": "Publicación Diario Oficial 28-09-2018",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1123459",
+      "reason": "La modificación que crea R10 fue publicada en el Diario Oficial el 28 de septiembre de 2018; 2020 es un error en la referencia de fuente."
     }
   ]
 }
