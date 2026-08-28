@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-28",
+  "regla": "Los source_checks comparan valores de la tabla contra parámetros explícitos de la fuente oficial. COINCIDE no modifica; ERROR CONFIRMADO propone y aplica sólo con confianza ALTA.",
+  "source_checks": [
+    {
+      "id": "pen-eq-vivienda",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ", "ESPECIF_ESPECIF": "RESIDENCIAL"},
+      "expect": {"SUB_PREDIAL": 2500, "OCUPACION": 0.1, "CONSTRUCCION": 0.1, "ANTEJARDIN": 10},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Municipalidad de Peñalolén - ficha oficial Zona EQ",
+      "page": "Para Vivienda",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/respaldo/Zona%20EQ.pdf",
+      "reason": "Parámetros explícitos de vivienda en Zona EQ."
+    },
+    {
+      "id": "pen-eq-equip-reg-com",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ", "ESPECIF_ESPECIF": "EQUIPAMIENTO", "OCUPACION": 0.1},
+      "expect": {"SUB_PREDIAL": 5000, "OCUPACION": 0.1, "CONSTRUCCION": 0.2, "ANTEJARDIN": 10},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Municipalidad de Peñalolén - ficha oficial Zona EQ",
+      "page": "Equipamiento escala regional/interurbana y comunal",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/respaldo/Zona%20EQ.pdf",
+      "reason": "Parámetros explícitos de equipamiento regional/interurbano y comunal en Zona EQ."
+    },
+    {
+      "id": "pen-eq-equip-vecinal",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ", "ESPECIF_ESPECIF": "EQUIPAMIENTO", "OCUPACION": 0.15},
+      "expect": {"SUB_PREDIAL": 2500, "OCUPACION": 0.15, "CONSTRUCCION": 0.2, "ANTEJARDIN": 10},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Municipalidad de Peñalolén - ficha oficial Zona EQ",
+      "page": "Equipamiento escala vecinal",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/respaldo/Zona%20EQ.pdf",
+      "reason": "Parámetros explícitos de equipamiento vecinal en Zona EQ."
+    },
+    {
+      "id": "pen-r4-residencial-2017",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R4", "ESPECIF_ESPECIF": "RESIDENCIAL"},
+      "expect": {"DENS_HAB_HA": 300, "SUB_PREDIAL": 2000, "OCUPACION": 0.2, "CONSTRUCCION": 0.2, "PISOS_MAX": 4, "ALTURA_MAX": 14},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Imagen normativa Zona R4",
+      "source_url": "https://www.bcn.cl/leychile/Navegar/imagen/JPG/69637.jpg",
+      "reason": "Parámetros de la Zona R4 incorporada por Peñalolén Nuevo en 2017; no corresponde a nomenclaturas R4 históricas de otros ámbitos."
+    },
+    {
+      "id": "pen-r4-equipamiento-2017",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R4", "ESPECIF_ESPECIF": "EQUIPAMIENTO"},
+      "expect": {"SUB_PREDIAL": 2000, "OCUPACION": 0.5, "CONSTRUCCION": 0.5, "PISOS_MAX": 4, "ALTURA_MAX": 14},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Imagen normativa Zona R4",
+      "source_url": "https://www.bcn.cl/leychile/Navegar/imagen/JPG/69637.jpg",
+      "reason": "Parámetros de equipamiento de la Zona R4 incorporada en 2017."
+    },
+    {
+      "id": "pen-r11-residencial-2017",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R11", "ESPECIF_ESPECIF": "RESIDENCIAL"},
+      "expect": {"DENS_HAB_HA": 200, "SUB_PREDIAL": 4000, "OCUPACION": 0.15, "CONSTRUCCION": 0.15, "PISOS_MAX": 4, "ALTURA_MAX": 14},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Imagen normativa Zona R11",
+      "source_url": "https://www.bcn.cl/leychile/Navegar/imagen/JPG/69637.jpg",
+      "reason": "Parámetros explícitos del uso residencial de Zona R11."
+    },
+    {
+      "id": "pen-r11-equipamiento-2017",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R11", "ESPECIF_ESPECIF": "EQUIPAMIENTO"},
+      "expect": {"SUB_PREDIAL": 4000, "OCUPACION": 0.4, "CONSTRUCCION": 0.4, "PISOS_MAX": 4, "ALTURA_MAX": 14},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Imagen normativa Zona R11",
+      "source_url": "https://www.bcn.cl/leychile/Navegar/imagen/JPG/69637.jpg",
+      "reason": "Parámetros explícitos del uso equipamiento de Zona R11."
+    },
+    {
+      "id": "pen-eq2-2017",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ-2"},
+      "expect": {"SUB_PREDIAL": 10000, "OCUPACION": 0.25, "CONSTRUCCION": 0.25},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Imagen normativa Zona EQ-2",
+      "source_url": "https://www.bcn.cl/leychile/Navegar/imagen/JPG/69637.jpg",
+      "reason": "Parámetros explícitos de Zona EQ-2."
+    },
+    {
+      "id": "pen-eq4-2017",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ-4"},
+      "expect": {"OCUPACION": 0.2},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Imagen normativa Zona EQ-4",
+      "source_url": "https://www.bcn.cl/leychile/Navegar/imagen/JPG/69638.jpg",
+      "reason": "La norma limita la superficie máxima de ocupación del suelo al 20% del predio."
+    },
+    {
+      "id": "pen-eq5-2017",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ-5"},
+      "expect": {"SUB_PREDIAL": 3, "OCUPACION": 0.1, "CONSTRUCCION": 0.1},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Imagen normativa Zona EQ-5; SUB_PREDIAL expresado en hectáreas",
+      "source_url": "https://www.bcn.cl/leychile/Navegar/imagen/JPG/69638.jpg",
+      "reason": "La tabla oficial fija 3,00 ha de superficie predial mínima, 10% de ocupación y constructibilidad 0,1. Se conserva el valor 3 mientras no se defina una conversión universal de unidades para SUB_PREDIAL."
+    },
+    {
+      "id": "pen-r5-vivienda",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R5", "ESPECIF_ESPECIF": "RESIDENCIAL"},
+      "expect": {"DENS_HAB_HA": 50, "SUB_PREDIAL": 800, "OCUPACION": 0.2, "CONSTRUCCION": 0.5, "ALTURA_MAX": 9, "ANTEJARDIN": 5},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 2100/1689",
+      "page": "Zona R5 - Normas específicas para vivienda",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=238368",
+      "reason": "Parámetros explícitos de vivienda en Zona R5."
+    },
+    {
+      "id": "pen-r7-vivienda",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R7", "UPERM": "VIVIENDA"},
+      "expect": {"DENS_HAB_HA": 70, "SUB_PREDIAL": 600, "OCUPACION": 0.3, "CONSTRUCCION": 0.5, "PISOS_MAX": 2, "ALTURA_MAX": 9, "ANTEJARDIN": 5},
+      "confidence": "ALTA",
+      "auto_apply": true,
+      "source": "Decreto Alcaldicio N° 2100/1689",
+      "page": "Zona R7 - Normas específicas para vivienda",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=238368",
+      "reason": "Parámetros explícitos de vivienda en Zona R7."
+    }
+  ]
+}
