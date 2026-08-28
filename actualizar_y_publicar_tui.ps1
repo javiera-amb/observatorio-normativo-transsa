@@ -35,15 +35,13 @@ function Ejecutar-Python {
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($py) {
         & py -3 @Argumentos | Out-Host
-        $codigoSalida = $LASTEXITCODE
-        return [int]$codigoSalida
+        return [int]$LASTEXITCODE
     }
 
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($python) {
         & python @Argumentos | Out-Host
-        $codigoSalida = $LASTEXITCODE
-        return [int]$codigoSalida
+        return [int]$LASTEXITCODE
     }
 
     throw "No se encontró Python en PATH."
@@ -82,6 +80,18 @@ try {
         throw "La carpeta no es un repositorio Git: $RepoPath"
     }
 
+    $rama = (git rev-parse --abbrev-ref HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($rama)) {
+        throw "No fue posible determinar la rama Git actual."
+    }
+    if ($rama -eq "HEAD") {
+        throw "El repositorio está en detached HEAD. Cambia a tu rama de trabajo antes de ejecutar."
+    }
+    if ($rama -eq "main" -or $rama -eq "master") {
+        throw "Por gobernanza TUI, la actualización local no publica directamente en '$rama'. Cambia a tu rama de trabajo y vuelve a ejecutar."
+    }
+
+    Escribir-Paso "Rama de trabajo detectada: $rama"
     Escribir-Paso "Comprobando cambios locales no relacionados con la actualización..."
     $estado = @(git status --porcelain)
     if ($LASTEXITCODE -ne 0) {
@@ -111,10 +121,10 @@ try {
         throw "Hay cambios locales de código o configuración pendientes. No se ejecutará el proceso automático para evitar incluirlos en un commit: $detalle"
     }
 
-    Escribir-Paso "Actualizando el repositorio desde GitHub..."
-    git pull --ff-only
+    Escribir-Paso "Actualizando la rama '$rama' desde GitHub..."
+    git pull --ff-only origin $rama
     if ($LASTEXITCODE -ne 0) {
-        throw "git pull falló. Revisa conexión, credenciales o cambios remotos."
+        throw "git pull falló para '$rama'. Revisa conexión, credenciales o cambios remotos."
     }
 
     Escribir-Paso "Comprobando Ollama local..."
@@ -182,19 +192,19 @@ try {
     }
 
     $mensaje = "Actualización diaria TUI $fecha"
-    Escribir-Paso "Creando commit: $mensaje"
+    Escribir-Paso "Creando commit en '$rama': $mensaje"
     git commit -m $mensaje
     if ($LASTEXITCODE -ne 0) {
         throw "git commit falló."
     }
 
-    Escribir-Paso "Publicando en GitHub..."
-    git push origin main
+    Escribir-Paso "Publicando resultados en la rama '$rama'..."
+    git push origin $rama
     if ($LASTEXITCODE -ne 0) {
-        throw "git push falló."
+        throw "git push falló para '$rama'."
     }
 
-    Escribir-Paso "Actualización y publicación completadas correctamente."
+    Escribir-Paso "Actualización completada en rama de trabajo. La integración a main requiere revisión/PR por separado."
 }
 catch {
     Escribir-Paso ("ERROR: " + $_.Exception.Message)
