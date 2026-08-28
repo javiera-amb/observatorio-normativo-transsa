@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .engine import process_file
+from .engine_v2 import process_file
 
 
 def main() -> int:
@@ -12,7 +12,8 @@ def main() -> int:
     parser.add_argument("input", help="CSV/XLSX de entrada")
     parser.add_argument("--normalized-dir", required=True, help="Carpeta de salida normalizada")
     parser.add_argument("--qa-dir", required=True, help="Carpeta de QA/trazabilidad")
-    parser.add_argument("--rules", default="config/tablas_normativas_reglas.json", help="Catálogo de reglas fuente-específicas")
+    parser.add_argument("--rules", default="config/tablas_normativas_reglas.json", help="Catálogo de reglas exactas fuente-específicas")
+    parser.add_argument("--conditional-rules", default="config/tablas_normativas_condicionales.json", help="Catálogo de reglas condicionadas por campos de la fila")
     args = parser.parse_args()
 
     result = process_file(
@@ -20,6 +21,7 @@ def main() -> int:
         Path(args.normalized_dir),
         Path(args.qa_dir),
         Path(args.rules) if args.rules else None,
+        Path(args.conditional_rules) if args.conditional_rules else None,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
