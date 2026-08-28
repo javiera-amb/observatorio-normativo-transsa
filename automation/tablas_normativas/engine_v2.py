@@ -61,24 +61,50 @@ def _matches_where(row: dict[str, Any], rule: dict[str, Any]) -> bool:
 
 def apply_conditional_rules(result: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
     findings = result["findings"]
+    original_row_count = len(result["rows"])
+
     for row_number, row in enumerate(result["rows"], start=2):
         for rule in catalog.get("conditional_rules", []):
             field = rule.get("field")
             if field not in FIELDS or not _matches_where(row, rule):
                 continue
+
             original = row.get(field, "")
             if "original" in rule and not _same(original, rule.get("original")):
                 continue
+
             corrected = rule.get("corrected", original)
             confidence = str(rule.get("confidence", "MEDIA")).upper()
             source = str(rule.get("source", ""))
             source_url = str(rule.get("source_url", ""))
+            auto_apply = confidence == "ALTA" and bool(rule.get("auto_apply", True))
+
+            if field == "CODIGO_PRC" and not bool(rule.get("allow_codigo_prc_change", False)):
+                findings.append({
+                    "row": row_number,
+                    "field": field,
+                    "original": original,
+                    "proposed": corrected,
+                    "status": "POSIBLE ERROR",
+                    "confidence": confidence,
+                    "reason": (
+                        str(rule.get("reason", "Regla normativa condicionada detectada."))
+                        + " CODIGO_PRC se conserva porque la regla no autoriza expresamente su modificación."
+                    ),
+                    "source": source,
+                    "page": str(rule.get("page", "")),
+                    "rule_id": str(rule.get("id", "")),
+                    "source_url": source_url,
+                })
+                continue
+
+            status = str(rule.get("status", "ERROR CONFIRMADO" if confidence == "ALTA" else "POSIBLE ERROR"))
             findings.append({
                 "row": row_number,
                 "field": field,
                 "original": original,
                 "proposed": corrected,
-                "status": str(rule.get("status", "ERROR CONFIRMADO")),
+                "status": status,
                 "confidence": confidence,
                 "reason": str(rule.get("reason", "Corrección respaldada por regla normativa condicionada.")),
                 "source": source,
@@ -86,9 +112,12 @@ def apply_conditional_rules(result: dict[str, Any], catalog: dict[str, Any]) -> 
                 "rule_id": str(rule.get("id", "")),
                 "source_url": source_url,
             })
-            if confidence == "ALTA" and bool(rule.get("auto_apply", True)):
+            if auto_apply:
                 row[field] = corrected
 
+    assert len(result["rows"]) == original_row_count, "Las reglas condicionadas no pueden cambiar la cantidad de filas/polígonos."
+    result["input_rows"] = result.get("input_rows", original_row_count)
+    result["output_rows"] = len(result["rows"])
     result["critical"] = sum(item.get("status") == "ERROR CONFIRMADO" for item in findings)
     result["possible"] = sum(item.get("status") == "POSIBLE ERROR" for item in findings)
     result["formatting"] = sum(item.get("status") == "NORMALIZACIÓN DE FORMATO" for item in findings)
@@ -175,10 +204,13 @@ def process_file(
         "source_file": input_path.name,
         "normalized_file": normalized_path.name,
         "qa_file": qa_path.name,
+        "input_rows": result.get("input_rows", len(rows)),
+        "output_rows": result.get("output_rows", len(result["rows"])),
         "critical": result["critical"],
         "possible": result["possible"],
         "formatting": result["formatting"],
         "conflicts": result["conflicts"],
+        "codigo_prc_policy": "PRESERVAR; sólo cambia con allow_codigo_prc_change=true y confianza ALTA",
         "state": "REQUIERE_REVISION" if requires_review else "CORREGIDA",
         "processed_at": result["processed_at"],
     }
