@@ -1,23 +1,26 @@
+# Python
 __pycache__/
-*.py[cod]
-.env
-.venv/
-venv/
-.DS_Store
-
-# Archivos temporales de SQLite
-*.sqlite3-journal
-*.sqlite3-wal
-*.sqlite3-shm
-_local/
-data/db/
-data/inbox/
-documentos/diario_oficial/
 **/__pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
+.venv/
+venv/
+
+# Variables/secretos locales
+.env
+
+# Runtime local TUI
+_local/
+data/db/
+data/inbox/
+documentos/diario_oficial/
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
 *.log
+
+# Temporales de oficina/SO
 ~$*.docx
 Thumbs.db
 .DS_Store
