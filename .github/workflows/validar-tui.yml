@@ -1,7 +1,7 @@
-name: Validar módulos locales TUI
+name: Validar TUI
 
-# Ollama y la recolección real se ejecutan en el computador local de Transsa.
-# GitHub Actions valida código, configuración, pruebas y compatibilidad del portal.
+# La recolección diaria del Diario Oficial y Ollama se ejecutan localmente.
+# Este workflow valida código, configuración, pruebas y compatibilidad del portal.
 on:
   workflow_dispatch:
   pull_request:
@@ -16,7 +16,7 @@ on:
       - "scripts/**"
       - "tests/**"
       - "docs/**"
-      - ".github/workflows/actualizar-diario.yml"
+      - ".github/workflows/validar-tui.yml"
   push:
     branches:
       - main
@@ -31,7 +31,7 @@ on:
       - "scripts/**"
       - "tests/**"
       - "docs/**"
-      - ".github/workflows/actualizar-diario.yml"
+      - ".github/workflows/validar-tui.yml"
 
 concurrency:
   group: validar-tui-${{ github.workflow }}-${{ github.ref }}
@@ -82,4 +82,4 @@ jobs:
       - name: Confirmar modalidad local
         run: |
           echo "Validación correcta."
-          echo "La recolección real, Ollama y la publicación diaria continúan ejecutándose localmente."
+          echo "La recolección real del Diario Oficial, Ollama y la publicación diaria se ejecutan localmente."

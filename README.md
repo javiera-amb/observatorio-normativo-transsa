@@ -1,71 +1,106 @@
-# Transsa Urban Intelligence
+# Transsa Urban Intelligence (TUI)
 
-**Sistema de inteligencia urbana, territorial e inmobiliaria de Transsa.**
+**Plataforma de inteligencia urbana, territorial e inmobiliaria del área DEI de Transsa.**
 
-El repositorio evoluciona desde el antiguo Observatorio Normativo Urbano hacia una plataforma que detecta, interpreta, gestiona y publica información pública relevante para el equipo: normativa, planificación, noticias, mercado inmobiliario, desarrollo urbano, infraestructura, proyectos y alertas.
+TUI consulta, organiza y publica información pública validada para apoyar seguimiento normativo, planificación territorial, noticias, mercado y capas territoriales. El repositorio contiene el código y la configuración de la plataforma; los archivos canónicos de trabajo viven en SharePoint y la documentación/gobierno operativo vive en Notion.
 
-## Estado actual
+## Estado operativo actual
 
-El portal existente continúa operativo con estos módulos:
+Módulos presentes en el portal:
 
 1. Diario Oficial.
 2. Actualizaciones IPT.
 3. Histórico anual.
 4. Mapa territorial.
 5. Vigencia cartográfica.
+6. Seguimiento normativo y capas territoriales disponibles en el portal.
 
-La migración será incremental y mantendrá compatibilidad durante cada sprint.
+> La existencia de una sección en el portal no implica que su automatización esté completa. Consulta `docs/21_AUDITORIA_OPERATIVA_TUI_2026-08-28.md` para estado, fallas y deuda técnica verificadas.
 
-## Documentación fundacional
+## Fuentes canónicas
 
-Lee primero [`docs/README.md`](docs/README.md).
+- **GitHub:** código, configuración, tests y workflows TUI.
+- **SharePoint:** GPKG, Excel, documentos fuente y entregables.
+- **Notion:** metodología, gobierno, QA, decisiones, estado y enlaces.
+- **SQL:** datos productivos cuando corresponda.
 
-Documentos principales:
+No se deben duplicar archivos canónicos en Notion ni guardar credenciales en el repositorio.
 
-- [`docs/01_VISION_Y_PRINCIPIOS.md`](docs/01_VISION_Y_PRINCIPIOS.md)
-- [`docs/02_ARQUITECTURA.md`](docs/02_ARQUITECTURA.md)
-- [`docs/03_MODELO_DE_DATOS.md`](docs/03_MODELO_DE_DATOS.md)
-- [`docs/04_ROADMAP.md`](docs/04_ROADMAP.md)
-- [`docs/05_DIAGNOSTICO_REPOSITORIO_ACTUAL.md`](docs/05_DIAGNOSTICO_REPOSITORIO_ACTUAL.md)
+## Documentación
 
-## Automatizaciones existentes
+El índice real y mantenible es:
 
-- `.github/workflows/actualizar-diario.yml`
-- `.github/workflows/actualizar-ipt.yml`
-- `.github/workflows/cargar-historico-anual.yml`
-- `.github/workflows/actualizar-vigencia-cartografica.yml`
+- [`docs/00_INDICE_DOCUMENTACION_TUI.md`](docs/00_INDICE_DOCUMENTACION_TUI.md)
+- [`docs/21_AUDITORIA_OPERATIVA_TUI_2026-08-28.md`](docs/21_AUDITORIA_OPERATIVA_TUI_2026-08-28.md)
 
-## Bases web actuales
+Los antiguos documentos 01–04 mencionados en versiones anteriores del README no existen actualmente en el repositorio ni en su historial disponible; no deben enlazarse como documentación vigente.
 
-- `data/reportes.js`
-- `data/ipt_reportes.js`
-- `data/historicos.js`
-- `data/vigencia_cartografica.js`
+## Estructura principal
 
+```text
+.github/workflows/   CI y automatizaciones GitHub
 
-## Núcleo de datos v0.2
-
-La plataforma cuenta con una migración compatible desde `data/reportes.js` hacia eventos canónicos y SQLite.
-
-Para reconstruir y validar la capa de datos:
-
-```bash
-python scripts/run_sprint1.py
-python -m unittest discover -s tests -v
+automation/          pipelines y conectores de actualización
+config/              configuración versionada sin secretos
+core/                modelo/eventos/base de datos local
+scripts/             utilidades de importación, exportación y mantenimiento
+tests/               pruebas automáticas
+data/                datos web/versionados que consume el portal
+docs/                documentación técnica e histórica útil
+documentos/          salidas publicables/versionadas cuando corresponda
+consolidados/        consolidados generados que forman parte del producto
+*.html, *.js, *.css  portal estático publicado por GitHub Pages
 ```
 
-El portal sigue leyendo `data/reportes.js`; por lo tanto, esta versión no altera la experiencia visible.
+## Diario Oficial
+
+La recolección real del Diario Oficial es **local**, no un workflow programado de GitHub Actions.
+
+Flujo actual:
+
+```text
+Diario Oficial
+→ prefiltro por reglas
+→ extracción PDF/texto
+→ análisis local con Ollama
+→ eventos/SQLite
+→ reporte web + Word preliminar
+→ QA del portal
+→ commit/push de resultados en la rama de trabajo
+```
+
+Comandos de apoyo:
+
+- `ejecutar_diario_local.bat`
+- `actualizar_y_publicar_tui.ps1`
+- `instalar_tarea_diaria_tui.ps1`
+
+La tarea de Windows requiere que el computador y la sesión local estén disponibles y que Ollama tenga el modelo configurado. No debe considerarse una automatización servidor 24/7.
+
+## Actualizaciones IPT
+
+`.github/workflows/actualizar-ipt.yml` contiene la automatización mensual de búsqueda de actualizaciones IPT. Su cobertura depende de fuentes oficiales indexadas y actualmente **no sustituye un inventario exhaustivo de ministerios, SEREMI, GORE y municipalidades**. El estado real está documentado en la auditoría operativa.
+
+## Validación CI
+
+`.github/workflows/validar-tui.yml` valida:
+
+- registro de fuentes de noticias;
+- tests automáticos;
+- sintaxis JavaScript;
+- consistencia del portal.
+
+Este workflow **no descarga el Diario Oficial ni ejecuta Ollama**.
+
+## Política de ramas y publicación
+
+El trabajo de desarrollo se realiza en una **rama de trabajo** y se revisa antes de integrarse a `main`.
+
+- Los scripts locales no deben hacer `push` directo a `main`.
+- `main` representa la versión publicada/integrada.
+- PR/merge y publicación final son pasos separados del proceso local de actualización.
+- No asumir permisos de administración por el hecho de poder trabajar en una rama.
 
 ## Motor local de IA
 
-Desde la versión 0.4, Transsa Urban Intelligence puede usar Ollama con `qwen3:8b` para generar análisis preliminares sin costos de API. La revisión y versión validada siguen siendo humanas. Consulta `docs/09_SPRINT_3_OLLAMA_LOCAL.md`.
-
-## Diario Oficial local v0.5
-
-La revisión diaria ya no depende de una API pagada. El comando:
-
-```text
-ejecutar_diario_local.bat
-```
-
-descarga la edición oficial, aplica reglas, analiza candidatos con Ollama, guarda los documentos originales, actualiza SQLite y genera un Word preliminar. Consulta `docs/11_SPRINT_4_DIARIO_OFICIAL_LOCAL.md`.
+El análisis preliminar puede usar Ollama con el modelo configurado en `config/ollama.json`. La IA es apoyo: resultados preliminares o `requires_review` no deben considerarse validados sin revisión humana.
