@@ -1,33 +1,62 @@
 # Inspector SIG IPT
 
-## Objetivo
+## Rol de esta herramienta
 
-El Inspector SIG IPT recorre la carpeta nacional de cartografía sin modificar los archivos originales. Genera un inventario por región, comuna, archivo y capa; detecta el tipo de IPT y el rol de la capa; identifica CRS, geometría, campos y un posible campo de zona; y propone una vinculación preliminar con los instrumentos vigentes del Portal IPT ya cargados en el repositorio.
+El Inspector SIG IPT es una **herramienta local opcional de diagnóstico**. Puede recorrer una copia sincronizada de `00_IPT_Nacional` sin modificar los archivos originales y generar inventarios técnicos de capas, CRS, geometría, campos y posibles zonas.
 
-## Ejecución
+**No forma parte de la operación productiva de TUI.**
 
-1. Actualizar la rama `main` en GitHub Desktop.
-2. Cerrar QGIS si hay muchos GeoPackage abiertos. No es obligatorio, pero evita bloqueos de lectura.
-3. Hacer doble clic en `REVISAR_CARTOGRAFIA_IPT.bat`.
-4. Esperar a que la ventana indique `LISTO`.
-5. La carpeta de resultados se abrirá automáticamente.
+La operación productiva debe funcionar íntegramente en la nube:
 
-La ruta configurada por defecto es:
+```text
+SharePoint
+  ↓
+Power Automate
+  ↓
+GitHub Actions
+  ↓
+TUI
+```
 
-`C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\00_IPT_Nacional`
+Por lo tanto, TUI no depende de que un computador esté encendido, de GitHub Desktop, de una ruta `C:\\`, de una carpeta sincronizada con OneDrive ni de ejecutar un BAT.
 
-También se puede arrastrar otra carpeta sobre `REVISAR_CARTOGRAFIA_IPT.bat`.
+## Fuente oficial
 
-## Resultados
+La raíz cloud oficial de IPT es:
 
-Los archivos se generan en `_local/sig_ipt/`. Esa carpeta está excluida de GitHub para evitar subir rutas locales y cartografía de trabajo.
+```text
+Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional
+```
 
-- `inventario_sig_ipt.csv`: una fila por capa SIG detectada.
-- `capas_sig_ipt.json`: inventario completo, campos y muestras de zonas.
-- `vinculacion_sig_ipt.csv`: vínculo preliminar SIG ↔ Portal IPT.
-- `vinculacion_sig_ipt.json`: versión completa de las vinculaciones y candidatos.
-- `alertas_sig_ipt.csv`: problemas que requieren revisión.
-- `resumen_sig_ipt.json`: conteos generales del barrido.
+La configuración cloud general está documentada en:
+
+`config/sharepoint_tui.json`
+
+## Uso manual opcional del inspector
+
+Solo cuando se necesite un barrido técnico local:
+
+1. Disponer localmente de una carpeta `00_IPT_Nacional`.
+2. Arrastrar esa carpeta sobre `REVISAR_CARTOGRAFIA_IPT.bat`, o ejecutar:
+
+```text
+REVISAR_CARTOGRAFIA_IPT.bat "RUTA_A_00_IPT_Nacional"
+```
+
+El BAT no contiene una ruta personal predeterminada.
+
+## Resultados locales
+
+Los resultados de esta utilidad se generan en `_local/sig_ipt/`, carpeta excluida de GitHub.
+
+- `inventario_sig_ipt.csv`
+- `capas_sig_ipt.json`
+- `vinculacion_sig_ipt.csv`
+- `vinculacion_sig_ipt.json`
+- `alertas_sig_ipt.csv`
+- `resumen_sig_ipt.json`
+
+Estos resultados son diagnósticos y no constituyen por sí mismos el estado productivo de TUI.
 
 ## Reglas de interpretación
 
@@ -39,32 +68,20 @@ Para vincular un seccional se exige coincidencia de comuna, región y una coinci
 
 ### PRC consolidado y modelo de entrega
 
-El inventario mantiene cada plan seccional como instrumento trazable. La consolidación espacial se realizará después del inventario: dentro del ámbito de un seccional se aplicará su normativa y fuera de él continuará la normativa del PRC.
+El inventario mantiene cada plan seccional como instrumento trazable. La consolidación espacial se realiza después del inventario: dentro del ámbito de un seccional se aplica su normativa y fuera de él continúa la normativa del PRC.
 
-La TUI V2.1 no intersecta uso de suelo, edificación y riesgos para fabricar una sola geometría. Esas materias se conservan como coberturas superpuestas. La entrega comunal contiene:
-
-- un GeoPackage con la geometría normativa base y `unidad_normativa_id`;
-- una tabla normativa separada con la misma clave;
-- riesgos y otras capas temáticas independientes.
-
-La intersección para consulta puede ejecutarla el visor o una vista SQL sin alterar la fuente normativa.
+TUI no intersecta uso de suelo, edificación y riesgos para fabricar una sola geometría. Esas materias se conservan como coberturas superpuestas.
 
 ### Estado SIG
 
-Este primer barrido **no declara** que una modificación esté incorporada en SIG. Primero identifica qué archivo y capa parecen corresponder al instrumento. Luego se compararán geometrías, zonas y parámetros entre versiones para asignar estados como:
+Un barrido local no declara automáticamente que una modificación esté incorporada en SIG. El estado productivo se controla por los flujos cloud y sus reglas de publicación/QA.
 
-- Incorporado en SIG
-- Parcialmente incorporado
-- No incorporado
-- Cartografía no localizada
-- Pendiente de vinculación
+## Formatos del inspector local
 
-## Formatos
-
-La lectura profunda inicial funciona para:
+La lectura profunda funciona principalmente para:
 
 - GeoPackage (`.gpkg`)
 - Shapefile (`.shp` + `.dbf` + `.prj` cuando existen)
 - GeoJSON (`.geojson` / `.json` de tamaño moderado)
 
-KML, GML y SQLite se inventarían en esta primera versión, pero pueden quedar marcados como lectura parcial.
+KML, GML y SQLite pueden quedar marcados como lectura parcial según el proceso.
