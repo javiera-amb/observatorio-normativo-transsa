@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "canal_oficial": "Sistema Operativo DEI",
+  "sharepoint_site": "https://transsa.sharepoint.com/sites/DEI",
+  "ipt_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional",
+  "prc_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional",
+  "tablas_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas",
+  "maestro_actual": "PRC_SQL2.xlsx",
+  "salida_final": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/NORMALIZADAS",
+  "qa_storage": "TUI",
+  "politica": {
+    "requiere_prc_y_tabla": true,
+    "una_fila_por_poligono": true,
+    "bloquear_si_poligonos_distinto_filas": true,
+    "preservar_orden_filas": true,
+    "campos_productivos": 35,
+    "preservar_codigo_prc": true,
+    "codigo_prc_solo_regla_condicionada": true,
+    "no_crear_filas": true,
+    "no_eliminar_filas": true,
+    "no_fusionar_filas": true,
+    "versionado": "SharePoint"
+  },
+  "estados": [
+    "FALTA PRC",
+    "FALTA TABLA",
+    "ERROR ESTRUCTURAL",
+    "EN AUDITORÍA",
+    "CON OBSERVACIONES",
+    "VALIDADA",
+    "LISTA PARA STAGING"
+  ]
+}
