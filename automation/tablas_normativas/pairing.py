@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import csv
 import re
 import sqlite3
 import unicodedata
 from pathlib import Path
 from typing import Any
+
+from openpyxl import load_workbook
 
 from . import engine as base
 
@@ -47,20 +50,84 @@ def _choose_feature_table(connection: sqlite3.Connection, preferred_layer: str |
     )
 
 
-def count_prc_features(prc_path: str | Path, preferred_layer: str | None = None) -> tuple[int, str]:
+def _column_name(connection: sqlite3.Connection, layer: str, wanted: str) -> str | None:
+    quoted = layer.replace('"', '""')
+    columns = [str(row[1]) for row in connection.execute(f'PRAGMA table_info("{quoted}")').fetchall()]
+    matches = [column for column in columns if _key(column) == _key(wanted)]
+    return matches[0] if len(matches) == 1 else None
+
+
+def read_prc_codes(
+    prc_path: str | Path,
+    preferred_layer: str | None = None,
+) -> tuple[int, str, list[str]]:
     path = Path(prc_path)
     if not path.exists():
         raise FileNotFoundError(path)
     if path.suffix.lower() != ".gpkg":
         raise ValueError("El PRC productivo debe entregarse como GeoPackage (.gpkg).")
+
     connection = sqlite3.connect(path)
     try:
         layer = _choose_feature_table(connection, preferred_layer)
-        quoted = layer.replace('"', '""')
-        count = int(connection.execute(f'SELECT COUNT(*) FROM "{quoted}"').fetchone()[0])
-        return count, layer
+        code_column = _column_name(connection, layer, "CODIGO_PRC")
+        if not code_column:
+            raise ValueError("La capa PRC no contiene un campo CODIGO_PRC inequívoco.")
+        quoted_layer = layer.replace('"', '""')
+        quoted_code = code_column.replace('"', '""')
+        rows = connection.execute(
+            f'SELECT "{quoted_code}" FROM "{quoted_layer}" ORDER BY rowid'
+        ).fetchall()
+        codes = [str(row[0] or "").strip() for row in rows]
+        return len(rows), layer, codes
     finally:
         connection.close()
+
+
+def _read_table(
+    table_path: Path,
+    table_sheet: str | None = None,
+) -> tuple[list[str], list[dict[str, Any]]]:
+    suffix = table_path.suffix.lower()
+    if suffix == ".csv":
+        with table_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            headers = [str(item or "").strip() for item in (reader.fieldnames or [])]
+            rows = [{str(k or "").strip(): v for k, v in row.items()} for row in reader]
+        return headers, rows
+    if suffix in {".xlsx", ".xlsm"}:
+        workbook = load_workbook(table_path, read_only=True, data_only=True)
+        if table_sheet:
+            if table_sheet not in workbook.sheetnames:
+                raise ValueError(f"No existe la hoja {table_sheet} en la tabla normativa.")
+            sheet = workbook[table_sheet]
+        else:
+            if len(workbook.sheetnames) != 1:
+                raise ValueError(
+                    "La tabla contiene varias hojas; se debe indicar explícitamente la hoja asociada a la comuna."
+                )
+            sheet = workbook[workbook.sheetnames[0]]
+        iterator = sheet.iter_rows(values_only=True)
+        try:
+            headers = [str(item or "").strip() for item in next(iterator)]
+        except StopIteration:
+            return [], []
+        rows = []
+        for values in iterator:
+            if not any(value not in (None, "") for value in values):
+                continue
+            rows.append({headers[index]: values[index] if index < len(values) else "" for index in range(len(headers))})
+        return headers, rows
+    return base.read_table(table_path)
+
+
+def _alias_index(aliases: dict[str, str] | None) -> dict[str, str]:
+    return {_key(source): _key(target) for source, target in (aliases or {}).items()}
+
+
+def _resolved_key(value: Any, aliases: dict[str, str]) -> str:
+    key = _key(value)
+    return aliases.get(key, key)
 
 
 def validate_prc_table_pair(
@@ -69,10 +136,17 @@ def validate_prc_table_pair(
     *,
     expected_comuna: str | None = None,
     preferred_layer: str | None = None,
+    table_sheet: str | None = None,
+    codigo_aliases: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Valida el contrato productivo: PRC + tabla, una fila por polígono.
+    """Valida que el PRC y su tabla normativa estén vinculados por CODIGO_PRC.
 
-    No modifica archivos. Cualquier diferencia estructural bloquea la producción.
+    El modelo productivo permite:
+    - varios polígonos con un mismo CODIGO_PRC;
+    - varias filas normativas/variantes para un mismo CODIGO_PRC.
+
+    La cantidad de filas de la tabla se preserva, pero no tiene que igualar la cantidad de
+    entidades espaciales. Se bloquea la producción cuando algún código queda sin vínculo.
     """
     prc_path = Path(prc_path)
     table_path = Path(table_path)
@@ -92,14 +166,14 @@ def validate_prc_table_pair(
         }
 
     try:
-        polygon_count, layer = count_prc_features(prc_path, preferred_layer)
+        polygon_count, layer, polygon_codes = read_prc_codes(prc_path, preferred_layer)
     except (ValueError, FileNotFoundError) as exc:
         errors.append(str(exc))
-        polygon_count, layer = None, None
+        polygon_count, layer, polygon_codes = None, None, []
 
     try:
-        headers, rows = base.read_table(table_path)
-    except Exception as exc:  # lectura inválida: debe bloquear, no adivinar
+        headers, rows = _read_table(table_path, table_sheet)
+    except Exception as exc:
         errors.append(f"No se pudo leer la tabla normativa: {exc}")
         headers, rows = [], []
 
@@ -113,26 +187,66 @@ def validate_prc_table_pair(
         errors.append("La tabla contiene más de una comuna y no puede ligarse a un único PRC.")
     if expected_comuna and commune and _key(expected_comuna) != _key(commune):
         errors.append(f"La tabla corresponde a {commune}, no a {expected_comuna}.")
-    if polygon_count is not None and polygon_count != row_count:
-        errors.append(
-            f"Relación 1:1 inválida: el PRC tiene {polygon_count} polígonos y la tabla {row_count} filas."
-        )
 
     missing_fields = [field for field in base.FIELDS if field not in headers]
     if missing_fields:
         errors.append("Faltan campos productivos obligatorios: " + ", ".join(missing_fields))
 
+    table_codes = [str(row.get("CODIGO_PRC", "") or "").strip() for row in rows]
+    blank_polygon_codes = sum(not code for code in polygon_codes)
+    blank_table_codes = sum(not code for code in table_codes)
+    if blank_polygon_codes:
+        errors.append(f"El PRC contiene {blank_polygon_codes} polígonos sin CODIGO_PRC.")
+    if blank_table_codes:
+        errors.append(f"La tabla contiene {blank_table_codes} filas sin CODIGO_PRC.")
+
+    aliases = _alias_index(codigo_aliases)
+    polygon_keys = {_resolved_key(code, aliases) for code in polygon_codes if code}
+    table_keys = {_resolved_key(code, aliases) for code in table_codes if code}
+    missing_in_table_keys = polygon_keys - table_keys
+    orphan_table_keys = table_keys - polygon_keys
+
+    polygon_raw_by_key: dict[str, set[str]] = {}
+    for code in polygon_codes:
+        if code:
+            polygon_raw_by_key.setdefault(_resolved_key(code, aliases), set()).add(code)
+    table_raw_by_key: dict[str, set[str]] = {}
+    for code in table_codes:
+        if code:
+            table_raw_by_key.setdefault(_resolved_key(code, aliases), set()).add(code)
+
+    missing_in_table = sorted({raw for key in missing_in_table_keys for raw in polygon_raw_by_key.get(key, set())})
+    orphan_table = sorted({raw for key in orphan_table_keys for raw in table_raw_by_key.get(key, set())})
+
+    if missing_in_table:
+        errors.append(
+            "Hay CODIGO_PRC presentes en el PRC sin normativa asociada: " + ", ".join(missing_in_table)
+        )
+    if orphan_table:
+        errors.append(
+            "Hay filas normativas cuyo CODIGO_PRC no existe en el PRC vigente: " + ", ".join(orphan_table)
+        )
+
     return {
         "valid": not errors,
-        "state": "LISTO_AUDITAR" if not errors else "ERROR_ESTRUCTURAL",
+        "state": "LISTO_AUDITAR" if not errors else "ERROR_VINCULO",
         "errors": errors,
         "comuna": commune or expected_comuna or "",
         "prc_path": str(prc_path),
         "table_path": str(table_path),
+        "table_sheet": table_sheet or "",
         "prc_layer": layer,
         "polygon_count": polygon_count,
         "row_count": row_count,
+        "distinct_polygon_codes": len({_key(code) for code in polygon_codes if code}),
+        "distinct_table_codes": len({_key(code) for code in table_codes if code}),
+        "blank_polygon_codes": blank_polygon_codes,
+        "blank_table_codes": blank_table_codes,
+        "missing_in_table": missing_in_table,
+        "orphan_table_codes": orphan_table,
         "productive_fields": len(base.FIELDS),
         "missing_fields": missing_fields,
-        "contract": "1 polígono PRC = 1 fila tabla; orden y cantidad se preservan",
+        "link_field": "CODIGO_PRC",
+        "relationship": "muchos polígonos ↔ CODIGO_PRC ↔ una o varias filas normativas",
+        "contract": "PRC y tabla obligatorios; todas las filas se preservan; todo CODIGO_PRC debe resolver en ambos lados",
     }

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "nota": "Estos alias se usan exclusivamente para validar el vínculo PRC-tabla. Nunca modifican CODIGO_PRC en archivos productivos.",
+  "por_comuna": {
+    "PEÑALOLÉN": {
+      "15152-ART 1 Trans. PRMS": "15152-ART 1 Trans.",
+      "15152-ART 5.2.2. PRMS": "15152-ART 5.2.2.",
+      "15152-ART 5.2.3.3. PRMS": "15152-ART 5.2.3.3.",
+      "15152-ART 5.2.4.1. PRMS": "15152-ART 5.2.4.1.",
+      "15152-ART 8.2.1.4. PRMS": "15152-RIESGO GEOFISICO ASOCIADO A REMOCION EN MASA"
+    }
+  }
+}

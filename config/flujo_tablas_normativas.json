@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "canal_oficial": "Sistema Operativo DEI",
   "sharepoint_site": "https://transsa.sharepoint.com/sites/DEI",
   "ipt_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional",
@@ -8,10 +8,21 @@
   "maestro_actual": "PRC_SQL2.xlsx",
   "salida_final": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/NORMALIZADAS",
   "qa_storage": "TUI",
+  "vinculo": {
+    "campo": "CODIGO_PRC",
+    "relacion": "muchos polígonos ↔ código ↔ una o varias filas normativas",
+    "requiere_cobertura_total_prc": true,
+    "requiere_que_toda_fila_tenga_codigo_vigente": true,
+    "permite_alias_solo_para_vinculo": true,
+    "alias_no_modifica_codigo_productivo": true
+  },
   "politica": {
     "requiere_prc_y_tabla": true,
-    "una_fila_por_poligono": true,
-    "bloquear_si_poligonos_distinto_filas": true,
+    "filas_tabla_son_registros_normativos": true,
+    "permite_variantes_por_codigo": true,
+    "permite_varios_poligonos_por_codigo": true,
+    "no_exige_poligonos_igual_filas": true,
+    "preservar_cantidad_filas_tabla": true,
     "preservar_orden_filas": true,
     "campos_productivos": 35,
     "preservar_codigo_prc": true,
@@ -25,6 +36,7 @@
     "FALTA PRC",
     "FALTA TABLA",
     "ERROR ESTRUCTURAL",
+    "ERROR VÍNCULO",
     "EN AUDITORÍA",
     "CON OBSERVACIONES",
     "VALIDADA",
