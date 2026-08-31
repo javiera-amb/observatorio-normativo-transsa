@@ -88,10 +88,11 @@
   }
 
   async function loadTablasNormativas() {
+    const release = "20260831-sistema-operativo-dei-1";
     try {
-      await loadScript("data/tablas_normativas_sharepoint.js?v=20260827-v1", "tablas-normativas-sharepoint-data");
-      await loadScript("tablas-normativas-ipt-v2.js?v=20260827-v1", "tablas-normativas-ipt-v2");
-      await loadScript("tablas-normativas-fuentes.js?v=20260827-v1", "tablas-normativas-fuentes");
+      await loadScript(`data/tablas_normativas_sharepoint.js?v=${release}`, "tablas-normativas-sharepoint-data");
+      await loadScript(`tablas-normativas-ipt-v2.js?v=${release}`, "tablas-normativas-ipt-v2");
+      await loadScript(`tablas-normativas-fuentes.js?v=${release}`, "tablas-normativas-fuentes");
     } catch (error) {
       console.error("No se pudo cargar Tablas Normativas IPT.", error);
     }
