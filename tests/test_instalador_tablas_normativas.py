@@ -8,6 +8,7 @@ class InstaladorTablasNormativasTests(unittest.TestCase):
         self.assertIn("Sistema Operativo DEI", text)
         self.assertIn("PRC_SQL2.xlsx", text)
         self.assertIn("NORMALIZADAS", text)
+        self.assertIn("estado_tablas_normativas.json", text)
         self.assertIn("schtasks.exe", text)
         self.assertNotIn("Azure", text)
         self.assertNotIn("Power Automate", text)
@@ -17,7 +18,8 @@ class InstaladorTablasNormativasTests(unittest.TestCase):
         self.assertIn("automation.tablas_normativas.runner", text)
         self.assertIn("tablas_normativas_codigo_aliases.json", text)
         self.assertIn("tablas_normativas_cobertura.json", text)
-        self.assertIn("estado_tablas_normativas.json", text)
+        self.assertIn('$state = [string]$config.state', text)
+        self.assertIn('"--state", $state', text)
 
 
 if __name__ == "__main__":
