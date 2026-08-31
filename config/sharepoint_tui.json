@@ -1,0 +1,10 @@
+{
+  "site": "https://transsa.sharepoint.com/sites/DEI",
+  "library": "Documentos compartidos",
+  "cartografia_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA",
+  "ipt_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional",
+  "capas_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/01_Capas_Territoriales",
+  "fuentes_tui_root": "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/01_Capas_Territoriales/FUENTES_TUI",
+  "mode": "cloud",
+  "local_sync_required": false
+}
