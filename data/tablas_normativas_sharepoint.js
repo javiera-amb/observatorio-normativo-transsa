@@ -28,51 +28,51 @@
       preservar_codigo_prc_por_defecto: true
     },
     archivos: [
-      "PRC_CHIGUAYANTE_35_CAMPOS.csv",
-      "PRC_CHILLAN_35_CAMPOS.csv",
-      "PRC_CHILLAN_VIEJO_35_CAMPOS.csv",
-      "PRC_COLINA_35_CAMPOS.csv",
-      "PRC_CONCEPCIÓN_35_CAMPOS.csv",
-      "PRC_COQUIMBO_35_CAMPOS.csv",
-      "PRC_COYHAIQUE_35_CAMPOS.csv",
-      "PRC_ESTACION_CENTRAL_35_CAMPOS.csv",
-      "PRC_FRUTILLAR_35_CAMPOS.csv",
-      "PRC_HUECHURABA_35_CAMPOS.csv",
-      "PRC_INDEPENDENCIA_35_CAMPOS.csv",
-      "PRC_IQUIQUE_35_CAMPOS.csv",
-      "PRC_LA_CISTERNA_35_CAMPOS.csv",
-      "PRC_LA_FLORIDA_35_CAMPOS.csv",
-      "PRC_LA_REINA_35_CAMPOS.csv",
-      "PRC_LA_SERENA_35_CAMPOS.csv",
-      "PRC_LAS_CONDES_35_CAMPOS.csv",
-      "PRC_LO_BARNECHEA_35_CAMPOS.csv",
-      "PRC_MACHALÍ_35_CAMPOS.csv",
-      "PRC_MACUL_35_CAMPOS.csv",
-      "PRC_MAIPU_35_CAMPOS.csv",
-      "PRC_MELIPILLA_35_CAMPOS.csv",
-      "PRC_ÑUÑOA_35_CAMPOS.csv",
-      "PRC_OSORNO_35_CAMPOS.csv",
-      "PRC_PEÑALOLEN_35_CAMPOS.csv",
-      "PRC_PROVIDENCIA_35_CAMPOS.csv",
-      "PRC_PUDAHUEL_35_CAMPOS.csv",
-      "PRC_PUENTE_ALTO_35_CAMPOS.csv",
-      "PRC_PUERTO_MONTT_35_CAMPOS.csv",
-      "PRC_PUERTO_OCTAY_35_CAMPOS.csv",
-      "PRC_PUNTA_ARENAS_35_CAMPOS.csv",
-      "PRC_QUILPUE_35_CAMPOS.csv",
-      "PRC_QUINTA_NORMAL_35_CAMPOS.csv",
-      "PRC_RANCAGUA_35_CAMPOS.csv",
-      "PRC_RECOLETA_35_CAMPOS.csv",
-      "PRC_RENCA_35_CAMPOS.csv",
-      "PRC_SAN_JOAQUIN_35_CAMPOS.csv",
-      "PRC_SAN_MIGUEL_35_CAMPOS.csv",
-      "PRC_SAN_PEDRO_DE_LA_PAZ_35_CAMPOS.csv",
-      "PRC_SANTIAGO_35_CAMPOS.csv",
-      "PRC_TALCA_35_CAMPOS.csv",
-      "PRC_TEMUCO_35_CAMPOS.csv",
-      "PRC_VALDIVIA_35_CAMPOS.csv",
-      "PRC_VINA_DEL_MAR_35_CAMPOS.csv",
-      "PRC_VITACURA_35_CAMPOS.csv"
+      "PRC_CHIGUAYANTE_35_CAMPOS.csv","PRC_CHILLAN_35_CAMPOS.csv","PRC_CHILLAN_VIEJO_35_CAMPOS.csv",
+      "PRC_COLINA_35_CAMPOS.csv","PRC_CONCEPCIÓN_35_CAMPOS.csv","PRC_COQUIMBO_35_CAMPOS.csv",
+      "PRC_COYHAIQUE_35_CAMPOS.csv","PRC_ESTACION_CENTRAL_35_CAMPOS.csv","PRC_FRUTILLAR_35_CAMPOS.csv",
+      "PRC_HUECHURABA_35_CAMPOS.csv","PRC_INDEPENDENCIA_35_CAMPOS.csv","PRC_IQUIQUE_35_CAMPOS.csv",
+      "PRC_LA_CISTERNA_35_CAMPOS.csv","PRC_LA_FLORIDA_35_CAMPOS.csv","PRC_LA_REINA_35_CAMPOS.csv",
+      "PRC_LA_SERENA_35_CAMPOS.csv","PRC_LAS_CONDES_35_CAMPOS.csv","PRC_LO_BARNECHEA_35_CAMPOS.csv",
+      "PRC_MACHALÍ_35_CAMPOS.csv","PRC_MACUL_35_CAMPOS.csv","PRC_MAIPU_35_CAMPOS.csv","PRC_MELIPILLA_35_CAMPOS.csv",
+      "PRC_ÑUÑOA_35_CAMPOS.csv","PRC_OSORNO_35_CAMPOS.csv","PRC_PEÑALOLEN_35_CAMPOS.csv",
+      "PRC_PROVIDENCIA_35_CAMPOS.csv","PRC_PUDAHUEL_35_CAMPOS.csv","PRC_PUENTE_ALTO_35_CAMPOS.csv",
+      "PRC_PUERTO_MONTT_35_CAMPOS.csv","PRC_PUERTO_OCTAY_35_CAMPOS.csv","PRC_PUNTA_ARENAS_35_CAMPOS.csv",
+      "PRC_QUILPUE_35_CAMPOS.csv","PRC_QUINTA_NORMAL_35_CAMPOS.csv","PRC_RANCAGUA_35_CAMPOS.csv",
+      "PRC_RECOLETA_35_CAMPOS.csv","PRC_RENCA_35_CAMPOS.csv","PRC_SAN_JOAQUIN_35_CAMPOS.csv",
+      "PRC_SAN_MIGUEL_35_CAMPOS.csv","PRC_SAN_PEDRO_DE_LA_PAZ_35_CAMPOS.csv","PRC_SANTIAGO_35_CAMPOS.csv",
+      "PRC_TALCA_35_CAMPOS.csv","PRC_TEMUCO_35_CAMPOS.csv","PRC_VALDIVIA_35_CAMPOS.csv",
+      "PRC_VINA_DEL_MAR_35_CAMPOS.csv","PRC_VITACURA_35_CAMPOS.csv"
     ]
   };
+
+  function refreshOfficialRouteUi() {
+    const section = document.getElementById("module-tablas-normativas");
+    if (!section) return false;
+    const cfg = window.TABLAS_NORMATIVAS_SHAREPOINT;
+    const banner = section.querySelector(".tn-banner");
+    if (banner) {
+      banner.innerHTML = `<strong>Canal oficial:</strong> ${cfg.canal_oficial} · <strong>Maestro vigente:</strong> ${cfg.maestro_vigente} · <strong>Entrada:</strong> ${cfg.carpeta_entrada} · <strong>Salidas:</strong> ${cfg.carpeta_salida_normalizadas} y ${cfg.carpeta_salida_qa}. <span style="display:block;margin-top:6px;opacity:.78">Ruta: ${cfg.ruta_base}</span>`;
+    }
+    const box = section.querySelector(".tn-folder-box");
+    if (box) {
+      const title = box.querySelector("strong");
+      const help = box.querySelector(".tn-subtle");
+      if (title) title.textContent = "Auditoría local opcional";
+      if (help) help.innerHTML = `El flujo productivo oficial parte desde <b>${cfg.maestro_vigente}</b> en SharePoint. Usa este selector sólo para pruebas o auditorías puntuales en el navegador; no es necesario para la producción oficial.`;
+    }
+    const status = section.querySelector("#tnFolderStatus");
+    if (status && !status.dataset.officialRouteApplied) {
+      status.innerHTML = `SharePoint oficial registrado: <strong>${cfg.maestro_vigente}</strong> + ${(cfg.archivos || []).length} archivos comunales de referencia. Las salidas productivas se almacenan en ${cfg.carpeta_salida_normalizadas} y el QA en ${cfg.carpeta_salida_qa}.`;
+      status.dataset.officialRouteApplied = "1";
+    }
+    return true;
+  }
+
+  if (!refreshOfficialRouteUi()) {
+    const observer = new MutationObserver(() => {
+      if (refreshOfficialRouteUi()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
 })();
