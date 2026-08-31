@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-31",
+  "policy": {
+    "source_truth": "Fuente normativa oficial vigente",
+    "baseline": "PRC_SQL2.xlsx",
+    "one_row_per_polygon": true,
+    "preserve_row_count_and_order": true,
+    "preserve_codigo_prc_by_default": true,
+    "no_spatial_inference_without_geometry": true
+  },
+  "source_checks": [
+    {
+      "id": "pen-ie-industria-800",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "I.E", "SUB_PREDIAL": 800},
+      "expected": {
+        "ESPECIF_GENERAL": "ACTIVIDADES PRODUCTIVAS - INFRAESTRUCTURA",
+        "ESPECIF_ESPECIF": "ACTIVIDADES PRODUCTIVAS",
+        "UPERM": "INDUSTRIA Y ALMACENAMIENTO INOFENSIVO; TRANSPORTE CON LA EXCEPCION DE LOS EXPRESAMENTE INDICADOS COMO EXCLUIDOS",
+        "SUB_PREDIAL": 800,
+        "CONSTRUCCION": 1.5,
+        "OCUPACION": 0.7,
+        "AGRUPAMIENTO": "AISLADO",
+        "ANTEJARDIN": 5
+      },
+      "auto_apply_fields": ["ESPECIF_GENERAL", "ESPECIF_ESPECIF", "UPERM"],
+      "confidence": "ALTA",
+      "source": "Municipalidad de Peñalolén - Zona I.E.",
+      "page": "1",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20IE.pdf",
+      "reason": "La unidad de 800 m2 corresponde a Industria y Almacenamiento Inofensivo."
+    },
+    {
+      "id": "pen-ie-equip-regional-2000",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "I.E", "SUB_PREDIAL": 2000},
+      "expected": {
+        "ESPECIF_GENERAL": "EQUIPAMIENTO - INFRAESTRUCTURA",
+        "ESPECIF_ESPECIF": "EQUIPAMIENTO",
+        "UPERM": "EQUIPAMIENTO CON LA EXCEPCION DE LOS EXPRESAMENTE INDICADOS COMO EXCLUIDOS; TRANSPORTE CON LA EXCEPCION DE LOS EXPRESAMENTE INDICADOS COMO EXCLUIDOS",
+        "SUB_PREDIAL": 2000,
+        "CONSTRUCCION": 1,
+        "OCUPACION": 0.5,
+        "AGRUPAMIENTO": "AISLADO",
+        "ANTEJARDIN": 5
+      },
+      "auto_apply_fields": ["ESPECIF_GENERAL", "ESPECIF_ESPECIF", "UPERM"],
+      "confidence": "ALTA",
+      "source": "Municipalidad de Peñalolén - Zona I.E.",
+      "page": "1",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Zona%20IE.pdf",
+      "reason": "La unidad de 2.000 m2 corresponde a Equipamiento de escala regional e interurbana."
+    },
+    {
+      "id": "pen-sm2-equipamiento-600",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "SM-2", "SUB_PREDIAL": 600},
+      "expected": {"SUB_PREDIAL": 600, "CONSTRUCCION": 1.4, "OCUPACION": 0.7},
+      "auto_apply_fields": ["CONSTRUCCION"],
+      "confidence": "ALTA",
+      "source": "Municipalidad de Peñalolén - Zona S.M.2",
+      "page": "22",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Ordenanza_Plan_Regulador_Comunal.pdf",
+      "reason": "Equipamiento regional/interurbano de S.M.2 tiene constructibilidad máxima 1,40."
+    },
+    {
+      "id": "pen-sm2-industria",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "SM-2", "ESPECIF_GENERAL": "ACTIVIDADES PRODUCTIVAS"},
+      "expected": {
+        "SUB_PREDIAL": 1500,
+        "CONSTRUCCION": 1,
+        "OCUPACION": 0.7,
+        "AGRUPAMIENTO": "AISLADO",
+        "ANTEJARDIN": 10
+      },
+      "auto_apply_fields": ["SUB_PREDIAL", "AGRUPAMIENTO", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Municipalidad de Peñalolén - Zona S.M.2",
+      "page": "22",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/Ordenanza_Plan_Regulador_Comunal.pdf",
+      "reason": "Industria y Almacenamiento Inofensivo en S.M.2 exige 1.500 m2, agrupamiento aislado y antejardín 10 m."
+    },
+    {
+      "id": "pen-eq-equipamiento-regional-comunal",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ", "ESPECIF_GENERAL": "EQUIPAMIENTO - INFRAESTRUCTURA", "OCUPACION": 0.1},
+      "expected": {"SUB_PREDIAL": 5000, "CONSTRUCCION": 0.2, "OCUPACION": 0.1, "AGRUPAMIENTO": "AISLADO", "ANTEJARDIN": 10},
+      "auto_apply_fields": ["SUB_PREDIAL"],
+      "confidence": "ALTA",
+      "source": "Municipalidad de Peñalolén - Zona EQ",
+      "page": "Condiciones de subdivisión y edificación",
+      "source_url": "https://www.penalolen.cl/transparencia/informes/Plan%20regulador/respaldo/Zona%20EQ.pdf",
+      "reason": "Equipamiento regional/interurbano y comunal en EQ exige superficie predial mínima de 5.000 m2."
+    },
+    {
+      "id": "pen-r11-equipamiento",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R11", "ESPECIF_ESPECIF": "EQUIPAMIENTO"},
+      "expected": {"CODIGO_PRC": "15152-R11", "SUB_PREDIAL": 4000, "CONSTRUCCION": 0.4, "OCUPACION": 0.4},
+      "auto_apply_fields": ["CODIGO_PRC"],
+      "allow_codigo_prc_change": true,
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Art. 31",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "La unidad fue incorporada como Zona R11 y sus parámetros oficiales son 4.000 m2, ocupación 0,40 y constructibilidad 0,40."
+    },
+    {
+      "id": "pen-r10-fecha-fuente",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R10"},
+      "expected": {"FUENTE": "DIARIO OFICIAL 28.09.18"},
+      "auto_apply_fields": ["FUENTE"],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N° 1200/4405",
+      "page": "Publicación Diario Oficial 28-09-2018",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1123459",
+      "reason": "La modificación que incorpora R10 fue publicada el 28 de septiembre de 2018."
+    },
+    {
+      "id": "pen-r4-residencial",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R4", "ESPECIF_ESPECIF": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 300, "SUB_PREDIAL": 2000, "CONSTRUCCION": 0.2, "OCUPACION": 0.2, "PISOS_MAX": 4, "ALTURA_MAX": 14},
+      "auto_apply_fields": [],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Zona R4",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "Comparación directa con las condiciones oficiales de la Zona R4."
+    },
+    {
+      "id": "pen-r4-equipamiento",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R4", "ESPECIF_ESPECIF": "EQUIPAMIENTO"},
+      "expected": {"SUB_PREDIAL": 2000, "CONSTRUCCION": 0.5, "OCUPACION": 0.5, "PISOS_MAX": 4, "ALTURA_MAX": 14},
+      "auto_apply_fields": [],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Zona R4",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "Comparación directa con las condiciones oficiales de la Zona R4."
+    },
+    {
+      "id": "pen-eq2",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ-2"},
+      "expected": {"SUB_PREDIAL": 10000, "CONSTRUCCION": 0.25, "OCUPACION": 0.25},
+      "auto_apply_fields": [],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo",
+      "page": "Zona EQ-2",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "Comparación directa con los parámetros oficiales de EQ-2."
+    },
+    {
+      "id": "pen-eq4-ocupacion",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ-4"},
+      "expected": {"OCUPACION": 0.2},
+      "auto_apply_fields": ["OCUPACION"],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo / PRMS Art. 5.2.4.1",
+      "page": "Zona EQ-4 - ocupación máxima 20%",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "La norma establece que la ocupación máxima de suelo no puede sobrepasar el 20% de la superficie total del predio."
+    },
+    {
+      "id": "pen-eq5",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "EQ-5"},
+      "expected": {"SUB_PREDIAL": 3, "CONSTRUCCION": 0.1, "OCUPACION": 0.1},
+      "auto_apply_fields": [],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N° 1200/3504 - Peñalolén Nuevo / PRMS Art. 8.2.1.2",
+      "page": "Zona EQ-5",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "La fuente expresa subdivisión predial mínima 3,00 ha y coeficientes 0,10. El valor 3 se conserva sin convertir silenciosamente a m2."
+    },
+    {
+      "id": "pen-r5",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R5"},
+      "expected": {"DENS_HAB_HA": 50, "SUB_PREDIAL": 800, "CONSTRUCCION": 0.5, "OCUPACION": 0.2, "ALTURA_MAX": 9, "AGRUPAMIENTO": "AISLADO", "ANTEJARDIN": 5},
+      "auto_apply_fields": [],
+      "confidence": "ALTA",
+      "source": "Decreto N° 2100/1689",
+      "page": "Zona R5",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=238368",
+      "reason": "Comparación directa con los parámetros oficiales de R5."
+    },
+    {
+      "id": "pen-r7-vivienda",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R7", "UPERM": "VIVIENDA"},
+      "expected": {"DENS_HAB_HA": 70, "SUB_PREDIAL": 600, "CONSTRUCCION": 0.5, "OCUPACION": 0.3, "PISOS_MAX": 2, "ALTURA_MAX": 9, "AGRUPAMIENTO": "AISLADO", "ANTEJARDIN": 5},
+      "auto_apply_fields": [],
+      "confidence": "ALTA",
+      "source": "Decreto N° 2100/1689",
+      "page": "Zona R7",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=238368",
+      "reason": "Comparación directa con los parámetros oficiales de vivienda en R7."
+    },
+    {
+      "id": "pen-r7-area-verde",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "R7", "UPERM": "AREAS VERDES"},
+      "expected": {"SUB_PREDIAL": 300},
+      "auto_apply_fields": [],
+      "confidence": "ALTA",
+      "source": "Decreto N° 2100/1689",
+      "page": "Zona R7 - Áreas Verdes",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=238368",
+      "reason": "La unidad de áreas verdes en R7 establece superficie predial mínima de 300 m2."
+    }
+  ],
+  "review_rules": [
+    {
+      "id": "pen-sql2-art-5233",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "ART 5.2.3.3."},
+      "field": "ZONA",
+      "status": "POSIBLE ERROR",
+      "confidence": "MEDIA",
+      "source": "PRMS Art. 5.2.3.3 + modificación Peñalolén Nuevo 2017",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "SQL2 usa el artículo como nombre de zona. Debe resolverse con el ámbito espacial del polígono antes de decidir si corresponde mantener la categoría PRMS o una zona local. No se modifica automáticamente ZONA ni CODIGO_PRC."
+    },
+    {
+      "id": "pen-sql2-art-5241",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "ART 5.2.4.1."},
+      "field": "ZONA",
+      "status": "POSIBLE ERROR",
+      "confidence": "MEDIA",
+      "source": "PRMS Art. 5.2.4.1 + modificación Peñalolén Nuevo 2017",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "Parte del ámbito fue incorporado como EQ-4. Sin geometría no puede asumirse que toda fila del artículo deba renombrarse."
+    },
+    {
+      "id": "pen-sql2-art-522",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "ART 5.2.2."},
+      "field": "ZONA",
+      "status": "POSIBLE ERROR",
+      "confidence": "MEDIA",
+      "source": "PRMS Art. 5.2.2 + modificación Peñalolén Nuevo 2017",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "El artículo identifica la regulación aplicable, pero no prueba por sí solo cuál debe ser el identificador productivo del polígono."
+    },
+    {
+      "id": "pen-sql2-art1-trans",
+      "comuna": "PEÑALOLÉN",
+      "where": {"ZONA": "ART 1 Trans."},
+      "field": "ZONA",
+      "status": "POSIBLE ERROR",
+      "confidence": "MEDIA",
+      "source": "PRMS Artículo 1° transitorio + modificación Peñalolén Nuevo 2017",
+      "source_url": "https://www.bcn.cl/leychile/navegar?i=1106909",
+      "reason": "Parte del ámbito fue incorporado como EQ-3. La decisión requiere identificar espacialmente el polígono; se conserva SQL2 hasta entonces."
+    }
+  ]
+}
