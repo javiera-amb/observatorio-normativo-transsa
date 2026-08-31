@@ -36,19 +36,21 @@ class TablasNormativasPairingTests(unittest.TestCase):
         finally:
             connection.close()
 
-    def _make_table(self, path: Path, codes: list[str], comuna: str = "PRUEBA"):
+    def _make_table(self, path: Path, codes: list[str], comuna: str = "PRUEBA", fields=None):
+        fields = list(fields or FIELDS)
         with path.open("w", encoding="utf-8-sig", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=FIELDS)
+            writer = csv.DictWriter(handle, fieldnames=fields)
             writer.writeheader()
             for index, code in enumerate(codes, start=1):
-                row = {field: "" for field in FIELDS}
+                row = {field: "" for field in fields}
                 row.update({
                     "COMUNA": comuna,
                     "RIALCOMSII": "99999",
                     "CODIGO_PRC": code,
                     "ZONA": code,
-                    "SUB_PREDIAL": 100 + index,
                 })
+                if "SUB_PREDIAL" in fields:
+                    row["SUB_PREDIAL"] = 100 + index
                 writer.writerow(row)
 
     def test_aprueba_varios_poligonos_y_variantes_por_codigo(self):
@@ -113,6 +115,28 @@ class TablasNormativasPairingTests(unittest.TestCase):
                 codigo_aliases={"15152-ART 5.2.2. PRMS": "15152-ART 5.2.2."},
             )
             self.assertTrue(result["valid"])
+
+    def test_campo_faltante_solo_se_permite_con_excepcion_explicita(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            gpkg = root / "PRC_PRUEBA.gpkg"
+            table = root / "PRC_PRUEBA.csv"
+            fields = [field for field in FIELDS if field != "OCUPACION_SUP"]
+            self._make_gpkg(gpkg, ["Z1"])
+            self._make_table(table, ["Z1"], fields=fields)
+
+            blocked = validate_prc_table_pair(gpkg, table)
+            self.assertFalse(blocked["valid"])
+            self.assertIn("OCUPACION_SUP", blocked["blocking_missing_fields"])
+
+            allowed = validate_prc_table_pair(
+                gpkg,
+                table,
+                allowed_missing_fields=["OCUPACION_SUP"],
+            )
+            self.assertTrue(allowed["valid"])
+            self.assertEqual(allowed["repairable_missing_fields"], ["OCUPACION_SUP"])
+            self.assertEqual(allowed["blocking_missing_fields"], [])
 
     def test_bloquea_tabla_de_otra_comuna(self):
         with tempfile.TemporaryDirectory() as tmp:
