@@ -18,6 +18,9 @@ from . import engine_v2
 from .pairing import validate_prc_table_pair
 
 
+VARIANT_FIELDS = ["TIPO_VARIANTE", "MOTIVO_VARIANTE"]
+
+
 def _key(value: Any) -> str:
     text = unicodedata.normalize("NFD", str(value or ""))
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
@@ -51,32 +54,93 @@ def _default_state_path() -> Path:
     return root / "TUI_DEI" / "estado_tablas_normativas.json"
 
 
+def _worksheet_data(sheet: Any) -> tuple[list[str], list[dict[str, Any]]]:
+    iterator = sheet.iter_rows(values_only=True)
+    try:
+        headers = [str(value or "").strip() for value in next(iterator)]
+    except StopIteration:
+        return [], []
+    rows: list[dict[str, Any]] = []
+    for values in iterator:
+        if not any(value not in (None, "") for value in values):
+            continue
+        rows.append({headers[i]: values[i] if i < len(values) else "" for i in range(len(headers))})
+    return headers, rows
+
+
+def _canonical_master_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "TRUE" if value else "FALSE"
+    if isinstance(value, (int, float)):
+        number = float(value)
+        return str(int(number)) if number.is_integer() else format(number, ".12g")
+    text = re.sub(r"\s+", " ", str(value).strip())
+    if re.fullmatch(r"-?\d+(?:[.,]\d+)?", text):
+        number = float(text.replace(",", "."))
+        return str(int(number)) if number.is_integer() else format(number, ".12g")
+    return text
+
+
+def _master_sheet_signature(headers: list[str], rows: list[dict[str, Any]]) -> str:
+    """Firma independiente del orden y de columnas de exportación.
+
+    Incluye los 35 campos productivos más la metadata de variante cuando existe. Dos hojas
+    con igual contenido normativo pero distinto orden/tipo numérico se consideran equivalentes.
+    """
+    fields = [*base.FIELDS, *VARIANT_FIELDS]
+    canonical_rows = [
+        tuple(_canonical_master_value(row.get(field, "")) for field in fields)
+        for row in rows
+    ]
+    payload = json.dumps(sorted(canonical_rows), ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _sheet_preference(item: dict[str, Any]) -> tuple[int, int, int, str]:
+    allowed = set(base.FIELDS) | set(VARIANT_FIELDS)
+    extras = len([header for header in item["headers"] if header not in allowed])
+    name = str(item["sheet"])
+    return (
+        extras,
+        0 if _key(name).startswith("PRC") else 1,
+        1 if _key(name).startswith("HOJA") else 0,
+        name,
+    )
+
+
 def _master_index(master_path: Path) -> dict[str, dict[str, Any]]:
     workbook = load_workbook(master_path, read_only=True, data_only=True)
-    index: dict[str, dict[str, Any]] = {}
+    groups: dict[str, list[dict[str, Any]]] = {}
     for sheet_name in workbook.sheetnames:
-        sheet = workbook[sheet_name]
-        iterator = sheet.iter_rows(values_only=True)
-        try:
-            headers = [str(value or "").strip() for value in next(iterator)]
-        except StopIteration:
+        headers, rows = _worksheet_data(workbook[sheet_name])
+        if "COMUNA" not in headers or not rows:
             continue
-        if "COMUNA" not in headers:
-            continue
-        comuna_index = headers.index("COMUNA")
-        first_comuna = ""
-        for row in iterator:
-            value = row[comuna_index] if comuna_index < len(row) else ""
-            if value not in (None, ""):
-                first_comuna = str(value).strip()
-                break
+        communes = [str(row.get("COMUNA", "") or "").strip() for row in rows]
+        first_comuna = next((value for value in communes if value), "")
         if not first_comuna:
             continue
-        key = _key(first_comuna)
-        if key in index:
-            index[key].setdefault("duplicates", []).append(sheet_name)
-        else:
-            index[key] = {"comuna": first_comuna, "sheet": sheet_name, "duplicates": []}
+        groups.setdefault(_key(first_comuna), []).append({
+            "comuna": first_comuna,
+            "sheet": sheet_name,
+            "headers": headers,
+            "rows": rows,
+            "signature": _master_sheet_signature(headers, rows),
+        })
+
+    index: dict[str, dict[str, Any]] = {}
+    for key, candidates in groups.items():
+        candidates = sorted(candidates, key=_sheet_preference)
+        chosen = candidates[0]
+        signatures = {item["signature"] for item in candidates}
+        equivalent = len(signatures) == 1
+        index[key] = {
+            "comuna": chosen["comuna"],
+            "sheet": chosen["sheet"],
+            "duplicates": [] if equivalent else [item["sheet"] for item in candidates[1:]],
+            "equivalent_sheets": [item["sheet"] for item in candidates] if len(candidates) > 1 and equivalent else [],
+        }
     return index
 
 
@@ -98,18 +162,7 @@ def _discover_prc(prc_root: Path) -> list[dict[str, Any]]:
 
 def _read_master_sheet(master_path: Path, sheet_name: str) -> tuple[list[str], list[dict[str, Any]]]:
     workbook = load_workbook(master_path, read_only=True, data_only=True)
-    sheet = workbook[sheet_name]
-    iterator = sheet.iter_rows(values_only=True)
-    try:
-        headers = [str(value or "").strip() for value in next(iterator)]
-    except StopIteration:
-        return [], []
-    rows: list[dict[str, Any]] = []
-    for values in iterator:
-        if not any(value not in (None, "") for value in values):
-            continue
-        rows.append({headers[i]: values[i] if i < len(values) else "" for i in range(len(headers))})
-    return headers, rows
+    return _worksheet_data(workbook[sheet_name])
 
 
 def _aliases_for(catalog: dict[str, Any], comuna: str) -> dict[str, str]:
@@ -130,6 +183,32 @@ def _coverage_for(catalog: dict[str, Any], comuna: str) -> str:
                 return item.upper()
             return str((item or {}).get("estado", "PENDIENTE")).upper()
     return "PENDIENTE"
+
+
+def _structure_for(catalog: dict[str, Any], comuna: str) -> dict[str, Any]:
+    registry = catalog.get("por_comuna", {}) if isinstance(catalog, dict) else {}
+    target = _key(comuna)
+    for name, item in registry.items():
+        if _key(name) == target:
+            return dict(item or {})
+    return {}
+
+
+def _repair_approved_missing_fields(
+    headers: list[str],
+    rows: list[dict[str, Any]],
+    approved_fields: list[str],
+) -> tuple[list[str], list[dict[str, Any]]]:
+    approved = [field for field in approved_fields if field in base.FIELDS and field not in headers]
+    if not approved:
+        return headers, rows
+    repaired_rows = [dict(row) for row in rows]
+    for row in repaired_rows:
+        for field in approved:
+            row[field] = ""
+    extras = [header for header in headers if header not in base.FIELDS]
+    repaired_headers = [field for field in base.FIELDS if field in headers or field in approved] + extras
+    return repaired_headers, repaired_rows
 
 
 def _blocking_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -176,6 +255,7 @@ def run(
     conditional_rules_path: str | Path | None = None,
     aliases_path: str | Path | None = None,
     coverage_path: str | Path | None = None,
+    structure_path: str | Path | None = None,
     state_path: str | Path | None = None,
 ) -> dict[str, Any]:
     prc_root = Path(prc_root)
@@ -189,12 +269,13 @@ def run(
     conditional_catalog = engine_v2.load_conditional_catalog(conditional_rules_path)
     aliases_catalog = _load_json(aliases_path, {"por_comuna": {}})
     coverage_catalog = _load_json(coverage_path, {"por_comuna": {}})
+    structure_catalog = _load_json(structure_path, {"por_comuna": {}})
     master = _master_index(master_path)
     master_hash = _sha256(master_path)
 
     now = datetime.now(timezone.utc).isoformat()
     result: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "processed_at": now,
         "master": str(master_path),
         "master_sha256": master_hash,
@@ -225,7 +306,7 @@ def run(
         if master[key].get("duplicates"):
             item["estado"] = "ERROR ESTRUCTURAL"
             item["errores"].append(
-                "La comuna aparece en más de una hoja del maestro: "
+                "La comuna aparece en hojas con contenido normativo distinto: "
                 + ", ".join([master[key]["sheet"], *master[key]["duplicates"]])
             )
             continue
@@ -233,21 +314,26 @@ def run(
         gpkg_path: Path = discovered["gpkg"]
         sheet = master[key]["sheet"]
         aliases = _aliases_for(aliases_catalog, comuna)
+        structure = _structure_for(structure_catalog, comuna)
+        approved_missing = list(structure.get("campos_faltantes_reparables", []) or [])
         pair = validate_prc_table_pair(
             gpkg_path,
             master_path,
             expected_comuna=master[key]["comuna"],
             table_sheet=sheet,
             codigo_aliases=aliases,
+            allowed_missing_fields=approved_missing,
         )
         item.update({
             "hoja": sheet,
+            "hojas_equivalentes": master[key].get("equivalent_sheets", []),
             "poligonos": pair.get("polygon_count"),
             "filas_normativas": pair.get("row_count"),
             "codigos_prc": pair.get("distinct_polygon_codes"),
             "codigos_tabla": pair.get("distinct_table_codes"),
             "sin_normativa": pair.get("missing_in_table", []),
             "sin_geometria": pair.get("orphan_table_codes", []),
+            "campos_estructurales_reparables": pair.get("repairable_missing_fields", []),
         })
         if not pair["valid"]:
             item["estado"] = "ERROR VÍNCULO"
@@ -263,7 +349,11 @@ def run(
 
         gpkg_hash = _sha256(gpkg_path)
         fingerprint = hashlib.sha256(
-            (gpkg_hash + master_hash + sheet + json.dumps(aliases, sort_keys=True, ensure_ascii=False)).encode("utf-8")
+            (
+                gpkg_hash + master_hash + sheet
+                + json.dumps(aliases, sort_keys=True, ensure_ascii=False)
+                + json.dumps(structure, sort_keys=True, ensure_ascii=False)
+            ).encode("utf-8")
         ).hexdigest()
         item["fingerprint"] = fingerprint
         prior = previous.get("comunas", {}).get(key, {})
@@ -275,6 +365,7 @@ def run(
             continue
 
         headers, rows = _read_master_sheet(master_path, sheet)
+        headers, rows = _repair_approved_missing_fields(headers, rows, approved_missing)
         audit = engine_v2.audit_table(headers, rows, exact_catalog, conditional_catalog)
         blocking = _blocking_findings(audit["findings"])
         item.update({
@@ -315,6 +406,7 @@ def main() -> int:
     parser.add_argument("--conditional-rules", default="config/tablas_normativas_condicionales.json")
     parser.add_argument("--aliases", default="config/tablas_normativas_codigo_aliases.json")
     parser.add_argument("--coverage", default="config/tablas_normativas_cobertura.json")
+    parser.add_argument("--structure", default="config/tablas_normativas_estructura.json")
     parser.add_argument("--state")
     args = parser.parse_args()
 
@@ -326,6 +418,7 @@ def main() -> int:
         conditional_rules_path=args.conditional_rules,
         aliases_path=args.aliases,
         coverage_path=args.coverage,
+        structure_path=args.structure,
         state_path=args.state,
     )
     counts: dict[str, int] = {}
