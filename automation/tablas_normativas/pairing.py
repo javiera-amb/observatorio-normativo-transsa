@@ -138,15 +138,13 @@ def validate_prc_table_pair(
     preferred_layer: str | None = None,
     table_sheet: str | None = None,
     codigo_aliases: dict[str, str] | None = None,
+    allowed_missing_fields: list[str] | tuple[str, ...] | set[str] | None = None,
 ) -> dict[str, Any]:
     """Valida que el PRC y su tabla normativa estén vinculados por CODIGO_PRC.
 
-    El modelo productivo permite:
-    - varios polígonos con un mismo CODIGO_PRC;
-    - varias filas normativas/variantes para un mismo CODIGO_PRC.
-
-    La cantidad de filas de la tabla se preserva, pero no tiene que igualar la cantidad de
-    entidades espaciales. Se bloquea la producción cuando algún código queda sin vínculo.
+    El modelo productivo permite varios polígonos y varias variantes normativas para un
+    mismo código. Una omisión estructural sólo deja de bloquear cuando está declarada de
+    forma explícita en ``allowed_missing_fields``; eso no inventa ni completa su valor.
     """
     prc_path = Path(prc_path)
     table_path = Path(table_path)
@@ -189,8 +187,11 @@ def validate_prc_table_pair(
         errors.append(f"La tabla corresponde a {commune}, no a {expected_comuna}.")
 
     missing_fields = [field for field in base.FIELDS if field not in headers]
-    if missing_fields:
-        errors.append("Faltan campos productivos obligatorios: " + ", ".join(missing_fields))
+    allowed_keys = {_key(field) for field in (allowed_missing_fields or [])}
+    repairable_missing_fields = [field for field in missing_fields if _key(field) in allowed_keys]
+    blocking_missing_fields = [field for field in missing_fields if _key(field) not in allowed_keys]
+    if blocking_missing_fields:
+        errors.append("Faltan campos productivos obligatorios: " + ", ".join(blocking_missing_fields))
 
     table_codes = [str(row.get("CODIGO_PRC", "") or "").strip() for row in rows]
     blank_polygon_codes = sum(not code for code in polygon_codes)
@@ -246,6 +247,8 @@ def validate_prc_table_pair(
         "orphan_table_codes": orphan_table,
         "productive_fields": len(base.FIELDS),
         "missing_fields": missing_fields,
+        "repairable_missing_fields": repairable_missing_fields,
+        "blocking_missing_fields": blocking_missing_fields,
         "link_field": "CODIGO_PRC",
         "relationship": "muchos polígonos ↔ CODIGO_PRC ↔ una o varias filas normativas",
         "contract": "PRC y tabla obligatorios; todas las filas se preservan; todo CODIGO_PRC debe resolver en ambos lados",
