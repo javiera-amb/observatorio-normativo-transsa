@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "default": "BLOQUEAR",
+    "nota": "Una columna productiva ausente sólo puede reconstruirse vacía si la comuna está declarada explícitamente. La excepción no inventa valores normativos y la comuna sigue requiriendo cobertura oficial completa antes de publicarse."
+  },
+  "por_comuna": {
+    "RENCA": {
+      "campos_faltantes_reparables": ["OCUPACION_SUP"],
+      "accion": "AGREGAR_VACIO_EN_SALIDA_DE_TRABAJO",
+      "motivo": "La hoja PRC_RENCA_SQL de PRC_SQL2 contiene 34 campos productivos y omite OCUPACION_SUP. Se conserva el maestro intacto y se reconstruye el campo vacío sólo para permitir la auditoría normativa.",
+      "requiere_fuente_para_publicar": true
+    }
+  }
+}
