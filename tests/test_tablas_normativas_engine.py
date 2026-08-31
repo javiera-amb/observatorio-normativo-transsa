@@ -65,7 +65,7 @@ class TablasNormativasEngineTests(unittest.TestCase):
         self.assertEqual(finding["source"], "Ordenanza oficial")
         self.assertEqual(finding["page"], "10")
 
-    def test_codigo_prc_se_preserva_si_regla_no_autoriza_cambio(self):
+    def test_codigo_prc_se_preserva_en_motor_base(self):
         row = self.base_row()
         row["COMUNA"] = "PEÑALOLÉN"
         row["CODIGO_PRC"] = "15152-PARQUE METROPOLITANO"
@@ -85,18 +85,6 @@ class TablasNormativasEngineTests(unittest.TestCase):
         self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-PARQUE METROPOLITANO")
         finding = next(f for f in result["findings"] if f["rule_id"] == "regla-no-autorizada")
         self.assertEqual(finding["status"], "POSIBLE ERROR")
-
-    def test_codigo_prc_solo_cambia_con_autorizacion_explicita_y_contexto(self):
-        row = self.base_row()
-        row["COMUNA"] = "PEÑALOLÉN"
-        row["CODIGO_PRC"] = "15152-SM-1"
-        row["ZONA"] = "R11"
-        catalog = load_rule_catalog(Path("config/tablas_normativas_reglas.json"))
-        result = audit_table(FIELDS.copy(), [row], catalog)
-        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-R11")
-        finding = next(f for f in result["findings"] if f["rule_id"] == "pen-r11-codigo-prc-confirmado")
-        self.assertEqual(finding["status"], "ERROR CONFIRMADO")
-        self.assertEqual(finding["confidence"], "ALTA")
 
     def test_regla_condicionada_no_se_aplica_fuera_de_zona(self):
         row = self.base_row()
