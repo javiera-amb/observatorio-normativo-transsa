@@ -1,8 +1,8 @@
-name: Actualizar IPT mensual
+name: Actualizar IPT semanal
 
 on:
   schedule:
-    - cron: "0 8 1 * *"
+    - cron: "0 7 * * 1"
       timezone: "America/Santiago"
   workflow_dispatch:
 
@@ -10,14 +10,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: actualizar-ipt-mensual
+  group: actualizar-ipt-semanal
   cancel-in-progress: false
 
 jobs:
   actualizar:
-    name: Revisar IPT de Chile
+    name: Revisar IPT y fuentes públicas de Chile
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - name: Descargar repositorio
@@ -31,15 +31,24 @@ jobs:
           cache-dependency-path: automation/requirements.txt
 
       - name: Instalar dependencias
-        run: pip install -r automation/requirements.txt
+        run: |
+          pip install -r automation/requirements.txt
+          pip install playwright
+          python -m playwright install --with-deps chromium
 
-      - name: Revisar actualizaciones IPT
+      - name: Sincronizar Portal IPT MINVU
+        run: python scripts/sincronizar_portal_ipt.py
+
+      - name: Barrido multifuente incremental semanal
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
-        run: python automation/actualizar_ipt_mensual.py
+        run: python automation/actualizar_ipt_semanal.py
 
-      - name: Actualizar vigencia cartográfica
+      - name: Refrescar seguimiento normativo nacional
+        run: python scripts/refrescar_seguimiento_publico.py
+
+      - name: Actualizar vigencia cartográfica complementaria
         run: python automation/actualizar_vigencia_cartografica.py
 
       - name: Validar portal
@@ -48,12 +57,15 @@ jobs:
       - name: Guardar cambios
         run: |
           if git diff --quiet; then
-            echo "No hay cambios nuevos."
+            echo "La revisión terminó sin cambios de archivos."
             exit 0
           fi
 
           git config user.name "Observatorio IPT Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/ipt_reportes.js data/vigencia_cartografica.js documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
-          git commit -m "Actualización IPT mensual $(date +'%Y-%m')"
+          git add \
+            data/actos_ipt.js data/actos_ipt_nacional_*.js data/actos_ipt_sync.json \
+            data/ipt_reportes.js data/seguimiento_normativo.js data/vigencia_cartografica.js \
+            documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
+          git commit -m "Actualización normativa semanal $(date +'%Y-%m-%d')"
           git push
