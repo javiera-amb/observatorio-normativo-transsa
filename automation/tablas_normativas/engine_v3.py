@@ -11,6 +11,7 @@ from . import engine_v2 as v2
 
 FIELDS = base.FIELDS
 _GROUPS = {"AISLADO", "PAREADO", "CONTINUO"}
+_BASE_SAME = v2._same
 
 
 def _group_tokens(value: Any) -> list[str] | None:
@@ -26,7 +27,7 @@ def _group_tokens(value: Any) -> list[str] | None:
 
 def _semantic_same(left: Any, right: Any) -> bool:
     """Compara valores normalizados y trata , ; / como equivalentes en AGRUPAMIENTO."""
-    if v2._same(left, right):
+    if _BASE_SAME(left, right):
         return True
     left_groups = _group_tokens(left)
     right_groups = _group_tokens(right)
