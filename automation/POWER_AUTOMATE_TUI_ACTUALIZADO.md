@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Cuando un integrante del equipo guarda en SharePoint/OneDrive un archivo final cuyo nombre termina en:
+Cuando un integrante del equipo guarda en SharePoint un archivo final cuyo nombre termina en:
 
 `_ACTUALIZADO.gpkg`
 
@@ -12,11 +12,27 @@ TUI debe cambiar automáticamente el estado correspondiente a **Actualizado**.
 - Si está dentro de `PRI`, `PRM`, `PRMS`, `PRMV`, `PRMC`, `PRMVAL` u otra variante metropolitana/intercomunal admitida, se actualiza el **instrumento PRI/PRM**.
 - El QA continúa siendo un control separado.
 
+## Principio de operación
+
+Este flujo es **100% cloud**. La operación productiva no depende de BAT, rutas `C:\\`, OneDrive sincronizado ni del computador de una persona.
+
+```text
+SharePoint
+  ↓
+Power Automate
+  ↓
+repository_dispatch
+  ↓
+GitHub Actions
+  ↓
+TUI
+```
+
+Los BAT y scripts locales, si existen, se consideran herramientas opcionales de diagnóstico/desarrollo y nunca una dependencia productiva.
+
 ---
 
-## Flujo único recomendado
-
-### 1. Disparador SharePoint
+## 1. Disparador SharePoint
 
 Usar:
 
@@ -30,6 +46,12 @@ Biblioteca:
 
 `Documentos compartidos`
 
+Raíz operativa oficial:
+
+```text
+Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional
+```
+
 No restringir el disparador a una sola región. El filtro se hace dentro del flujo para cubrir todo `00_IPT_Nacional`.
 
 ---
@@ -38,13 +60,16 @@ No restringir el disparador a una sola región. El filtro se hace dentro del flu
 
 Continuar únicamente cuando se cumplan ambas condiciones:
 
-1. La ruta contiene `00_IPT_Nacional`.
+1. La ruta contiene `Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional`.
 2. El nombre del archivo termina exactamente en `_ACTUALIZADO.gpkg`.
 
 Expresión conceptual:
 
 ```text
-contains(Ruta, '00_IPT_Nacional')
+contains(
+  Ruta,
+  'Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional'
+)
 AND
 endsWith(NombreConExtension, '_ACTUALIZADO.gpkg')
 ```
@@ -125,7 +150,7 @@ Payload:
 Región y tipo se derivan automáticamente desde una ruta como:
 
 ```text
-00_IPT_Nacional/IPT_Metropolitana/PRMS/IPT_13_PRMS_Santiago_ACTUALIZADO.gpkg
+Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/IPT_Metropolitana/PRMS/IPT_13_PRMS_Santiago_ACTUALIZADO.gpkg
 ```
 
 Workflow receptor:
@@ -140,7 +165,7 @@ Usar el conector GitHub y la acción equivalente a:
 
 **Create a repository dispatch event**
 
-Repositorio:
+Repositorio oficial:
 
 ```text
 javiera-amb/observatorio-normativo-transsa
@@ -190,8 +215,6 @@ TUI · PRMS Santiago = Actualizado
 
 El archivo `_ACTUALIZADO.gpkg` acredita el **estado de producción**, no el QA.
 
-Orden lógico:
-
 ```text
 Pendiente
   ↓
@@ -208,20 +231,21 @@ Enviado
 
 ---
 
-## Estructura de almacenamiento que se respeta
-
-No se crean carpetas nuevas ni se trasladan archivos.
+## Estructura oficial respetada
 
 ```text
-00_IPT_Nacional/
-└── IPT_<Region>/
-    ├── LU/
-    ├── PRC/
-    ├── PRI/        # cuando exista
-    ├── PRM/        # cuando exista
-    ├── PRMS/       # cuando exista
-    ├── PRMV/       # cuando exista
-    └── ...
+Sistema Operativo DEI/
+└── 02_PRODUCCION_DEI/
+    └── 01_CARTOGRAFIA/
+        └── 00_IPT_Nacional/
+            └── IPT_<Region>/
+                ├── LU/
+                ├── PRC/
+                ├── PRI/        # cuando exista
+                ├── PRM/        # cuando exista
+                ├── PRMS/       # cuando exista
+                ├── PRMV/       # cuando exista
+                └── ...
 ```
 
-TUI detecta y sigue la estructura existente de Cartografía Transsa.
+TUI consume eventos de SharePoint y no requiere acceso a una carpeta local sincronizada.
