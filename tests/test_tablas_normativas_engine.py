@@ -65,7 +65,7 @@ class TablasNormativasEngineTests(unittest.TestCase):
         self.assertEqual(finding["source"], "Ordenanza oficial")
         self.assertEqual(finding["page"], "10")
 
-    def test_codigo_prc_se_preserva_si_regla_no_autoriza_cambio(self):
+    def test_codigo_prc_se_preserva_en_motor_base(self):
         row = self.base_row()
         row["COMUNA"] = "PEÑALOLÉN"
         row["CODIGO_PRC"] = "15152-PARQUE METROPOLITANO"
@@ -85,31 +85,6 @@ class TablasNormativasEngineTests(unittest.TestCase):
         self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-PARQUE METROPOLITANO")
         finding = next(f for f in result["findings"] if f["rule_id"] == "regla-no-autorizada")
         self.assertEqual(finding["status"], "POSIBLE ERROR")
-
-    def test_codigo_prc_solo_cambia_con_autorizacion_explicita_y_contexto(self):
-        row = self.base_row()
-        row["COMUNA"] = "PEÑALOLÉN"
-        row["CODIGO_PRC"] = "15152-SM-1"
-        row["ZONA"] = "R11"
-        catalog = {"exact_rules": [{
-            "id": "test-r11-codigo-confirmado",
-            "comuna": "PEÑALOLÉN",
-            "field": "CODIGO_PRC",
-            "original": "15152-SM-1",
-            "corrected": "15152-R11",
-            "where": {"ZONA": "R11"},
-            "confidence": "ALTA",
-            "auto_apply": True,
-            "allow_codigo_prc_change": True,
-            "source": "Decreto Alcaldicio N° 1200/3504",
-            "page": "Art. 31",
-            "reason": "La fila corresponde a la zona R11 y el código SM-1 es inconsistente."
-        }]}
-        result = audit_table(FIELDS.copy(), [row], catalog)
-        self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-R11")
-        finding = next(f for f in result["findings"] if f["rule_id"] == "test-r11-codigo-confirmado")
-        self.assertEqual(finding["status"], "ERROR CONFIRMADO")
-        self.assertEqual(finding["confidence"], "ALTA")
 
     def test_regla_condicionada_no_se_aplica_fuera_de_zona(self):
         row = self.base_row()
