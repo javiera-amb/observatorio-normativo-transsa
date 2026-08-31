@@ -1,32 +1,46 @@
 (() => {
   "use strict";
 
-  // Snapshot operativo del inventario canónico alojado en SharePoint DEI.
-  // Sólo publica estructura lógica y nombres de archivo; no contiene credenciales.
+  // Configuración pública del módulo. No contiene credenciales ni resultados internos de auditoría.
   window.TABLAS_NORMATIVAS_SHAREPOINT = {
     origen: "SharePoint · sitio DEI",
     canal_oficial: "Sistema Operativo DEI",
     fecha_snapshot: "2026-08-31",
     ruta_base: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas",
-    ruta_entrada: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/01_TABLAS_CANONICAS",
-    ruta_salida_normalizadas: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/02_TABLAS_NORMALIZADAS",
-    ruta_salida_qa: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/03_QA_TRAZABILIDAD",
+    ruta_maestro: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/01_TABLAS_CANONICAS/PRC_SQL2.xlsx",
+    ruta_salida_normalizadas: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/NORMALIZADAS",
     carpeta_entrada: "01_TABLAS_CANONICAS",
-    carpeta_salida_normalizadas: "02_TABLAS_NORMALIZADAS",
-    carpeta_salida_qa: "03_QA_TRAZABILIDAD",
+    carpeta_salida_normalizadas: "NORMALIZADAS",
     folder_ids: {
       entrada: "01MVUN5G6SI25ZNVSJHFEKZCC5RRLCHV7V",
-      normalizadas: "01MVUN5GZHXKN3J24ST5ELWUBRPL7B5J3C",
-      qa: "01MVUN5G7RKMMB3BDRPFF33VE65664L43T"
+      normalizadas: "01MVUN5G2INU4K3ZGVNNAZMLOPVE44YSU2"
     },
     maestro_vigente: "PRC_SQL2.xlsx",
     politica_maestro: "PRC_SQL2.xlsx es la base tabular vigente; la normativa oficial determina la validez de cada valor.",
     campos_productivos: 35,
-    invariantes: {
-      una_fila_por_poligono: true,
-      conservar_cantidad_y_orden_filas: true,
-      preservar_codigo_prc_por_defecto: true
+    automatizacion: {
+      motor: "Python local",
+      frecuencia_minutos: 15,
+      estado: "Programador de tareas de Windows",
+      publica_solo_validas: true
     },
+    vinculo: {
+      campo: "CODIGO_PRC",
+      relacion: "muchos polígonos ↔ CODIGO_PRC ↔ una o varias filas normativas",
+      variantes_por_codigo: true,
+      conteo_poligonos_puede_diferir_de_filas: true,
+      alias_solo_para_vinculo: true,
+      alias_no_modifica_codigo_productivo: true
+    },
+    invariantes: {
+      conservar_cantidad_y_orden_filas_normativas: true,
+      preservar_codigo_prc_por_defecto: true,
+      no_fusionar_variantes: true,
+      no_eliminar_duplicados_automaticamente: true,
+      salida_exacta_35_campos: true
+    },
+    // Inventario histórico de archivos comunales usado sólo para compatibilidad visual de la TUI.
+    // El maestro productivo vigente es PRC_SQL2.xlsx.
     archivos: [
       "PRC_CHIGUAYANTE_35_CAMPOS.csv","PRC_CHILLAN_35_CAMPOS.csv","PRC_CHILLAN_VIEJO_35_CAMPOS.csv",
       "PRC_COLINA_35_CAMPOS.csv","PRC_CONCEPCIÓN_35_CAMPOS.csv","PRC_COQUIMBO_35_CAMPOS.csv",
@@ -46,26 +60,59 @@
     ]
   };
 
+  function setText(node, text) {
+    if (node) node.textContent = text;
+  }
+
   function refreshOfficialRouteUi() {
     const section = document.getElementById("module-tablas-normativas");
     if (!section) return false;
     const cfg = window.TABLAS_NORMATIVAS_SHAREPOINT;
+
+    const header = section.querySelector(".module-header");
+    if (header) {
+      setText(header.querySelector("h2"), "Auditoría y producción automática de tablas normativas");
+      setText(
+        header.querySelector("h2 + p"),
+        "El PRC trabajado se vincula con la tabla normativa mediante CODIGO_PRC. Un código puede tener varias filas válidas cuando representan variantes normativas."
+      );
+    }
+
     const banner = section.querySelector(".tn-banner");
     if (banner) {
-      banner.innerHTML = `<strong>Canal oficial:</strong> ${cfg.canal_oficial} · <strong>Maestro vigente:</strong> ${cfg.maestro_vigente} · <strong>Entrada:</strong> ${cfg.carpeta_entrada} · <strong>Salidas:</strong> ${cfg.carpeta_salida_normalizadas} y ${cfg.carpeta_salida_qa}. <span style="display:block;margin-top:6px;opacity:.78">Ruta: ${cfg.ruta_base}</span>`;
+      banner.innerHTML = `<strong>Canal oficial:</strong> ${cfg.canal_oficial} · <strong>Maestro:</strong> ${cfg.maestro_vigente} · <strong>Vínculo:</strong> CODIGO_PRC · <strong>Salida final:</strong> ${cfg.carpeta_salida_normalizadas}. <span style="display:block;margin-top:6px;opacity:.82">El motor revisa cambios cada ${cfg.automatizacion.frecuencia_minutos} minutos y sólo publica una tabla cuando pasan vínculo, fuentes oficiales y QA. El número de polígonos no tiene que coincidir con el número de filas porque un código puede tener múltiples variantes.</span>`;
     }
+
+    const panel = section.querySelector(".tn-folder")?.closest(".tn-panel");
     const box = section.querySelector(".tn-folder-box");
     if (box) {
       const title = box.querySelector("strong");
       const help = box.querySelector(".tn-subtle");
-      if (title) title.textContent = "Auditoría local opcional";
-      if (help) help.innerHTML = `El flujo productivo oficial parte desde <b>${cfg.maestro_vigente}</b> en SharePoint. Usa este selector sólo para pruebas o auditorías puntuales en el navegador; no es necesario para la producción oficial.`;
+      if (title) title.textContent = "Diagnóstico manual opcional";
+      if (help) help.innerHTML = `No es parte del flujo productivo. Úsalo sólo si necesitas inspeccionar manualmente un archivo durante una revisión. La producción oficial usa <b>${cfg.maestro_vigente}</b> y los GPKG de <b>PRC Trabajado</b>.`;
     }
+    if (panel) panel.dataset.optionalDiagnostic = "true";
+
     const status = section.querySelector("#tnFolderStatus");
     if (status && !status.dataset.officialRouteApplied) {
-      status.innerHTML = `SharePoint oficial registrado: <strong>${cfg.maestro_vigente}</strong> + ${(cfg.archivos || []).length} archivos comunales de referencia. Las salidas productivas se almacenan en ${cfg.carpeta_salida_normalizadas} y el QA en ${cfg.carpeta_salida_qa}.`;
+      status.innerHTML = `<strong>Flujo automático activo.</strong><br>PRC Trabajado + ${cfg.maestro_vigente} → vínculo por CODIGO_PRC → auditoría normativa → ${cfg.carpeta_salida_normalizadas}. La trazabilidad operativa se guarda fuera de SharePoint y las versiones finales usan el historial nativo de SharePoint.`;
       status.dataset.officialRouteApplied = "1";
     }
+
+    const metricLabels = section.querySelectorAll(".tn-kpi span");
+    const labels = [
+      "Comunas universo TUI",
+      "Con tabla en maestro",
+      "Revisadas en sesión",
+      "Con observaciones",
+      "Listas staging"
+    ];
+    metricLabels.forEach((node, index) => { if (labels[index]) node.textContent = labels[index]; });
+
+    const tableHeaders = section.querySelectorAll(".tn-table thead th");
+    if (tableHeaders[1]) tableHeaders[1].textContent = "Tabla / maestro";
+    if (tableHeaders[3]) tableHeaders[3].textContent = "Revisión local";
+
     return true;
   }
 
