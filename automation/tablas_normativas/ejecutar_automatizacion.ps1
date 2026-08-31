@@ -37,14 +37,16 @@ try {
     $arguments = @()
     $arguments += $pythonPrefix
     $arguments += @(
-        "-m", "automation.tablas_normativas.runner",
+        "-m", "automation.tablas_normativas.runner_v3",
         "--prc-root", $prcRoot,
         "--master", $master,
         "--output", $output,
         "--exact-rules", (Join-Path $repo "config\tablas_normativas_reglas.json"),
         "--conditional-rules", (Join-Path $repo "config\tablas_normativas_condicionales.json"),
+        "--source-rules", (Join-Path $repo "config\tablas_normativas_fuente.json"),
         "--aliases", (Join-Path $repo "config\tablas_normativas_codigo_aliases.json"),
         "--coverage", (Join-Path $repo "config\tablas_normativas_cobertura.json"),
+        "--structure", (Join-Path $repo "config\tablas_normativas_estructura.json"),
         "--state", $state
     )
     & $pythonExe @arguments
