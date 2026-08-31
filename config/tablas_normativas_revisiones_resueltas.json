@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-31",
+  "nota": "Registro de alertas históricas revisadas y resueltas. No modifica valores productivos; evita que una alerta ya explicada siga bloqueando la automatización.",
+  "resolved_review_rule_ids": [
+    "pen-sql2-art-5233",
+    "pen-sql2-art-5241",
+    "pen-sql2-art-522",
+    "pen-sql2-art1-trans"
+  ],
+  "resolved_exact_rule_ids": [
+    "pen-prms-code-riesgo-remocion"
+  ],
+  "evidencia": {
+    "pen-sql2-art-5233": {
+      "estado": "VALIDO_COMO_PRMS_REMANENTE",
+      "razon": "El GPKG final conserva polígonos ART 5.2.3.3. PRMS. La modificación 2017 renombra sólo las áreas incorporadas dentro de sus polígonos de modificación; no acredita un reemplazo global de la categoría PRMS.",
+      "fuente": "Decreto 1200/3504 de 2017 + PRC_PEÑALOLEN.gpkg"
+    },
+    "pen-sql2-art-5241": {
+      "estado": "VALIDO_COMO_PRMS_REMANENTE",
+      "razon": "El GPKG final contiene simultáneamente polígonos ART 5.2.4.1. PRMS y zona local EQ-4. La coexistencia es compatible con una incorporación parcial establecida por la modificación 2017.",
+      "fuente": "Decreto 1200/3504 de 2017 + PRC_PEÑALOLEN.gpkg"
+    },
+    "pen-sql2-art-522": {
+      "estado": "VALIDO_COMO_PRMS_REMANENTE",
+      "razon": "El GPKG final mantiene un polígono ART 5.2.2. PRMS. No existe una regla 2017 que ordene sustituir globalmente todos los polígonos sometidos a ese artículo.",
+      "fuente": "PRMS + Decreto 1200/3504 de 2017 + PRC_PEÑALOLEN.gpkg"
+    },
+    "pen-sql2-art1-trans": {
+      "estado": "VALIDO_COMO_PRMS_REMANENTE",
+      "razon": "El GPKG final contiene tanto ART 1 Trans. PRMS como EQ-3. El decreto 2017 incorpora y renombra el ámbito afectado por su modificación, no toda existencia de la categoría PRMS fuera de ese ámbito.",
+      "fuente": "Decreto 1200/3504 de 2017 + PRC_PEÑALOLEN.gpkg"
+    },
+    "pen-prms-code-riesgo-remocion": {
+      "estado": "VALIDO",
+      "razon": "La zona de riesgo del GPKG corresponde a ART 8.2.1.4. PRMS. La modificación 2017 incorporó como EQ-5 la Zona de Derrumbes y Asentamiento de Suelo del ART 8.2.1.2., no el ART 8.2.1.4.; por tanto no hay fundamento para reemplazar el código descriptivo sólo por homogeneización.",
+      "fuente": "Decreto 1200/3504 de 2017 + PRMS + PRC_PEÑALOLEN.gpkg"
+    }
+  }
+}

@@ -11,6 +11,41 @@ from . import engine_v3
 from . import runner as base_runner
 
 
+def _load_review_resolutions(path: str | Path | None) -> dict[str, Any]:
+    if not path:
+        return {"resolved_review_rule_ids": [], "resolved_exact_rule_ids": []}
+    file_path = Path(path)
+    if not file_path.exists():
+        return {"resolved_review_rule_ids": [], "resolved_exact_rule_ids": []}
+    payload = json.loads(file_path.read_text(encoding="utf-8"))
+    payload.setdefault("resolved_review_rule_ids", [])
+    payload.setdefault("resolved_exact_rule_ids", [])
+    return payload
+
+
+def _filter_resolved_rules(
+    exact_catalog: dict[str, Any] | None,
+    source_catalog: dict[str, Any],
+    resolutions: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    resolved_exact = set(resolutions.get("resolved_exact_rule_ids") or [])
+    resolved_review = set(resolutions.get("resolved_review_rule_ids") or [])
+
+    exact = dict(exact_catalog or {"exact_rules": []})
+    exact["exact_rules"] = [
+        rule for rule in exact.get("exact_rules", [])
+        if str(rule.get("id", "")) not in resolved_exact
+    ]
+
+    source = dict(source_catalog or {"source_checks": [], "review_rules": []})
+    source["source_checks"] = list(source.get("source_checks", []))
+    source["review_rules"] = [
+        rule for rule in source.get("review_rules", [])
+        if str(rule.get("id", "")) not in resolved_review
+    ]
+    return exact, source
+
+
 def _mark_confirmed_resolution(result: dict[str, Any]) -> dict[str, Any]:
     """Marca si cada ERROR CONFIRMADO quedó realmente resuelto en la fila final.
 
@@ -62,18 +97,22 @@ def run(
     exact_rules_path: str | Path | None = None,
     conditional_rules_path: str | Path | None = None,
     source_rules_path: str | Path | None = None,
+    review_resolutions_path: str | Path | None = None,
     aliases_path: str | Path | None = None,
     coverage_path: str | Path | None = None,
     structure_path: str | Path | None = None,
     state_path: str | Path | None = None,
 ) -> dict[str, Any]:
     source_catalog = engine_v3.load_source_catalog(source_rules_path)
+    resolutions = _load_review_resolutions(review_resolutions_path)
+
     source_path = Path(source_rules_path) if source_rules_path else None
-    source_sha = (
-        hashlib.sha256(source_path.read_bytes()).hexdigest()
-        if source_path and source_path.exists()
-        else "sin_catalogo_fuente"
-    )
+    resolutions_path = Path(review_resolutions_path) if review_resolutions_path else None
+    source_digest_parts = []
+    for path in (source_path, resolutions_path):
+        if path and path.exists():
+            source_digest_parts.append(hashlib.sha256(path.read_bytes()).hexdigest())
+    source_sha = hashlib.sha256("|".join(source_digest_parts).encode("utf-8")).hexdigest() if source_digest_parts else "sin_catalogo_fuente"
 
     original_engine = base_runner.engine_v2
     original_blocking = base_runner._blocking_findings
@@ -91,13 +130,20 @@ def run(
             exact_catalog: dict[str, Any] | None = None,
             conditional_catalog: dict[str, Any] | None = None,
         ) -> dict[str, Any]:
+            filtered_exact, filtered_source = _filter_resolved_rules(
+                exact_catalog,
+                source_catalog,
+                resolutions,
+            )
             result = engine_v3.audit_table(
                 headers,
                 rows,
-                exact_catalog,
+                filtered_exact,
                 conditional_catalog,
-                source_catalog,
+                filtered_source,
             )
+            result["resolved_review_rules"] = len(resolutions.get("resolved_review_rule_ids") or [])
+            result["resolved_exact_rules"] = len(resolutions.get("resolved_exact_rule_ids") or [])
             return _mark_confirmed_resolution(result)
 
     def structure_with_source_hash(catalog: dict[str, Any], comuna: str) -> dict[str, Any]:
@@ -125,6 +171,7 @@ def run(
         base_runner._blocking_findings = original_blocking
         base_runner._structure_for = original_structure_for
     result["source_catalog_sha256"] = source_sha
+    result["review_resolutions_file"] = str(review_resolutions_path or "")
     return result
 
 
@@ -138,6 +185,7 @@ def main() -> int:
     parser.add_argument("--exact-rules", default="config/tablas_normativas_reglas.json")
     parser.add_argument("--conditional-rules", default="config/tablas_normativas_condicionales.json")
     parser.add_argument("--source-rules", default="config/tablas_normativas_fuente.json")
+    parser.add_argument("--review-resolutions", default="config/tablas_normativas_revisiones_resueltas.json")
     parser.add_argument("--aliases", default="config/tablas_normativas_codigo_aliases.json")
     parser.add_argument("--coverage", default="config/tablas_normativas_cobertura.json")
     parser.add_argument("--structure", default="config/tablas_normativas_estructura.json")
@@ -151,6 +199,7 @@ def main() -> int:
         exact_rules_path=args.exact_rules,
         conditional_rules_path=args.conditional_rules,
         source_rules_path=args.source_rules,
+        review_resolutions_path=args.review_resolutions,
         aliases_path=args.aliases,
         coverage_path=args.coverage,
         structure_path=args.structure,
