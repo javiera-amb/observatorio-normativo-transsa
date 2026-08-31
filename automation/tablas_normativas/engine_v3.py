@@ -10,6 +10,27 @@ from . import engine as base
 from . import engine_v2 as v2
 
 FIELDS = base.FIELDS
+_GROUPS = {"AISLADO", "PAREADO", "CONTINUO"}
+
+
+def _group_tokens(value: Any) -> list[str] | None:
+    tokens = [
+        token.strip().upper()
+        for token in re.split(r"[;,/]+", str(value or ""))
+        if token.strip()
+    ]
+    if not tokens or not all(token in _GROUPS for token in tokens):
+        return None
+    return sorted(set(tokens))
+
+
+def _semantic_same(left: Any, right: Any) -> bool:
+    """Compara valores normalizados y trata , ; / como equivalentes en AGRUPAMIENTO."""
+    if v2._same(left, right):
+        return True
+    left_groups = _group_tokens(left)
+    right_groups = _group_tokens(right)
+    return left_groups is not None and left_groups == right_groups
 
 
 def load_source_catalog(path: str | Path | None) -> dict[str, Any]:
@@ -57,7 +78,7 @@ def _matches(row: dict[str, Any], rule: dict[str, Any]) -> bool:
     if v2._key(rule.get("comuna")) != v2._key(row.get("COMUNA")):
         return False
     for field, expected in (rule.get("where") or {}).items():
-        if field not in FIELDS or not v2._same(row.get(field), expected):
+        if field not in FIELDS or not _semantic_same(row.get(field), expected):
             return False
     return True
 
@@ -91,7 +112,7 @@ def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict
                 if field not in FIELDS:
                     continue
                 current = row.get(field, "")
-                if v2._same(current, expected):
+                if _semantic_same(current, expected):
                     findings.append(_finding(
                         row=row_number,
                         field=field,
@@ -192,12 +213,21 @@ def audit_table(
     conditional_rule_catalog: dict[str, Any] | None = None,
     source_catalog: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    result = v2.audit_table(
-        headers,
-        rows,
-        exact_rule_catalog,
-        conditional_rule_catalog,
-    )
+    # v2 evalúa las reglas condicionadas después de normalizar AGRUPAMIENTO.
+    # Se reemplaza el comparador sólo durante esa etapa para que una coma o
+    # punto y coma no impida reconocer la misma combinación normativa.
+    original_same = v2._same
+    v2._same = _semantic_same
+    try:
+        result = v2.audit_table(
+            headers,
+            rows,
+            exact_rule_catalog,
+            conditional_rule_catalog,
+        )
+    finally:
+        v2._same = original_same
+
     return apply_source_checks(
         result,
         source_catalog or {"source_checks": [], "review_rules": []},
