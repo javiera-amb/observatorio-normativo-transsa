@@ -5,29 +5,28 @@ import json
 import math
 import re
 import unicodedata
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font, PatternFill
+
 
 FIELDS = [
-    "COMUNA","RIALCOMSII","CODIGO_PRC","ZONA","USO","SUBZONA_USO","EDIF","SUBZONA_EDIF",
-    "DEFINICION_ZONA","ESPECIF_GENERAL","ESPECIF_ESPECIF","UPERM","UPROH","TABLA",
-    "DETALLE_TABLA_ORDENANZA","DENS_HAB_HA","DENS_VIV_HA","SUB_PREDIAL","CONSTRUCCION",
-    "OCUPACION","OCUPACION_SUP","PISOS_MAX","ALTURA_MIN","ALTURA_MAX","ARBORIZACION","PAGE",
-    "AREA_LIBRE_MIN","AGRUPAMIENTO","RASANTE","DIST_MEDIANEROS","ADOSAMIENTO","ANTEJARDIN",
-    "INCENTIVO","FUENTE","COMENTS_NORM",
+    "COMUNA", "RIALCOMSII", "CODIGO_PRC", "ZONA", "USO", "SUBZONA_USO", "EDIF", "SUBZONA_EDIF",
+    "DEFINICION_ZONA", "ESPECIF_GENERAL", "ESPECIF_ESPECIF", "UPERM", "UPROH", "TABLA",
+    "DETALLE_TABLA_ORDENANZA", "DENS_HAB_HA", "DENS_VIV_HA", "SUB_PREDIAL", "CONSTRUCCION",
+    "OCUPACION", "OCUPACION_SUP", "PISOS_MAX", "ALTURA_MIN", "ALTURA_MAX", "ARBORIZACION", "PAGE",
+    "AREA_LIBRE_MIN", "AGRUPAMIENTO", "RASANTE", "DIST_MEDIANEROS", "ADOSAMIENTO", "ANTEJARDIN",
+    "INCENTIVO", "FUENTE", "COMENTS_NORM",
 ]
 
 NULL_LITERALS = {"NULL", "N/A", "N/D", "-"}
+NUMERIC_DECIMAL = {"CONSTRUCCION", "OCUPACION", "OCUPACION_SUP", "ALTURA_MIN", "ALTURA_MAX", "AREA_LIBRE_MIN"}
 GROUP_ORDER = ["AISLADO", "PAREADO", "CONTINUO"]
-NUMERIC_DECIMAL = {
-    "DENS_HAB_HA", "DENS_VIV_HA", "SUB_PREDIAL", "CONSTRUCCION", "OCUPACION",
-    "OCUPACION_SUP", "ALTURA_MIN", "ALTURA_MAX", "AREA_LIBRE_MIN",
-}
-OCR_PATTERN = re.compile(r"(^|[^A-Z])[OPIl][.,]?\d|\d[.,]?[OIl]($|[^A-Z])", re.I)
+OCR_PATTERN = re.compile(r"(?:^|\s)[OoPp][.,]?\d|\b[lI][.,]?\d", re.I)
 
 
 @dataclass
@@ -44,46 +43,33 @@ class Finding:
     rule_id: str = ""
 
 
-def _plain(value: Any) -> Any:
-    if value is None:
-        return ""
-    if isinstance(value, float) and math.isnan(value):
-        return ""
-    return value
-
-
-def _clean_text(value: str) -> str:
-    value = value.replace("\u00a0", " ")
-    value = re.sub(r"[\u200B-\u200D\uFEFF]", "", value)
-    return re.sub(r"\s+", " ", value).strip()
+def _key(value: Any) -> str:
+    text = unicodedata.normalize("NFD", str(value or ""))
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    return re.sub(r"[^A-Z0-9]+", "", text.upper())
 
 
 def _numeric(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        return float(value)
-    text = _clean_text(str(value))
-    if re.fullmatch(r"-?\d+(?:[.,]\d+)?", text):
-        try:
-            return float(text.replace(",", "."))
-        except ValueError:
+        if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
             return None
-    return None
+        return float(value)
+    text = str(value or "").strip()
+    if not re.fullmatch(r"-?\d+(?:[.,]\d+)?", text):
+        return None
+    try:
+        return float(text.replace(",", "."))
+    except ValueError:
+        return None
 
 
-def _rule_key(value: Any) -> str:
-    text = unicodedata.normalize("NFD", str(value or ""))
-    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
-    return re.sub(r"\s+", " ", text).strip().upper()
-
-
-def _same_value(left: Any, right: Any) -> bool:
-    left_num = _numeric(left)
-    right_num = _numeric(right)
-    if left_num is not None and right_num is not None:
-        return abs(left_num - right_num) < 1e-9
-    return _rule_key(left) == _rule_key(right)
+def _same(a: Any, b: Any) -> bool:
+    an, bn = _numeric(a), _numeric(b)
+    if an is not None and bn is not None:
+        return math.isclose(an, bn, rel_tol=0, abs_tol=1e-9)
+    return _key(a) == _key(b)
 
 
 def _row_signature(row: dict[str, Any]) -> str:
@@ -93,30 +79,84 @@ def _row_signature(row: dict[str, Any]) -> str:
 def load_rule_catalog(path: str | Path | None) -> dict[str, Any]:
     if not path:
         return {"exact_rules": []}
-    rule_path = Path(path)
-    if not rule_path.exists():
+    file_path = Path(path)
+    if not file_path.exists():
         return {"exact_rules": []}
-    return json.loads(rule_path.read_text(encoding="utf-8"))
+    return json.loads(file_path.read_text(encoding="utf-8"))
 
 
-def _matching_rule(
-    row: dict[str, Any], field: str, original: Any, catalog: dict[str, Any]
-) -> dict[str, Any] | None:
-    for rule in catalog.get("exact_rules", []):
-        if _rule_key(rule.get("comuna")) != _rule_key(row.get("COMUNA")):
-            continue
-        if rule.get("field") != field:
-            continue
-        if not _same_value(rule.get("original"), original):
-            continue
-        instrument = rule.get("instrumento")
-        if instrument and _rule_key(instrument) not in _rule_key(row.get("FUENTE")):
-            continue
-        where = rule.get("where") or {}
-        if any(not _same_value(row.get(where_field), expected) for where_field, expected in where.items()):
-            continue
-        return rule
-    return None
+def read_table(path: str | Path) -> tuple[list[str], list[dict[str, Any]]]:
+    path = Path(path)
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            headers = [str(value or "").strip() for value in (reader.fieldnames or [])]
+            rows = [{str(k or "").strip(): v for k, v in row.items()} for row in reader]
+        return headers, rows
+    if suffix in {".xlsx", ".xlsm"}:
+        workbook = load_workbook(path, read_only=True, data_only=True)
+        sheet = workbook[workbook.sheetnames[0]]
+        iterator = sheet.iter_rows(values_only=True)
+        try:
+            headers = [str(value or "").strip() for value in next(iterator)]
+        except StopIteration:
+            return [], []
+        rows = []
+        for values in iterator:
+            if not any(value not in (None, "") for value in values):
+                continue
+            rows.append({headers[index]: values[index] if index < len(values) else "" for index in range(len(headers))})
+        return headers, rows
+    raise ValueError(f"Formato no soportado: {path.suffix}")
+
+
+def _write_table_xlsx(path: Path, rows: list[dict[str, Any]]) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "TABLA_NORMALIZADA"
+    sheet.append(FIELDS)
+    for row in rows:
+        sheet.append([row.get(field, "") for field in FIELDS])
+    fill = PatternFill("solid", fgColor="243A5E")
+    font = Font(color="FFFFFF", bold=True)
+    for cell in sheet[1]:
+        cell.fill = fill
+        cell.font = font
+    sheet.freeze_panes = "A2"
+    workbook.save(path)
+
+
+def _write_qa_xlsx(path: Path, findings: list[dict[str, Any]]) -> None:
+    columns = ["row", "field", "original", "proposed", "status", "confidence", "reason", "source", "page", "rule_id"]
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "QA_TRAZABILIDAD"
+    sheet.append(columns)
+    for item in findings:
+        sheet.append([item.get(column, "") for column in columns])
+    fill = PatternFill("solid", fgColor="243A5E")
+    font = Font(color="FFFFFF", bold=True)
+    for cell in sheet[1]:
+        cell.fill = fill
+        cell.font = font
+    sheet.freeze_panes = "A2"
+    workbook.save(path)
+
+
+def _normalize_text(value: str) -> str:
+    value = value.replace("\u00a0", " ")
+    value = re.sub(r"[\u200B-\u200D\uFEFF]", "", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _normalize_grouping(value: Any) -> Any:
+    if not isinstance(value, str) or not value.strip():
+        return value
+    tokens = [_normalize_text(item).upper() for item in re.split(r"[,;/]+", value) if _normalize_text(item)]
+    if not tokens or not all(token in GROUP_ORDER for token in tokens):
+        return value
+    return "; ".join(item for item in GROUP_ORDER if item in tokens)
 
 
 def _apply_rule(
@@ -125,78 +165,69 @@ def _apply_rule(
     field: str,
     value: Any,
     findings: list[Finding],
-    catalog: dict[str, Any],
+    rule_catalog: dict[str, Any],
 ) -> Any:
-    rule = _matching_rule(row, field, value, catalog)
-    if not rule:
-        return value
-
-    confidence = str(rule.get("confidence", "MEDIA")).upper()
-    proposed = rule.get("corrected", value)
-    auto_apply = confidence == "ALTA" and bool(rule.get("auto_apply", True))
-
-    # CODIGO_PRC es identificador productivo y se preserva por defecto.
-    # Incluso una regla de alta confianza necesita una autorización explícita adicional.
-    if field == "CODIGO_PRC" and not bool(rule.get("allow_codigo_prc_change", False)):
+    for rule in rule_catalog.get("exact_rules", []):
+        if rule.get("field") != field:
+            continue
+        if field == "CODIGO_PRC":
+            # CODIGO_PRC se preserva siempre en el motor base. Incluso una coincidencia exacta
+            # sólo se reporta; cualquier cambio debe pasar por engine_v2 con contexto, fuente y
+            # allow_codigo_prc_change explícito.
+            if not _same(value, rule.get("original")):
+                continue
+            findings.append(Finding(
+                row_number, field, value, rule.get("corrected", ""), "POSIBLE ERROR",
+                str(rule.get("confidence", "MEDIA")),
+                str(rule.get("reason", "CODIGO_PRC requiere revisión contextual.")),
+                str(rule.get("source", "")), str(rule.get("page", "")), str(rule.get("id", ""))
+            ))
+            continue
+        commune = str(row.get("COMUNA", "") or "")
+        rule_commune = str(rule.get("comuna", "") or "")
+        if rule_commune and _key(commune) != _key(rule_commune):
+            continue
+        if not _same(value, rule.get("original")):
+            continue
+        proposed = rule.get("corrected", "")
+        status = str(rule.get("status", "ERROR CONFIRMADO"))
+        confidence = str(rule.get("confidence", "ALTA"))
         findings.append(Finding(
-            row=row_number,
-            field=field,
-            original=value,
-            proposed=proposed,
-            status="POSIBLE ERROR",
-            confidence=confidence,
-            reason=(rule.get("reason", "Regla normativa detectada.") +
-                    " CODIGO_PRC se conserva porque la regla no autoriza expresamente su modificación."),
-            source=rule.get("source", ""),
-            page=str(rule.get("page", "")),
-            rule_id=rule.get("id", ""),
+            row_number, field, value, proposed, status, confidence,
+            str(rule.get("reason", "Regla exacta de fuente oficial.")),
+            str(rule.get("source", "")), str(rule.get("page", "")), str(rule.get("id", ""))
         ))
-        return value
-
-    status = "ERROR CONFIRMADO" if confidence == "ALTA" else "POSIBLE ERROR"
-    findings.append(Finding(
-        row=row_number,
-        field=field,
-        original=value,
-        proposed=proposed,
-        status=status,
-        confidence=confidence,
-        reason=rule.get("reason", "Corrección respaldada por regla normativa específica."),
-        source=rule.get("source", ""),
-        page=str(rule.get("page", "")),
-        rule_id=rule.get("id", ""),
-    ))
-    return proposed if auto_apply else value
+        if rule.get("auto_apply") is True and confidence.upper() == "ALTA" and status == "ERROR CONFIRMADO":
+            return proposed
+    return value
 
 
 def _normalize_cell(row_number: int, field: str, value: Any, findings: list[Finding]) -> Any:
-    value = _plain(value)
+    if value is None:
+        return ""
     original = value
-
     if isinstance(value, str):
-        cleaned = _clean_text(value)
-        if cleaned.upper() in NULL_LITERALS:
+        proposed = _normalize_text(value)
+        if proposed.upper() in NULL_LITERALS:
             findings.append(Finding(
                 row_number, field, original, "", "NORMALIZACIÓN DE FORMATO", "ALTA",
-                "Literal de ausencia reemplazado por vacío."
+                "Literal de ausencia reemplazado por celda vacía."
             ))
             return ""
-        if cleaned != value:
+        if proposed != value:
             findings.append(Finding(
-                row_number, field, original, cleaned, "NORMALIZACIÓN DE FORMATO", "ALTA",
+                row_number, field, original, proposed, "NORMALIZACIÓN DE FORMATO", "ALTA",
                 "Espacios o caracteres invisibles normalizados."
             ))
-        value = cleaned
+        value = proposed
 
-    if field == "AGRUPAMIENTO" and value:
-        tokens = [token.strip().upper() for token in re.split(r"[;,/]+", str(value)) if token.strip()]
-        if tokens and all(token in GROUP_ORDER for token in tokens):
-            proposed = "; ".join(item for item in GROUP_ORDER if item in tokens)
-            if proposed != str(value):
-                findings.append(Finding(
-                    row_number, field, original, proposed, "NORMALIZACIÓN DE FORMATO", "ALTA",
-                    "Agrupamiento normalizado en una sola celda; nunca se crean filas por alternativas."
-                ))
+    if field == "AGRUPAMIENTO":
+        proposed = _normalize_grouping(value)
+        if proposed != value:
+            findings.append(Finding(
+                row_number, field, original, proposed, "NORMALIZACIÓN DE FORMATO", "ALTA",
+                "Agrupamientos normalizados en una sola celda; no se crean filas adicionales."
+            ))
             value = proposed
 
     if field in NUMERIC_DECIMAL and isinstance(value, str):
@@ -248,7 +279,7 @@ def audit_table(
             "NORMALIZACIÓN DE FORMATO", "ALTA", "Los campos productivos se ordenan al contrato oficial de 35 campos."
         ))
 
-    # Regla estructural central: una fila de entrada produce exactamente una fila de salida.
+    # Regla estructural central: cada fila normativa de entrada produce exactamente una fila de salida.
     for index, source_row in enumerate(rows, start=2):
         row = {field: _normalize_cell(index, field, source_row.get(field, ""), findings) for field in FIELDS}
         for field in FIELDS:
@@ -303,20 +334,20 @@ def audit_table(
                 "Contenido incompatible con rasante; posible desplazamiento de columnas."
             ))
 
-    # Filas con atributos iguales pueden corresponder a polígonos distintos.
-    # Se conservan siempre y, a lo sumo, se señalan para revisión.
+    # Una fila repetida puede ser una variante válida o una repetición técnica. Nunca se elimina.
+    # El vínculo con geometría se valida por CODIGO_PRC, no por igualdad de filas.
     seen: dict[str, int] = {}
     for index, row in enumerate(normalized_rows, start=2):
         signature = _row_signature(row)
         if signature in seen:
             findings.append(Finding(
-                index, "FILA", f"Atributos iguales a fila {seen[signature]}", "", "POSIBLE ERROR", "BAJA",
-                "Las filas no se fusionan ni eliminan: pueden representar polígonos distintos con igual normativa."
+                index, "FILA", f"Campos productivos iguales a fila {seen[signature]}", "", "POSIBLE ERROR", "BAJA",
+                "Se conserva la fila: puede corresponder a una variante válida o a una repetición técnica. No se fusiona ni elimina automáticamente."
             ))
         else:
             seen[signature] = index
 
-    assert len(normalized_rows) == len(rows), "La auditoría no puede cambiar la cantidad de filas/polígonos."
+    assert len(normalized_rows) == len(rows), "La auditoría no puede cambiar la cantidad de filas normativas."
 
     critical = sum(f.status == "ERROR CONFIRMADO" for f in findings)
     possible = sum(f.status == "POSIBLE ERROR" for f in findings)
@@ -339,69 +370,6 @@ def audit_table(
     }
 
 
-def _read_csv(path: Path) -> tuple[list[str], list[dict[str, Any]]]:
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        headers = [str(item or "").strip() for item in (reader.fieldnames or [])]
-        rows = [{str(key or "").strip(): value for key, value in row.items()} for row in reader]
-    return headers, rows
-
-
-def _read_xlsx(path: Path) -> tuple[list[str], list[dict[str, Any]]]:
-    workbook = load_workbook(path, read_only=True, data_only=True)
-    sheet = workbook[workbook.sheetnames[0]]
-    matrix = sheet.iter_rows(values_only=True)
-    try:
-        headers = [str(value or "").strip() for value in next(matrix)]
-    except StopIteration:
-        return [], []
-    rows = []
-    for values in matrix:
-        if not any(value not in (None, "") for value in values):
-            continue
-        rows.append({header: (values[index] if index < len(values) else "") for index, header in enumerate(headers)})
-    return headers, rows
-
-
-def read_table(path: str | Path) -> tuple[list[str], list[dict[str, Any]]]:
-    path = Path(path)
-    suffix = path.suffix.lower()
-    if suffix == ".csv":
-        return _read_csv(path)
-    if suffix in {".xlsx", ".xlsm"}:
-        return _read_xlsx(path)
-    raise ValueError(f"Formato no soportado: {suffix}")
-
-
-def _write_table_xlsx(path: Path, rows: Iterable[dict[str, Any]]) -> None:
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = "TABLA_NORMALIZADA"
-    sheet.append(FIELDS)
-    for row in rows:
-        sheet.append([row.get(field, "") for field in FIELDS])
-    workbook.save(path)
-
-
-def _write_qa_xlsx(path: Path, comuna: str, findings: list[dict[str, Any]]) -> None:
-    columns = [
-        "COMUNA", "FILA", "CAMPO", "VALOR_ORIGINAL", "VALOR_NUEVO", "ESTADO", "CONFIANZA",
-        "MOTIVO", "FUENTE", "PAGE", "REGLA"
-    ]
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = "QA_TRAZABILIDAD"
-    sheet.append(columns)
-    for finding in findings:
-        sheet.append([
-            comuna,
-            finding.get("row", ""), finding.get("field", ""), finding.get("original", ""), finding.get("proposed", ""),
-            finding.get("status", ""), finding.get("confidence", ""), finding.get("reason", ""), finding.get("source", ""),
-            finding.get("page", ""), finding.get("rule_id", ""),
-        ])
-    workbook.save(path)
-
-
 def process_file(
     input_path: str | Path,
     normalized_dir: str | Path,
@@ -409,51 +377,37 @@ def process_file(
     rule_catalog_path: str | Path | None = None,
 ) -> dict[str, Any]:
     input_path = Path(input_path)
+    headers, rows = read_table(input_path)
+    catalog = load_rule_catalog(rule_catalog_path)
+    result = audit_table(headers, rows, catalog)
+    commune = str(result["rows"][0].get("COMUNA", "SIN_COMUNA") if result["rows"] else "SIN_COMUNA")
+    safe_commune = re.sub(r"[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ]+", "_", commune).strip("_").upper()
+
     normalized_dir = Path(normalized_dir)
     qa_dir = Path(qa_dir)
     normalized_dir.mkdir(parents=True, exist_ok=True)
     qa_dir.mkdir(parents=True, exist_ok=True)
 
-    headers, rows = read_table(input_path)
-    catalog = load_rule_catalog(rule_catalog_path)
-    result = audit_table(headers, rows, catalog)
-    comuna = str(result["rows"][0].get("COMUNA", "") if result["rows"] else "").strip() or input_path.stem
-    safe = re.sub(
-        r"[^A-Za-z0-9]+", "_",
-        unicodedata.normalize("NFD", comuna).encode("ascii", "ignore").decode()
-    ).strip("_").upper()
-
-    normalized_path = normalized_dir / f"PRC_{safe}_NORMALIZADO.xlsx"
-    qa_path = qa_dir / f"QA_PRC_{safe}.xlsx"
-    status_path = qa_dir / f"STATUS_PRC_{safe}.json"
+    normalized_path = normalized_dir / f"PRC_{safe_commune}_NORMALIZADO.xlsx"
+    qa_path = qa_dir / f"QA_PRC_{safe_commune}.xlsx"
+    status_path = qa_dir / f"STATUS_PRC_{safe_commune}.json"
 
     _write_table_xlsx(normalized_path, result["rows"])
-    _write_qa_xlsx(qa_path, comuna, result["findings"])
-
-    requires_review = any(
-        finding["status"] in {"POSIBLE ERROR", "CONFLICTO NORMATIVO"} or
-        (finding["status"] == "ERROR CONFIRMADO" and finding["confidence"] != "ALTA")
-        for finding in result["findings"]
-    )
+    _write_qa_xlsx(qa_path, result["findings"])
     status = {
-        "comuna": comuna,
-        "source_file": input_path.name,
-        "normalized_file": normalized_path.name,
-        "qa_file": qa_path.name,
-        "input_rows": result["input_rows"],
-        "output_rows": result["output_rows"],
-        "critical": result["critical"],
-        "possible": result["possible"],
-        "formatting": result["formatting"],
-        "conflicts": result["conflicts"],
-        "codigo_prc_policy": "PRESERVAR; sólo cambia con allow_codigo_prc_change=true y confianza ALTA",
-        "state": "REQUIERE_REVISION" if requires_review else "CORREGIDA",
+        "comuna": commune,
+        "source": input_path.name,
+        "normalized": normalized_path.name,
+        "qa": qa_path.name,
+        "rows": result["input_rows"],
+        "fields": len(FIELDS),
+        "findings": len(result["findings"]),
+        "errores_confirmados": result["critical"],
+        "posibles_errores": result["possible"],
+        "normalizaciones_formato": result["formatting"],
+        "conflictos_normativos": result["conflicts"],
+        "state": "CON OBSERVACIONES" if result["critical"] or result["possible"] or result["conflicts"] else "VALIDADA",
         "processed_at": result["processed_at"],
     }
     status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {
-        **status,
-        "normalized_path": str(normalized_path),
-        "qa_path": str(qa_path),
-        "status_path": str(status_path),
-    }
+    return {**result, "normalized_path": normalized_path, "qa_path": qa_path, "status_path": status_path, "status": status}
