@@ -2,31 +2,40 @@
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 
-title Inspector SIG IPT - Transsa Urban Intelligence
+title Inspector SIG IPT - herramienta local opcional
 
 set "REPO=%~dp0"
 if "%REPO:~-1%"=="\" set "REPO=%REPO:~0,-1%"
-
-set "CARPETA_SIG=C:\Users\Javiera Morales\OneDrive - Transsa\DEI - Cartografía Transsa_GENERAL\00_IPT_Nacional"
-
-if not "%~1"=="" set "CARPETA_SIG=%~1"
+set "CARPETA_SIG=%~1"
 
 echo ================================================================
-echo INSPECTOR SIG IPT - TRANSSA URBAN INTELLIGENCE
+echo INSPECTOR SIG IPT - HERRAMIENTA LOCAL OPCIONAL
+
+echo NO FORMA PARTE DE LA OPERACION PRODUCTIVA TUI.
+echo TUI PRODUCTIVO FUNCIONA SHAREPOINT ^> POWER AUTOMATE ^> GITHUB ACTIONS.
 echo ================================================================
 echo.
+
+if "%CARPETA_SIG%"=="" (
+    echo No se definio una carpeta SIG.
+    echo.
+    echo Esta utilidad NO usa rutas personales por defecto.
+    echo Para ejecutarla manualmente, arrastra la carpeta 00_IPT_Nacional
+    echo sobre este BAT o ejecuta:
+    echo.
+    echo   REVISAR_CARTOGRAFIA_IPT.bat "RUTA_A_00_IPT_Nacional"
+    echo.
+    pause
+    exit /b 2
+)
+
 echo Repositorio:
 echo %REPO%
 echo.
-echo Carpeta SIG:
+echo Carpeta SIG proporcionada manualmente:
 echo %CARPETA_SIG%
 echo.
 echo Este proceso SOLO LEE la cartografia. No modifica GPKG ni SHP.
-echo.
-echo Version 2: interpreta IPT_Region / tipo IPT / comuna / archivo,
-echo separa planes seccionales y excluye predios/RGC de referencia.
-echo Luego genera un consolidado por comuna para evaluar si el SIG
-echo puede utilizarse en el visor o requiere revision normativa.
 echo.
 
 if not exist "%REPO%\index.html" (
@@ -39,7 +48,6 @@ if not exist "%REPO%\index.html" (
 
 if not exist "%REPO%\scripts\inspector_sig_ipt_v2.py" (
     echo ERROR: falta scripts\inspector_sig_ipt_v2.py en el repositorio.
-    echo Haz Fetch origin y Pull origin en GitHub Desktop y vuelve a intentar.
     echo.
     pause
     exit /b 4
@@ -47,7 +55,6 @@ if not exist "%REPO%\scripts\inspector_sig_ipt_v2.py" (
 
 if not exist "%REPO%\scripts\consolidar_sig_comunal.py" (
     echo ERROR: falta scripts\consolidar_sig_comunal.py en el repositorio.
-    echo Haz Fetch origin y Pull origin en GitHub Desktop y vuelve a intentar.
     echo.
     pause
     exit /b 5
@@ -55,9 +62,6 @@ if not exist "%REPO%\scripts\consolidar_sig_comunal.py" (
 
 if not exist "%CARPETA_SIG%" (
     echo ERROR: No encuentro la carpeta SIG indicada.
-    echo.
-    echo Puedes arrastrar la carpeta correcta sobre REVISAR_CARTOGRAFIA_IPT.bat
-    echo o editar la variable CARPETA_SIG dentro de este archivo.
     echo.
     pause
     exit /b 2
@@ -84,6 +88,7 @@ if not "!RESULTADO!"=="0" goto :FIN
 echo.
 echo ================================================================
 echo GENERANDO CONSOLIDADO SIG POR COMUNA
+
 echo ================================================================
 echo.
 %PYTHON_CMD% "%REPO%\scripts\consolidar_sig_comunal.py" --repo "%REPO%"
@@ -93,22 +98,16 @@ set "RESULTADO=!errorlevel!"
 echo.
 if "%RESULTADO%"=="0" (
     echo ================================================================
-    echo LISTO. El inventario y consolidado SIG terminaron correctamente.
+    echo LISTO. El diagnostico local termino correctamente.
     echo ================================================================
     echo.
-    echo Resultados:
+    echo Resultados locales:
     echo %REPO%\_local\sig_ipt
     echo.
-    echo Archivos clave:
-    echo - resumen_sig_ipt.json
-    echo - consolidado_sig_comunal.csv
-    echo - consolidado_sig_comunal.json
-    echo.
-    echo Abriendo carpeta de resultados...
     if exist "%REPO%\_local\sig_ipt" start "" "%REPO%\_local\sig_ipt"
 ) else (
     echo ================================================================
-    echo ERROR. El proceso SIG NO termino correctamente.
+    echo ERROR. El proceso local NO termino correctamente.
     echo Codigo devuelto por Python: %RESULTADO%
     echo ================================================================
 )
