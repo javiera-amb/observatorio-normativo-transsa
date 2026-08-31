@@ -1,8 +1,8 @@
-name: Actualizar IPT mensual
+name: Actualizar IPT semanal
 
 on:
   schedule:
-    - cron: "0 8 1 * *"
+    - cron: "0 7 * * 1"
       timezone: "America/Santiago"
   workflow_dispatch:
 
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: actualizar-ipt-mensual
+  group: actualizar-ipt-semanal
   cancel-in-progress: false
 
 jobs:
@@ -55,5 +55,5 @@ jobs:
           git config user.name "Observatorio IPT Bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/ipt_reportes.js data/vigencia_cartografica.js documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
-          git commit -m "Actualización IPT mensual $(date +'%Y-%m')"
+          git commit -m "Actualización IPT semanal $(date +'%Y-%m-%d')"
           git push
