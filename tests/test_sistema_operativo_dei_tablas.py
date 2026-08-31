@@ -12,13 +12,26 @@ def test_sharepoint_config_usa_sistema_operativo_dei():
     assert cfg["local_sync_required"] is False
 
 
-def test_catalogo_declara_maestro_sql2_y_rutas_oficiales():
+def test_catalogo_declara_maestro_vinculo_variantes_y_salida_unica():
     text = (ROOT / "data" / "tablas_normativas_sharepoint.js").read_text(encoding="utf-8")
     assert 'canal_oficial: "Sistema Operativo DEI"' in text
     assert 'maestro_vigente: "PRC_SQL2.xlsx"' in text
-    assert "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas" in text
-    assert 'una_fila_por_poligono: true' in text
+    assert 'carpeta_salida_normalizadas: "NORMALIZADAS"' in text
+    assert 'campo: "CODIGO_PRC"' in text
+    assert 'variantes_por_codigo: true' in text
+    assert 'conteo_poligonos_puede_diferir_de_filas: true' in text
+    assert 'conservar_cantidad_y_orden_filas_normativas: true' in text
+    assert 'no_eliminar_duplicados_automaticamente: true' in text
     assert 'preservar_codigo_prc_por_defecto: true' in text
+    assert "una_fila_por_poligono" not in text
+
+
+def test_tui_explica_automatizacion_y_diagnostico_opcional():
+    text = (ROOT / "data" / "tablas_normativas_sharepoint.js").read_text(encoding="utf-8")
+    assert "Auditoría y producción automática de tablas normativas" in text
+    assert "Diagnóstico manual opcional" in text
+    assert "El número de polígonos no tiene que coincidir" in text
+    assert "sólo publica una tabla cuando pasan vínculo, fuentes oficiales y QA" in text
 
 
 def test_codigos_prms_descriptivos_no_se_autocorrigen():
