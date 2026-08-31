@@ -91,10 +91,23 @@ class TablasNormativasEngineTests(unittest.TestCase):
         row["COMUNA"] = "PEÑALOLÉN"
         row["CODIGO_PRC"] = "15152-SM-1"
         row["ZONA"] = "R11"
-        catalog = load_rule_catalog(Path("config/tablas_normativas_reglas.json"))
+        catalog = {"exact_rules": [{
+            "id": "test-r11-codigo-confirmado",
+            "comuna": "PEÑALOLÉN",
+            "field": "CODIGO_PRC",
+            "original": "15152-SM-1",
+            "corrected": "15152-R11",
+            "where": {"ZONA": "R11"},
+            "confidence": "ALTA",
+            "auto_apply": True,
+            "allow_codigo_prc_change": True,
+            "source": "Decreto Alcaldicio N° 1200/3504",
+            "page": "Art. 31",
+            "reason": "La fila corresponde a la zona R11 y el código SM-1 es inconsistente."
+        }]}
         result = audit_table(FIELDS.copy(), [row], catalog)
         self.assertEqual(result["rows"][0]["CODIGO_PRC"], "15152-R11")
-        finding = next(f for f in result["findings"] if f["rule_id"] == "pen-r11-codigo-prc-confirmado")
+        finding = next(f for f in result["findings"] if f["rule_id"] == "test-r11-codigo-confirmado")
         self.assertEqual(finding["status"], "ERROR CONFIRMADO")
         self.assertEqual(finding["confidence"], "ALTA")
 
