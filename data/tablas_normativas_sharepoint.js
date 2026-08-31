@@ -2,15 +2,31 @@
   "use strict";
 
   // Snapshot operativo del inventario canónico alojado en SharePoint DEI.
-  // Este archivo sólo publica nombres de archivo y estructura lógica; no contiene
-  // credenciales, enlaces privados ni contenido normativo.
+  // Sólo publica estructura lógica y nombres de archivo; no contiene credenciales.
   window.TABLAS_NORMATIVAS_SHAREPOINT = {
     origen: "SharePoint · sitio DEI",
-    fecha_snapshot: "2026-08-27",
+    canal_oficial: "Sistema Operativo DEI",
+    fecha_snapshot: "2026-08-31",
+    ruta_base: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas",
+    ruta_entrada: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/01_TABLAS_CANONICAS",
+    ruta_salida_normalizadas: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/02_TABLAS_NORMALIZADAS",
+    ruta_salida_qa: "Sistema Operativo DEI/02_PRODUCCION_DEI/01_CARTOGRAFIA/00_IPT_Nacional/02_Tablas_normativas/03_QA_TRAZABILIDAD",
     carpeta_entrada: "01_TABLAS_CANONICAS",
     carpeta_salida_normalizadas: "02_TABLAS_NORMALIZADAS",
     carpeta_salida_qa: "03_QA_TRAZABILIDAD",
+    folder_ids: {
+      entrada: "01MVUN5G6SI25ZNVSJHFEKZCC5RRLCHV7V",
+      normalizadas: "01MVUN5GZHXKN3J24ST5ELWUBRPL7B5J3C",
+      qa: "01MVUN5G7RKMMB3BDRPFF33VE65664L43T"
+    },
+    maestro_vigente: "PRC_SQL2.xlsx",
+    politica_maestro: "PRC_SQL2.xlsx es la base tabular vigente; la normativa oficial determina la validez de cada valor.",
     campos_productivos: 35,
+    invariantes: {
+      una_fila_por_poligono: true,
+      conservar_cantidad_y_orden_filas: true,
+      preservar_codigo_prc_por_defecto: true
+    },
     archivos: [
       "PRC_CHIGUAYANTE_35_CAMPOS.csv",
       "PRC_CHILLAN_35_CAMPOS.csv",
