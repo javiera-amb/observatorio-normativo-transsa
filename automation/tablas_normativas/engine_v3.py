@@ -12,6 +12,27 @@ from . import engine_v2 as v2
 FIELDS = base.FIELDS
 _GROUPS = {"AISLADO", "PAREADO", "CONTINUO"}
 _BASE_SAME = v2._same
+_INCENTIVE_SENSITIVE_FIELDS = {
+    "DENS_HAB_HA",
+    "DENS_VIV_HA",
+    "SUB_PREDIAL",
+    "CONSTRUCCION",
+    "OCUPACION",
+    "OCUPACION_SUP",
+    "PISOS_MAX",
+    "ALTURA_MIN",
+    "ALTURA_MAX",
+    "AREA_LIBRE_MIN",
+    "AGRUPAMIENTO",
+    "RASANTE",
+    "DIST_MEDIANEROS",
+    "ADOSAMIENTO",
+    "ANTEJARDIN",
+}
+
+
+def _empty_source_catalog() -> dict[str, Any]:
+    return {"source_checks": [], "review_rules": [], "coverage_checks": []}
 
 
 def _group_tokens(value: Any) -> list[str] | None:
@@ -36,13 +57,14 @@ def _semantic_same(left: Any, right: Any) -> bool:
 
 def load_source_catalog(path: str | Path | None) -> dict[str, Any]:
     if not path:
-        return {"source_checks": [], "review_rules": []}
+        return _empty_source_catalog()
     source_path = Path(path)
     if not source_path.exists():
-        return {"source_checks": [], "review_rules": []}
+        return _empty_source_catalog()
     payload = json.loads(source_path.read_text(encoding="utf-8"))
     payload.setdefault("source_checks", [])
     payload.setdefault("review_rules", [])
+    payload.setdefault("coverage_checks", [])
     return payload
 
 
@@ -84,6 +106,82 @@ def _matches(row: dict[str, Any], rule: dict[str, Any]) -> bool:
     return True
 
 
+def _has_incentive(row: dict[str, Any]) -> bool:
+    return bool(str(row.get("INCENTIVO") or "").strip())
+
+
+def _apply_coverage_checks(result: dict[str, Any], catalog: dict[str, Any]) -> None:
+    """Detecta zonas/instrumentos jurídicamente requeridos que no existen en la tabla.
+
+    Un control de cobertura nunca inventa filas. Si la norma/cartografía oficial exige una
+    zona y no existe una fila productiva que la represente inequívocamente, se registra un
+    hallazgo estructural bloqueante. Esto mantiene la invariante 1 polígono = 1 fila.
+    """
+    rows = result.get("rows") or []
+    if not rows:
+        return
+    comuna = rows[0].get("COMUNA", "")
+
+    for check in catalog.get("coverage_checks", []):
+        if v2._key(check.get("comuna")) != v2._key(comuna):
+            continue
+        field = str(check.get("field") or "ZONA")
+        if field not in FIELDS:
+            continue
+        accepted = list(check.get("accepted_values") or [])
+        if not accepted and check.get("proposed") not in (None, ""):
+            accepted = [check.get("proposed")]
+        if not accepted:
+            continue
+
+        present = any(
+            any(_semantic_same(row.get(field), candidate) for candidate in accepted)
+            for row in rows
+        )
+        if present:
+            if bool(check.get("record_match", False)):
+                item = _finding(
+                    row=0,
+                    field=field,
+                    original=next(
+                        (row.get(field, "") for row in rows if any(
+                            _semantic_same(row.get(field), candidate) for candidate in accepted
+                        )),
+                        "",
+                    ),
+                    proposed=check.get("proposed", accepted[0]),
+                    status="COINCIDE",
+                    confidence="ALTA",
+                    reason=str(check.get("match_reason", "La zona legal requerida está representada en la tabla productiva.")),
+                    source=str(check.get("source", "")),
+                    page=str(check.get("page", "")),
+                    rule_id=str(check.get("id", "")),
+                    source_url=str(check.get("source_url", "")),
+                )
+                item["scope"] = "COBERTURA_ZONA"
+                result["findings"].append(item)
+            continue
+
+        item = _finding(
+            row=0,
+            field=field,
+            original="",
+            proposed=check.get("proposed", accepted[0]),
+            status=str(check.get("status", "CONFLICTO NORMATIVO")),
+            confidence=str(check.get("confidence", "ALTA")).upper(),
+            reason=str(check.get(
+                "reason",
+                "La zona existe en la normativa/cartografía oficial vigente, pero no está representada inequívocamente en la tabla productiva.",
+            )),
+            source=str(check.get("source", "")),
+            page=str(check.get("page", "")),
+            rule_id=str(check.get("id", "")),
+            source_url=str(check.get("source_url", "")),
+        )
+        item["scope"] = "COBERTURA_ZONA"
+        result["findings"].append(item)
+
+
 def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
     """Compara la tabla ya normalizada por v2 contra valores oficiales explícitos.
 
@@ -92,7 +190,10 @@ def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict
     - COINCIDE registra trazabilidad positiva;
     - una diferencia sólo se autocorrige si la comprobación lo autoriza expresamente;
     - CODIGO_PRC se preserva salvo autorización explícita y error demostrado;
-    - las reglas de revisión nunca modifican datos.
+    - una norma base no pisa campos de intensidad de una fila con INCENTIVO, salvo
+      autorización explícita `allow_incentive_override=true` en la regla;
+    - las reglas de revisión nunca modifican datos;
+    - las zonas legales ausentes se reportan como cobertura estructural, nunca se inventan.
     """
     findings = result["findings"]
     original_count = len(result["rows"])
@@ -148,6 +249,29 @@ def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict
                     ))
                     continue
 
+                if (
+                    field in _INCENTIVE_SENSITIVE_FIELDS
+                    and _has_incentive(row)
+                    and not bool(check.get("allow_incentive_override", False))
+                ):
+                    findings.append(_finding(
+                        row=row_number,
+                        field=field,
+                        original=current,
+                        proposed=expected,
+                        status="POSIBLE ERROR",
+                        confidence="MEDIA",
+                        reason=(
+                            "La fila tiene INCENTIVO y difiere de la norma base. Se conserva el valor productivo "
+                            "hasta contrastar la regla específica del incentivo; la norma base no puede sobrescribirlo."
+                        ),
+                        source=source,
+                        page=page,
+                        rule_id=check_id,
+                        source_url=source_url,
+                    ))
+                    continue
+
                 status = str(check.get(
                     "error_status",
                     "ERROR CONFIRMADO" if confidence == "ALTA" else "POSIBLE ERROR",
@@ -193,6 +317,8 @@ def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict
                 source_url=str(review.get("source_url", "")),
             ))
 
+    _apply_coverage_checks(result, catalog)
+
     assert len(result["rows"]) == original_count, (
         "Los source checks no pueden cambiar la cantidad de filas/polígonos."
     )
@@ -204,6 +330,10 @@ def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict
     result["formatting"] = sum(item.get("status") == "NORMALIZACIÓN DE FORMATO" for item in findings)
     result["conflicts"] = sum(item.get("status") == "CONFLICTO NORMATIVO" for item in findings)
     result["matches"] = sum(item.get("status") == "COINCIDE" for item in findings)
+    result["coverage_missing"] = sum(
+        item.get("scope") == "COBERTURA_ZONA" and item.get("status") != "COINCIDE"
+        for item in findings
+    )
     return result
 
 
@@ -214,9 +344,6 @@ def audit_table(
     conditional_rule_catalog: dict[str, Any] | None = None,
     source_catalog: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    # v2 evalúa las reglas condicionadas después de normalizar AGRUPAMIENTO.
-    # Se reemplaza el comparador sólo durante esa etapa para que una coma o
-    # punto y coma no impida reconocer la misma combinación normativa.
     original_same = v2._same
     v2._same = _semantic_same
     try:
@@ -231,7 +358,7 @@ def audit_table(
 
     return apply_source_checks(
         result,
-        source_catalog or {"source_checks": [], "review_rules": []},
+        source_catalog or _empty_source_catalog(),
     )
 
 
@@ -276,7 +403,7 @@ def process_file(
     v2._write_qa_xlsx(qa_path, comuna, result["findings"])
 
     requires_review = any(
-        finding.get("status") in {"POSIBLE ERROR", "CONFLICTO NORMATIVO"}
+        finding.get("status") in {"POSIBLE ERROR", "CONFLICTO NORMATIVO", "SIN FUENTE"}
         or (finding.get("status") == "ERROR CONFIRMADO" and finding.get("confidence") != "ALTA")
         for finding in result["findings"]
     )
@@ -292,6 +419,7 @@ def process_file(
         "formatting": result["formatting"],
         "conflicts": result["conflicts"],
         "matches": result.get("matches", 0),
+        "coverage_missing": result.get("coverage_missing", 0),
         "codigo_prc_policy": "PRESERVAR; sólo cambia con autorización explícita y error confirmado",
         "row_policy": "1 fila origen = 1 polígono = 1 fila salida; mismo orden",
         "state": "CON_OBSERVACIONES" if requires_review else "CORREGIDA",
