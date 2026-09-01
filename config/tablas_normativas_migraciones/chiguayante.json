@@ -6,21 +6,31 @@
   "nota": "La tabla SQL2 representa una versión normativa anterior. La cartografía vigente contiene zonificación creada, dividida o renombrada por actos posteriores. El original se conserva intacto y la tabla vigente se reconstruye sólo con fuente oficial y vínculo espacial demostrado.",
   "instrumentos": [
     {
+      "id": "CHIG-2015-DEC-2482",
+      "fecha": "2014-12-24",
+      "publicacion": "2015-01-19",
+      "tipo": "MODIFICACION_PRC",
+      "acto": "Decreto Alcaldicio N°2.482",
+      "efecto": "Crea la zona ZRE y reemplaza con ella una parte de la cobertura territorial de ZRD mediante plano PRCH-6.",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1073994"
+    },
+    {
       "id": "CHIG-2018-DEC-333",
       "fecha": "2018-02-09",
-      "publicacion": "2018-03-16",
+      "publicacion": "2018-02-16",
       "tipo": "MODIFICACION_PRC",
       "acto": "Decreto Alcaldicio N°333",
-      "efecto": "Crea ZU2-A1, ZU2-A2 y ZR1-A; divide/renombra ZI en ZIa/ ZIb y ZR2 en ZR2a/ ZR2b/ ZR2c; actualiza plano PRCH-7.",
-      "source_url": "https://www.chiguayante.cl/transparencia/2018/1_ACTOS%20Y%20DOC%20PUBLICADOS%20EN%20DIARIO%20OFICIAL/333.pdf"
+      "efecto": "Crea ZU2-A1, ZU2-A2 y ZR1-A; divide/renombra ZI en ZIa/ZIb y ZR2 en ZR2a/ZR2b/ZR2c; actualiza plano PRCH-7.",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1115251"
     },
     {
       "id": "CHIG-2024-DEC-898",
-      "fecha": "2024-05-09",
+      "fecha": "2024-04-30",
+      "publicacion": "2024-05-09",
       "tipo": "ENMIENDA_PRC",
       "acto": "Decreto Alcaldicio N°898",
       "efecto": "Ajusta ZR1, estándares de estacionamientos y volúmenes sobre antejardines.",
-      "source_url": "https://www.bcn.cl/leychile/navegar?f=2024-05-09&i=1203429"
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1203429"
     },
     {
       "id": "CHIG-2024-DEC-1033",
@@ -28,10 +38,47 @@
       "tipo": "COMPLEMENTO_ENMIENDA",
       "acto": "Decreto Alcaldicio N°1033",
       "efecto": "Complementa Decreto 898 y la regla incorporada sobre cuerpos salientes/antejardín.",
-      "source_url": "https://www.diariooficial.interior.gob.cl/"
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1203429"
     }
   ],
+  "equivalencias_nomenclatura": {
+    "AV": "Area verde",
+    "EU-1": "ZEU1",
+    "EU-2": "ZEU2",
+    "EU-3": "ZEU3",
+    "EU-4": "ZEU4",
+    "EU-5": "ZEU5",
+    "PR": "ZPR",
+    "R3": "ZR3",
+    "R4": "ZR4",
+    "R5": "ZR5",
+    "R6": "ZR6",
+    "RD": "ZRD",
+    "U1-A": "ZU1-A",
+    "U1-B": "ZU1-B",
+    "U2-A": "ZU2-A",
+    "U2-B": "ZU2-B",
+    "U3-A": "ZU3-A",
+    "U3-B": "ZU3-B",
+    "U4": "ZU4",
+    "U5": "ZU5",
+    "U6": "ZU6",
+    "U7": "ZU7",
+    "U8-1": "ZU8-1",
+    "U8-2": "ZU8-2",
+    "U8-3": "ZU8-3",
+    "VN": "ZVN",
+    "VNR": "ZVNR",
+    "ZM": "ZM"
+  },
   "transformaciones_zona": [
+    {
+      "type": "PARTIAL_SPLIT",
+      "legacy_zones": ["RD"],
+      "current_zones": ["ZRD", "ZRE"],
+      "source_act": "CHIG-2015-DEC-2482",
+      "requires_spatial_code_mapping": true
+    },
     {
       "type": "SPLIT",
       "legacy_zones": ["ZI"],
