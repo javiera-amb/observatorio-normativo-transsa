@@ -1,0 +1,60 @@
+name: Refrescar vigencia por backfill oficial
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "config/vigencia_actos_verificados.json"
+      - "scripts/refrescar_seguimiento_publico.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refrescar-vigencia-backfill
+  cancel-in-progress: false
+
+jobs:
+  refrescar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Regenerar seguimiento nacional
+        run: python scripts/refrescar_seguimiento_publico.py
+
+      - name: Validar hotfix Chiguayante 2024
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          raw = Path('data/seguimiento_normativo.js').read_text(encoding='utf-8').strip()
+          prefix = 'window.SEGUIMIENTO_NORMATIVO = '
+          assert raw.startswith(prefix) and raw.endswith(';')
+          payload = json.loads(raw[len(prefix):-1])
+          row = next(item for item in payload['comunas'] if item['comuna'] == 'Chiguayante')
+          assert int(row['actos_posteriores']) >= 11, row
+          assert row['ultimo_acto_posterior'] == '2024-05-29', row
+          assert row['apto_para_visor'] == 'REVISAR', row
+          print('Chiguayante OK:', row['actos_posteriores'], row['ultimo_acto_posterior'])
+          PY
+
+      - name: Publicar seguimiento corregido
+        run: |
+          if git diff --quiet -- data/seguimiento_normativo.js; then
+            echo "El seguimiento ya estaba actualizado."
+            exit 0
+          fi
+          git config user.name "Observatorio IPT Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/seguimiento_normativo.js
+          git commit -m "Corregir vigencia oficial verificada"
+          git push
