@@ -2,11 +2,12 @@ from __future__ import annotations
 
 """Runner productivo V4: auditoría incremental con catálogos oficiales por comuna.
 
-Regla operacional:
+Reglas operacionales:
 - una comuna con catálogo parcial se AUDITA y acumula QA/correcciones;
 - sólo una comuna con cobertura oficial COMPLETA puede publicarse en NORMALIZADAS;
-- los productos de auditorías parciales se escriben únicamente en un directorio temporal;
-- los controles de cobertura detectan zonas legales ausentes sin inventar filas.
+- una comuna con VERSION_MIGRATION queda SIEMPRE bloqueada hasta cerrar la migración;
+- los productos de auditorías parciales/migraciones se escriben sólo en temporales;
+- nunca se inventa CODIGO_PRC para resolver un cambio de zonificación.
 """
 
 import argparse
@@ -16,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from . import runner_v3
+from . import version_migration
 
 
 _CATALOG_SECTIONS = ("source_checks", "review_rules", "coverage_checks")
@@ -123,12 +125,22 @@ def _coverage_state(catalog: dict[str, Any], comuna: str) -> str:
     return "PENDIENTE"
 
 
+def _set_coverage_state(catalog: dict[str, Any], comuna: str, state: str, marker: str) -> None:
+    registry = catalog.setdefault("por_comuna", {})
+    key = _key(comuna)
+    found = next((name for name in registry if _key(name) == key), comuna)
+    current = registry.get(found)
+    item = dict(current) if isinstance(current, dict) else {"nota": str(current or "")}
+    item["estado"] = state
+    item[marker] = True
+    registry[found] = item
+
+
 def _promote_catalogued_communes_for_audit(
     coverage: dict[str, Any],
     commune_catalogs: dict[str, dict[str, Any]],
 ) -> tuple[dict[str, Any], set[str]]:
     promoted = json.loads(json.dumps(coverage, ensure_ascii=False))
-    registry = promoted.setdefault("por_comuna", {})
     partial_keys: set[str] = set()
 
     for key, meta in commune_catalogs.items():
@@ -137,17 +149,24 @@ def _promote_catalogued_communes_for_audit(
         if actual == "COMPLETA":
             continue
         partial_keys.add(key)
-        found_name = next((name for name in registry if _key(name) == key), comuna)
-        current = registry.get(found_name)
-        if isinstance(current, dict):
-            item = dict(current)
-        else:
-            item = {"nota": str(current or "")}
-        item["estado"] = "COMPLETA"
-        item["_promovida_solo_para_auditoria"] = True
-        registry[found_name] = item
+        _set_coverage_state(promoted, comuna, "COMPLETA", "_promovida_solo_para_auditoria")
 
     return promoted, partial_keys
+
+
+def _block_migration_communes(
+    coverage: dict[str, Any],
+    plans: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    blocked = json.loads(json.dumps(coverage, ensure_ascii=False))
+    for plan in plans.values():
+        _set_coverage_state(
+            blocked,
+            str(plan.get("comuna") or ""),
+            "PARCIAL",
+            "_bloqueada_por_migracion_version",
+        )
+    return blocked
 
 
 def _merge_partial_audit(
@@ -202,6 +221,49 @@ def _merge_partial_audit(
             )
 
 
+def _apply_version_migration_status(
+    result: dict[str, Any],
+    plans: dict[str, dict[str, Any]],
+    master_path: str | Path,
+) -> None:
+    if not plans:
+        return
+    master_index = runner_v3.base_runner._master_index(Path(master_path))
+
+    for key, plan in plans.items():
+        item = (result.get("comunas") or {}).get(key)
+        master_item = master_index.get(key)
+        if not item or not master_item:
+            continue
+        _, rows = runner_v3.base_runner._read_master_sheet(
+            Path(master_path), master_item["sheet"]
+        )
+        legacy_zones = sorted({
+            str(row.get("ZONA") or "").strip()
+            for row in rows
+            if str(row.get("ZONA") or "").strip()
+        })
+        analysis = version_migration.analyze_zone_migration(plan, legacy_zones)
+        item["migracion_normativa"] = analysis
+        if not analysis["migration_required"]:
+            continue
+
+        item["estado"] = "MIGRACIÓN NORMATIVA REQUERIDA"
+        item["publicable"] = False
+        item["auditoria_ejecutada"] = bool(item.get("auditoria_ejecutada", False))
+        item["motivo_no_publicacion"] = (
+            "La zonificación vigente difiere de la versión representada por la tabla maestra. "
+            "Debe reconstruirse la versión vigente con fuente oficial y CODIGO_PRC espacial demostrado."
+        )
+        item["zonas_legacy"] = analysis["legacy_zones"]
+        item["zonas_vigentes_esperadas"] = analysis["current_zones"]
+        item["zonas_legacy_sin_explicar"] = analysis["unexplained_legacy_zones"]
+        item["zonas_vigentes_sin_explicar"] = analysis["unexplained_current_zones"]
+        item["migracion_estructuralmente_explicada"] = analysis["structurally_explained"]
+        item.pop("salida", None)
+        item.pop("sin_cambios", None)
+
+
 def run(
     *,
     prc_root: str | Path,
@@ -211,6 +273,7 @@ def run(
     conditional_rules_path: str | Path | None = None,
     source_rules_path: str | Path | None = None,
     source_dir: str | Path | None = None,
+    migration_dir: str | Path | None = None,
     review_resolutions_path: str | Path | None = None,
     aliases_path: str | Path | None = None,
     coverage_path: str | Path | None = None,
@@ -218,10 +281,13 @@ def run(
     state_path: str | Path | None = None,
 ) -> dict[str, Any]:
     bundle = build_source_bundle(source_rules_path, source_dir)
+    migrations = version_migration.load_migration_plans(migration_dir)
     coverage = _load_coverage(coverage_path)
+    execution_coverage = _block_migration_communes(coverage, migrations)
     promoted_coverage, partial_keys = _promote_catalogued_communes_for_audit(
-        coverage, bundle.get("commune_catalogs", {})
+        execution_coverage, bundle.get("commune_catalogs", {})
     )
+    partial_keys.update(migrations.keys())
     actual_state_path = Path(state_path) if state_path else runner_v3.base_runner._default_state_path()
 
     with tempfile.TemporaryDirectory(prefix="tui_tablas_fuentes_") as tmp:
@@ -230,6 +296,10 @@ def run(
         bundle_path.write_text(
             json.dumps(bundle, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
             encoding="utf-8",
+        )
+        execution_coverage_path = tmp_root / "cobertura_ejecucion.json"
+        execution_coverage_path.write_text(
+            json.dumps(execution_coverage, ensure_ascii=False, sort_keys=True), encoding="utf-8"
         )
 
         result = runner_v3.run(
@@ -241,7 +311,7 @@ def run(
             source_rules_path=bundle_path,
             review_resolutions_path=review_resolutions_path,
             aliases_path=aliases_path,
-            coverage_path=coverage_path,
+            coverage_path=execution_coverage_path,
             structure_path=structure_path,
             state_path=actual_state_path,
         )
@@ -269,12 +339,15 @@ def run(
             )
             _merge_partial_audit(result, audit_only, partial_keys, coverage)
 
+    _apply_version_migration_status(result, migrations, master_path)
+
     result["source_catalog_files"] = bundle["catalog_files"]
     result["source_checks_count"] = bundle["source_checks_count"]
     result["review_rules_count"] = bundle["review_rules_count"]
     result["coverage_checks_count"] = bundle["coverage_checks_count"]
     result["commune_catalogs"] = bundle.get("commune_catalogs", {})
     result["partial_audit_communes"] = sorted(partial_keys)
+    result["version_migration_communes"] = sorted(migrations.keys())
 
     actual_state_path.parent.mkdir(parents=True, exist_ok=True)
     actual_state_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -283,7 +356,7 @@ def run(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Audita toda comuna con catálogo y publica sólo las de cobertura oficial completa."
+        description="Audita tablas, soporta migraciones normativas y publica sólo versiones vigentes completas."
     )
     parser.add_argument("--prc-root", required=True)
     parser.add_argument("--master", required=True)
@@ -292,6 +365,7 @@ def main() -> int:
     parser.add_argument("--conditional-rules", default="config/tablas_normativas_condicionales.json")
     parser.add_argument("--source-rules", default="config/tablas_normativas_fuente.json")
     parser.add_argument("--source-dir", default="config/tablas_normativas_fuentes")
+    parser.add_argument("--migration-dir", default="config/tablas_normativas_migraciones")
     parser.add_argument("--review-resolutions", default="config/tablas_normativas_revisiones_resueltas.json")
     parser.add_argument("--aliases", default="config/tablas_normativas_codigo_aliases.json")
     parser.add_argument("--coverage", default="config/tablas_normativas_cobertura.json")
@@ -307,6 +381,7 @@ def main() -> int:
         conditional_rules_path=args.conditional_rules,
         source_rules_path=args.source_rules,
         source_dir=args.source_dir,
+        migration_dir=args.migration_dir,
         review_resolutions_path=args.review_resolutions,
         aliases_path=args.aliases,
         coverage_path=args.coverage,
@@ -320,6 +395,7 @@ def main() -> int:
         "estados": counts,
         "catalogos_fuente": len(result.get("source_catalog_files", [])),
         "comunas_auditadas_con_fuentes_parciales": len(result.get("partial_audit_communes", [])),
+        "comunas_en_migracion_normativa": len(result.get("version_migration_communes", [])),
         "source_checks": result.get("source_checks_count", 0),
         "review_rules": result.get("review_rules_count", 0),
         "coverage_checks": result.get("coverage_checks_count", 0),
