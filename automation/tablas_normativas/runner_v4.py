@@ -5,10 +5,8 @@ from __future__ import annotations
 Regla operacional:
 - una comuna con catálogo parcial se AUDITA y acumula QA/correcciones;
 - sólo una comuna con cobertura oficial COMPLETA puede publicarse en NORMALIZADAS;
-- los productos de auditorías parciales se escriben únicamente en un directorio temporal.
-
-La lógica normativa sigue delegada en V3. V4 compone las fuentes y separa auditoría
-de publicación para poder avanzar comuna por comuna sin relajar el control legal.
+- los productos de auditorías parciales se escriben únicamente en un directorio temporal;
+- los controles de cobertura detectan zonas legales ausentes sin inventar filas.
 """
 
 import argparse
@@ -20,8 +18,11 @@ from typing import Any
 from . import runner_v3
 
 
+_CATALOG_SECTIONS = ("source_checks", "review_rules", "coverage_checks")
+
+
 def _empty_catalog() -> dict[str, Any]:
-    return {"source_checks": [], "review_rules": []}
+    return {section: [] for section in _CATALOG_SECTIONS}
 
 
 def _key(value: Any) -> str:
@@ -32,10 +33,10 @@ def _read_catalog(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise RuntimeError(f"Catálogo normativo inválido: {path}")
-    payload.setdefault("source_checks", [])
-    payload.setdefault("review_rules", [])
-    if not isinstance(payload["source_checks"], list) or not isinstance(payload["review_rules"], list):
-        raise RuntimeError(f"source_checks/review_rules deben ser listas: {path}")
+    for section in _CATALOG_SECTIONS:
+        payload.setdefault(section, [])
+        if not isinstance(payload[section], list):
+            raise RuntimeError(f"{section} debe ser una lista: {path}")
     return payload
 
 
@@ -75,7 +76,7 @@ def build_source_bundle(
                 "estado_cobertura": str(catalog.get("estado_cobertura") or "PARCIAL").upper(),
             }
 
-        for section in ("source_checks", "review_rules"):
+        for section in _CATALOG_SECTIONS:
             for rule in catalog.get(section, []):
                 if not isinstance(rule, dict):
                     raise RuntimeError(f"Regla inválida en {path}: {rule!r}")
@@ -89,11 +90,12 @@ def build_source_bundle(
                 seen_rule_ids[rule_id] = path
                 bundle[section].append(rule)
 
-    bundle["bundle_schema_version"] = 2
+    bundle["bundle_schema_version"] = 3
     bundle["catalog_files"] = [str(path).replace("\\", "/") for path in files]
     bundle["commune_catalogs"] = commune_catalogs
     bundle["source_checks_count"] = len(bundle["source_checks"])
     bundle["review_rules_count"] = len(bundle["review_rules"])
+    bundle["coverage_checks_count"] = len(bundle["coverage_checks"])
     return bundle
 
 
@@ -156,18 +158,20 @@ def _merge_partial_audit(
 ) -> None:
     metric_fields = {
         "correcciones_confirmadas", "posibles", "normalizaciones_formato", "conflictos",
-        "hallazgos_bloqueantes", "confirmed_unresolved", "poligonos", "filas_normativas",
-        "codigos_prc", "codigos_tabla", "sin_normativa", "sin_geometria",
-        "campos_estructurales_reparables", "hoja", "hojas_equivalentes", "fingerprint",
+        "hallazgos_bloqueantes", "confirmed_unresolved", "coverage_missing",
+        "poligonos", "filas_normativas", "codigos_prc", "codigos_tabla", "sin_normativa",
+        "sin_geometria", "campos_estructurales_reparables", "hoja", "hojas_equivalentes",
+        "fingerprint",
     }
 
     for key in partial_keys:
         audited = (audit_only.get("comunas") or {}).get(key)
         if not audited:
             continue
-        current = (primary.get("comunas") or {}).setdefault(key, {"comuna": audited.get("comuna", key)})
+        current = (primary.get("comunas") or {}).setdefault(
+            key, {"comuna": audited.get("comuna", key)}
+        )
 
-        # Los errores estructurales o de vínculo siguen teniendo prioridad sobre cobertura.
         if audited.get("estado") in {"ERROR ESTRUCTURAL", "ERROR VÍNCULO", "FALTA TABLA"}:
             current.update(audited)
             current["publicable"] = False
@@ -178,7 +182,9 @@ def _merge_partial_audit(
             if field in audited:
                 current[field] = audited[field]
         current["errores"] = list(audited.get("errores") or [])
-        current["cobertura_fuentes"] = _coverage_state(coverage, str(current.get("comuna") or ""))
+        current["cobertura_fuentes"] = _coverage_state(
+            coverage, str(current.get("comuna") or "")
+        )
         current["auditoria_ejecutada"] = True
         current["publicable"] = False
         current.pop("salida", None)
@@ -226,7 +232,6 @@ def run(
             encoding="utf-8",
         )
 
-        # Primera pasada: publicación productiva sólo con cobertura realmente COMPLETA.
         result = runner_v3.run(
             prc_root=prc_root,
             master_path=master_path,
@@ -241,7 +246,6 @@ def run(
             state_path=actual_state_path,
         )
 
-        # Segunda pasada temporal: permite auditar comunas con catálogo parcial.
         if partial_keys:
             promoted_path = tmp_root / "cobertura_solo_auditoria.json"
             promoted_path.write_text(
@@ -268,6 +272,7 @@ def run(
     result["source_catalog_files"] = bundle["catalog_files"]
     result["source_checks_count"] = bundle["source_checks_count"]
     result["review_rules_count"] = bundle["review_rules_count"]
+    result["coverage_checks_count"] = bundle["coverage_checks_count"]
     result["commune_catalogs"] = bundle.get("commune_catalogs", {})
     result["partial_audit_communes"] = sorted(partial_keys)
 
@@ -317,6 +322,7 @@ def main() -> int:
         "comunas_auditadas_con_fuentes_parciales": len(result.get("partial_audit_communes", [])),
         "source_checks": result.get("source_checks_count", 0),
         "review_rules": result.get("review_rules_count", 0),
+        "coverage_checks": result.get("coverage_checks_count", 0),
     }, ensure_ascii=False, indent=2))
     return 0
 
