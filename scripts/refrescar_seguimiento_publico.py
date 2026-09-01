@@ -9,6 +9,11 @@ la parte normativa con los instrumentos/actos públicos ya sincronizados en Git:
 - fecha del último acto posterior;
 - fecha de la última revisión normativa.
 
+El Portal IPT MINVU es la base nacional. Además se incorpora un backfill acotado
+de actos acreditados en fuentes oficiales (BCN, Diario Oficial, municipalidades)
+cuando una omisión del Portal IPT fue comprobada. Los suplementos nunca eliminan
+actos del Portal y se deduplican si la fuente nacional los incorpora después.
+
 Si aparece un PRC/LU nuevo o un acto posterior nuevo, el estado sólo puede
 volverse más conservador (REVISAR); nunca se aprueba cartografía desde este paso.
 """
@@ -29,9 +34,10 @@ import exportar_seguimiento_normativo as legacy  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "consolidados" / "vigencia" / "consolidado_sig_comunal.csv"
 OUTPUT = ROOT / "data" / "seguimiento_normativo.js"
+VERIFIED_ACTS = ROOT / "config" / "vigencia_actos_verificados.json"
 
 
-def load_current_acts() -> list[dict[str, Any]]:
+def load_portal_acts() -> list[dict[str, Any]]:
     files = [ROOT / "data" / f"actos_ipt_nacional_{i:02d}.js" for i in range(1, 11)]
     rows = base.decode_act_files(files)
     acts: list[dict[str, Any]] = []
@@ -50,10 +56,84 @@ def load_current_acts() -> list[dict[str, Any]]:
             "fecha_derogacion": row[8] or "",
             "codigos_origen": row[10] if isinstance(row[10], list) else [],
             "tipo_acto": row[11] or "Modificación",
+            "origen_seguimiento": "Portal IPT MINVU",
         })
     if not acts:
         raise RuntimeError("No se pudieron leer actos del Portal IPT sincronizado.")
     return acts
+
+
+def load_verified_acts(path: Path = VERIFIED_ACTS) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw = payload.get("actos", []) if isinstance(payload, dict) else []
+    if not isinstance(raw, list):
+        raise RuntimeError("vigencia_actos_verificados.json debe contener una lista 'actos'.")
+
+    acts: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict) or item.get("verificado") is not True:
+            continue
+        act = dict(item)
+        act.setdefault("fecha_derogacion", "")
+        act.setdefault("codigos_origen", [])
+        act.setdefault("nivel", "Comunal")
+        act.setdefault("tipo_acto", "Modificación")
+        act.setdefault("estado", "Vigente")
+        act["origen_seguimiento"] = "Backfill oficial verificado"
+        if not base.valid_date(act.get("fecha")):
+            raise RuntimeError(f"Acto verificado sin fecha válida: {act.get('id', 'sin id')}")
+        if not act.get("source_url"):
+            raise RuntimeError(f"Acto verificado sin fuente oficial: {act.get('id', 'sin id')}")
+        if not act.get("region") or not act.get("comunas") or not act.get("tipo_ipt"):
+            raise RuntimeError(f"Acto verificado incompleto: {act.get('id', 'sin id')}")
+        acts.append(act)
+    return acts
+
+
+def _commune_set(act: dict[str, Any]) -> set[str]:
+    return {base.norm(value) for value in (act.get("comunas") or []) if base.norm(value)}
+
+
+def _same_effective_act(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    """Deduplica un suplemento si el Portal IPT incorpora después el mismo acto.
+
+    Para el seguimiento de vigencia, dos actos comunales del mismo tipo de IPT,
+    misma fecha, misma región y comuna superpuesta representan la misma publicación
+    efectiva. El título puede variar entre Portal IPT, Diario Oficial y BCN.
+    """
+    left_official = str(left.get("official_id") or "").strip()
+    right_official = str(right.get("official_id") or "").strip()
+    if left_official and right_official and left_official == right_official:
+        return True
+    if str(left.get("fecha") or "") != str(right.get("fecha") or ""):
+        return False
+    if base.norm(left.get("region")) != base.norm(right.get("region")):
+        return False
+    if str(left.get("tipo_ipt") or "").upper() != str(right.get("tipo_ipt") or "").upper():
+        return False
+    return bool(_commune_set(left) & _commune_set(right))
+
+
+def merge_acts(
+    portal_acts: list[dict[str, Any]], verified_acts: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], int]:
+    merged = list(portal_acts)
+    added = 0
+    for verified in verified_acts:
+        if any(_same_effective_act(verified, existing) for existing in merged):
+            continue
+        merged.append(verified)
+        added += 1
+    return merged, added
+
+
+def load_current_acts() -> tuple[list[dict[str, Any]], int, int]:
+    portal = load_portal_acts()
+    verified = load_verified_acts()
+    merged, added = merge_acts(portal, verified)
+    return merged, len(portal), added
 
 
 def is_effective(act: dict[str, Any]) -> bool:
@@ -118,7 +198,7 @@ def main() -> int:
     legacy.apply_known_overrides(rows)
 
     instruments = base.load_vigentes(ROOT)
-    acts = load_current_acts()
+    acts, portal_count, verified_added = load_current_acts()
     reviewed = date.today().isoformat()
     escalated = 0
 
@@ -193,8 +273,14 @@ def main() -> int:
         "ultima_actualizacion": reviewed,
         "ultima_revision_normativa": reviewed,
         "frecuencia_objetivo_dias": 7,
-        "fuentes_actualizacion": ["Portal IPT MINVU", "consolidado SIG TUI"],
-        "actos_portal_leidos": len(acts),
+        "fuentes_actualizacion": [
+            "Portal IPT MINVU",
+            "Backfill oficial verificado BCN/Diario Oficial/municipalidades",
+            "consolidado SIG TUI",
+        ],
+        "actos_portal_leidos": portal_count,
+        "actos_verificados_suplementarios": verified_added,
+        "actos_totales_evaluados": len(acts),
         "alertas_escaladas": escalated,
         "alcance": "Todas las comunas de Chile",
     }
@@ -206,7 +292,10 @@ def main() -> int:
         encoding="utf-8",
     )
     print(f"Seguimiento público actualizado: {len(rows)} comunas")
-    print(f"Actos Portal IPT: {len(acts)} · alertas escaladas: {escalated}")
+    print(
+        f"Actos Portal IPT: {portal_count} · suplementos verificados añadidos: {verified_added} "
+        f"· total evaluado: {len(acts)} · alertas escaladas: {escalated}"
+    )
     return 0
 
 
