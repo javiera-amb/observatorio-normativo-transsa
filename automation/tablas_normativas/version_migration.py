@@ -50,9 +50,9 @@ def analyze_zone_migration(
     """Compara la estructura antigua con la zonificación vigente documentada.
 
     Una equivalencia de nomenclatura sólo sirve para comprender continuidad jurídica;
-    jamás cambia ZONA o CODIGO_PRC automáticamente. Los SPLIT/PARTIAL_SPLIT sí indican
-    que la versión vigente puede requerir nuevas unidades normativas, pero publicar
-    sigue exigiendo el vínculo espacial de CODIGO_PRC.
+    jamás cambia ZONA o CODIGO_PRC automáticamente. Las transformaciones legales pueden
+    crear/dividir unidades. Una zona legacy puede retirarse sólo si el plan la declara
+    explícitamente obsoleta con evidencia de ausencia en ordenanza y cartografía vigentes.
     """
     legacy_by_key = {_key(zone): str(zone) for zone in legacy_zones if str(zone or "").strip()}
     current_zones = [str(zone) for zone in (plan.get("zonas_vigentes_esperadas") or [])]
@@ -71,6 +71,28 @@ def analyze_zone_migration(
             "current_zone": str(current),
             "legacy_present": legacy_key in legacy_by_key,
             "current_expected": current_key in current_by_key,
+        })
+
+    retired = []
+    for item in plan.get("legacy_retired_zones", []) or []:
+        if isinstance(item, str):
+            zone = item
+            reason = ""
+            source = ""
+        else:
+            zone = str(item.get("zone") or "")
+            reason = str(item.get("reason") or "")
+            source = str(item.get("source_url") or "")
+        key = _key(zone)
+        if not key:
+            continue
+        covered_legacy.add(key)
+        retired.append({
+            "legacy_zone": zone,
+            "legacy_present": key in legacy_by_key,
+            "reason": reason,
+            "source_url": source,
+            "treatment": "PRESERVAR_EN_ORIGINAL_EXCLUIR_DE_VERSION_VIGENTE",
         })
 
     transformations = []
@@ -109,7 +131,7 @@ def analyze_zone_migration(
         item["requires_spatial_code_mapping"] for item in transformations
     ) or bool((plan.get("reglas_publicacion") or {}).get("requiere_codigo_prc_espacial_demostrado", True))
 
-    structural_change = bool(transformations) or set(legacy_by_key) != set(current_by_key)
+    structural_change = bool(transformations or retired) or set(legacy_by_key) != set(current_by_key)
     return {
         "mode": "VERSION_MIGRATION",
         "comuna": str(plan.get("comuna") or ""),
@@ -119,6 +141,7 @@ def analyze_zone_migration(
         "legacy_zones": sorted(legacy_by_key.values()),
         "current_zones": sorted(current_by_key.values()),
         "nomenclature_equivalences": nomenclature,
+        "retired_legacy_zones": retired,
         "transformations": transformations,
         "unexplained_legacy_zones": unexplained_legacy,
         "unexplained_current_zones": unexplained_current,
