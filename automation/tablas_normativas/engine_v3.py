@@ -12,6 +12,23 @@ from . import engine_v2 as v2
 FIELDS = base.FIELDS
 _GROUPS = {"AISLADO", "PAREADO", "CONTINUO"}
 _BASE_SAME = v2._same
+_INCENTIVE_SENSITIVE_FIELDS = {
+    "DENS_HAB_HA",
+    "DENS_VIV_HA",
+    "SUB_PREDIAL",
+    "CONSTRUCCION",
+    "OCUPACION",
+    "OCUPACION_SUP",
+    "PISOS_MAX",
+    "ALTURA_MIN",
+    "ALTURA_MAX",
+    "AREA_LIBRE_MIN",
+    "AGRUPAMIENTO",
+    "RASANTE",
+    "DIST_MEDIANEROS",
+    "ADOSAMIENTO",
+    "ANTEJARDIN",
+}
 
 
 def _empty_source_catalog() -> dict[str, Any]:
@@ -87,6 +104,10 @@ def _matches(row: dict[str, Any], rule: dict[str, Any]) -> bool:
         if field not in FIELDS or not _semantic_same(row.get(field), expected):
             return False
     return True
+
+
+def _has_incentive(row: dict[str, Any]) -> bool:
+    return bool(str(row.get("INCENTIVO") or "").strip())
 
 
 def _apply_coverage_checks(result: dict[str, Any], catalog: dict[str, Any]) -> None:
@@ -169,6 +190,8 @@ def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict
     - COINCIDE registra trazabilidad positiva;
     - una diferencia sólo se autocorrige si la comprobación lo autoriza expresamente;
     - CODIGO_PRC se preserva salvo autorización explícita y error demostrado;
+    - una norma base no pisa campos de intensidad de una fila con INCENTIVO, salvo
+      autorización explícita `allow_incentive_override=true` en la regla;
     - las reglas de revisión nunca modifican datos;
     - las zonas legales ausentes se reportan como cobertura estructural, nunca se inventan.
     """
@@ -218,6 +241,29 @@ def apply_source_checks(result: dict[str, Any], catalog: dict[str, Any]) -> dict
                         reason=(
                             str(check.get("reason", "El valor difiere de la referencia oficial."))
                             + " CODIGO_PRC se conserva hasta demostrar que el identificador productivo es incorrecto."
+                        ),
+                        source=source,
+                        page=page,
+                        rule_id=check_id,
+                        source_url=source_url,
+                    ))
+                    continue
+
+                if (
+                    field in _INCENTIVE_SENSITIVE_FIELDS
+                    and _has_incentive(row)
+                    and not bool(check.get("allow_incentive_override", False))
+                ):
+                    findings.append(_finding(
+                        row=row_number,
+                        field=field,
+                        original=current,
+                        proposed=expected,
+                        status="POSIBLE ERROR",
+                        confidence="MEDIA",
+                        reason=(
+                            "La fila tiene INCENTIVO y difiere de la norma base. Se conserva el valor productivo "
+                            "hasta contrastar la regla específica del incentivo; la norma base no puede sobrescribirlo."
                         ),
                         source=source,
                         page=page,
@@ -298,9 +344,6 @@ def audit_table(
     conditional_rule_catalog: dict[str, Any] | None = None,
     source_catalog: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    # v2 evalúa las reglas condicionadas después de normalizar AGRUPAMIENTO.
-    # Se reemplaza el comparador sólo durante esa etapa para que una coma o
-    # punto y coma no impida reconocer la misma combinación normativa.
     original_same = v2._same
     v2._same = _semantic_same
     try:
