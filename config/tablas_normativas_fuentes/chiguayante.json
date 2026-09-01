@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-09-01",
+  "comuna": "CHIGUAYANTE",
+  "rialcomsii": "8211",
+  "estado_cobertura": "EN_AUDITORIA",
+  "criterio": "Catálogo comunal de fuente oficial. Corrige sólo parámetros demostrados por la normativa vigente y nunca cambia ZONA ni CODIGO_PRC por semejanza de nomenclatura.",
+  "fuentes": [
+    {
+      "tipo": "PRC consolidado vigente",
+      "nombre": "Decreto Alcaldicio N.º 637 de 2003, texto vigente con modificaciones",
+      "url": "https://www.bcn.cl/leychile/navegar?i=212051"
+    },
+    {
+      "tipo": "Enmienda",
+      "nombre": "Decreto Alcaldicio N.º 898, publicado 09-05-2024",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=1203429"
+    },
+    {
+      "tipo": "Complemento de Enmienda",
+      "nombre": "Decreto Alcaldicio N.º 1033, publicado 29-05-2024",
+      "url": "https://www.bcn.cl/leychile/navegar?idNorma=1203864"
+    },
+    {
+      "tipo": "Ordenanza refundida",
+      "nombre": "Plan Regulador Comunal de Chiguayante, texto refundido 2024",
+      "url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf"
+    }
+  ],
+  "source_checks": [
+    {
+      "id": "chig-zr1-residencial-enmienda-2024",
+      "comuna": "CHIGUAYANTE",
+      "where": {
+        "CODIGO_PRC": "8211-RI",
+        "ZONA": "RI",
+        "ESPECIF_ESPECIF": "RESIDENCIAL"
+      },
+      "expected": {
+        "DENS_HAB_HA": 10,
+        "OCUPACION": 0.035,
+        "CONSTRUCCION": 0.14
+      },
+      "auto_apply_fields": ["DENS_HAB_HA", "OCUPACION", "CONSTRUCCION"],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N.º 898 / PRC Chiguayante vigente",
+      "page": "Punto 6 - Zona Especial por Laderas ZR1",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1203429",
+      "reason": "La Enmienda 2024 reemplaza en ZR1 la densidad bruta máxima de 12 a 10 hab/ha, la ocupación residencial de 0,05 a 0,035 y la constructibilidad residencial de 0,20 a 0,14."
+    },
+    {
+      "id": "chig-zr1-otros-usos-enmienda-2024",
+      "comuna": "CHIGUAYANTE",
+      "where": {
+        "CODIGO_PRC": "8211-R1",
+        "ZONA": "R1",
+        "ESPECIF_ESPECIF": "EQUIPAMIENTO"
+      },
+      "expected": {
+        "DENS_HAB_HA": 10,
+        "OCUPACION": 0.1,
+        "CONSTRUCCION": 0.3
+      },
+      "auto_apply_fields": ["DENS_HAB_HA"],
+      "confidence": "ALTA",
+      "source": "Decreto Alcaldicio N.º 898 / PRC Chiguayante vigente",
+      "page": "Punto 6 - Zona Especial por Laderas ZR1",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1203429",
+      "reason": "La densidad bruta máxima vigente de ZR1 es 10 hab/ha. Para otros usos se mantienen ocupación 0,10 y constructibilidad 0,30, por lo que esos valores sirven además como control positivo."
+    }
+  ],
+  "review_rules": [],
+  "cambios_no_mapeados_directamente_a_los_35_campos": [
+    {
+      "acto": "Decreto 898",
+      "materia": "Estándares de estacionamientos del artículo 5",
+      "detalle": "Modifica estándares para culto y cultura, salud, seguridad, servicios profesionales y servicios artesanales. Debe conservarse como normativa general y no forzarse en un campo numérico que no representa estacionamientos."
+    },
+    {
+      "acto": "Decreto 1033",
+      "materia": "Cuerpos salientes sobre antejardines",
+      "detalle": "Desde segundo piso permite cuerpos salientes hasta 1,20 m sobre antejardín, respetando distanciamientos laterales OGUC. No modifica por sí mismo el valor numérico de ANTEJARDIN."
+    }
+  ]
+}
