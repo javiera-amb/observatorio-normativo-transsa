@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-09-01",
+  "criterio": "Backfill de actos normativos efectivos acreditados en fuentes oficiales que no estén disponibles o correctamente relacionados en la base sincronizada del Portal IPT. Estos registros complementan la base; nunca eliminan actos del Portal IPT y se deduplican si el acto aparece posteriormente en la fuente nacional.",
+  "actos": [
+    {
+      "id": "chiguayante-da-898-2024",
+      "official_id": "BCN-1203429",
+      "region": "Biobío",
+      "comunas": ["Chiguayante"],
+      "nivel": "Comunal",
+      "tipo_ipt": "PRC",
+      "titulo": "Decreto Alcaldicio N.º 898: aprueba Enmienda al PRC vigente de Chiguayante - ajuste ZR1, estacionamientos y volúmenes sobre antejardines",
+      "estado": "Vigente",
+      "fecha": "2024-05-09",
+      "fecha_derogacion": "",
+      "codigos_origen": [],
+      "tipo_acto": "Enmienda",
+      "fuente": "Biblioteca del Congreso Nacional - LeyChile",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1203429",
+      "verificado": true,
+      "afecta": [
+        "Artículo 5: estándares de estacionamientos para determinados equipamientos",
+        "Zona Especial por Laderas ZR1: densidad bruta máxima 10 hab/ha",
+        "Zona Especial por Laderas ZR1: ocupación de suelo 0,035",
+        "Zona Especial por Laderas ZR1: constructibilidad 0,14",
+        "Incorpora nuevo artículo 6 y renumera artículos posteriores"
+      ]
+    },
+    {
+      "id": "chiguayante-da-1033-2024",
+      "official_id": "BCN-1203864",
+      "region": "Biobío",
+      "comunas": ["Chiguayante"],
+      "nivel": "Comunal",
+      "tipo_ipt": "PRC",
+      "titulo": "Decreto Alcaldicio N.º 1033: complementa Decreto N.º 898 de la Enmienda al PRC de Chiguayante",
+      "estado": "Vigente",
+      "fecha": "2024-05-29",
+      "fecha_derogacion": "",
+      "codigos_origen": [],
+      "tipo_acto": "Complemento de Enmienda",
+      "fuente": "Biblioteca del Congreso Nacional - LeyChile",
+      "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1203864",
+      "verificado": true,
+      "afecta": [
+        "Complementa el punto 7 del Decreto N.º 898",
+        "Nuevo artículo 6: cuerpos salientes sobre antejardines hasta 1,20 m desde segundo piso, respetando distanciamientos OGUC"
+      ]
+    }
+  ],
+  "fuentes_documentales": [
+    {
+      "id": "chiguayante-ordenanza-refundida-2024",
+      "region": "Biobío",
+      "comuna": "Chiguayante",
+      "tipo_ipt": "PRC",
+      "nombre": "Ordenanza Local Plan Regulador Comunal de Chiguayante - texto refundido 2024",
+      "institucion": "Municipalidad de Chiguayante",
+      "estado": "oficial_vigente",
+      "uso": "Fuente consolidada prioritaria para auditar la tabla normativa vigente después de la Enmienda 2024.",
+      "url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf"
+    }
+  ]
+}
