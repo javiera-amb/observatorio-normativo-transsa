@@ -1,15 +1,20 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "updated_at": "2026-09-01",
   "comuna": "CHIGUAYANTE",
   "rialcomsii": "8211",
-  "estado_cobertura": "EN_AUDITORIA",
-  "criterio": "Catálogo comunal de fuente oficial. Corrige sólo parámetros demostrados por la normativa vigente y nunca cambia ZONA ni CODIGO_PRC por semejanza de nomenclatura.",
+  "estado_cobertura": "PARCIAL",
+  "criterio": "Catálogo comunal de fuente oficial. Corrige sólo parámetros demostrados por la normativa vigente, detecta zonas legales ausentes y nunca cambia ZONA ni CODIGO_PRC por semejanza de nomenclatura.",
   "fuentes": [
     {
       "tipo": "PRC consolidado vigente",
       "nombre": "Decreto Alcaldicio N.º 637 de 2003, texto vigente con modificaciones",
       "url": "https://www.bcn.cl/leychile/navegar?i=212051"
+    },
+    {
+      "tipo": "Modificación PRC",
+      "nombre": "Adecuación normativa y nuevas subzonas, 2018",
+      "url": "https://www.bcn.cl/leychile/"
     },
     {
       "tipo": "Enmienda",
@@ -25,22 +30,235 @@
       "tipo": "Ordenanza refundida",
       "nombre": "Plan Regulador Comunal de Chiguayante, texto refundido 2024",
       "url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf"
+    },
+    {
+      "tipo": "Cartografía oficial vigente",
+      "nombre": "MINVU GeoIDE - PRC Biobío, Chiguayante",
+      "url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9"
     }
   ],
   "source_checks": [
     {
+      "id": "chig-zu1a-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U1-A"},
+      "expected": {"SUB_PREDIAL": 200, "CONSTRUCCION": 2, "OCUPACION": 0.6, "ALTURA_MAX": 15, "ANTEJARDIN": 2},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ALTURA_MAX", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU1-A",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU1-A fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu1a-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U1-A", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 350, "PISOS_MAX": 5},
+      "auto_apply_fields": ["DENS_HAB_HA", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU1-A",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU1-A fija densidad bruta máxima de 350 hab/ha y 5 pisos."
+    },
+    {
+      "id": "chig-zu1b-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U1-B"},
+      "expected": {"SUB_PREDIAL": 200, "CONSTRUCCION": 2, "OCUPACION": 0.6, "ALTURA_MAX": 15, "ANTEJARDIN": 2},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ALTURA_MAX", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU1-B",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU1-B fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu1b-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U1-B", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 600, "PISOS_MAX": 5},
+      "auto_apply_fields": ["DENS_HAB_HA", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU1-B",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU1-B fija densidad bruta máxima de 600 hab/ha y 5 pisos."
+    },
+    {
+      "id": "chig-zu2a-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U2-A"},
+      "expected": {"SUB_PREDIAL": 300, "CONSTRUCCION": 1, "OCUPACION": 0.4, "ALTURA_MAX": 9, "ANTEJARDIN": 3},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ALTURA_MAX", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU2-A",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU2-A fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu2a-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U2-A", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 108, "PISOS_MAX": 3},
+      "auto_apply_fields": ["DENS_HAB_HA", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU2-A",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU2-A fija densidad bruta máxima de 108 hab/ha y 3 pisos."
+    },
+    {
+      "id": "chig-zu2b-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U2-B"},
+      "expected": {"SUB_PREDIAL": 200, "CONSTRUCCION": 1, "OCUPACION": 0.6, "ANTEJARDIN": 2},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU2-B",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU2-B fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu2b-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U2-B", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 160, "ALTURA_MAX": 9, "PISOS_MAX": 3},
+      "auto_apply_fields": ["DENS_HAB_HA", "ALTURA_MAX", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU2-B",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU2-B fija densidad 160 hab/ha, altura 9 m y 3 pisos."
+    },
+    {
+      "id": "chig-zu3a-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U3-A"},
+      "expected": {"SUB_PREDIAL": 200, "CONSTRUCCION": 3.8, "OCUPACION": 0.6, "ANTEJARDIN": 2},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU3-A",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU3-A fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu3a-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U3-A", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 700, "ALTURA_MAX": 24, "PISOS_MAX": 8},
+      "auto_apply_fields": ["DENS_HAB_HA", "ALTURA_MAX", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU3-A",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU3-A fija densidad 700 hab/ha, altura 24 m y 8 pisos."
+    },
+    {
+      "id": "chig-zu3b-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U3-B"},
+      "expected": {"SUB_PREDIAL": 200, "CONSTRUCCION": 3.2, "OCUPACION": 0.6, "ALTURA_MAX": 24, "ANTEJARDIN": 4},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ALTURA_MAX", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU3-B",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU3-B fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu3b-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U3-B", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 700, "PISOS_MAX": 8},
+      "auto_apply_fields": ["DENS_HAB_HA", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU3-B",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU3-B fija densidad 700 hab/ha y 8 pisos."
+    },
+    {
+      "id": "chig-zu4-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U4"},
+      "expected": {"SUB_PREDIAL": 160, "CONSTRUCCION": 3.8, "OCUPACION": 0.8, "ALTURA_MAX": 24, "ANTEJARDIN": 2},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ALTURA_MAX", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU4",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU4 fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu4-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U4", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 900, "PISOS_MAX": 8},
+      "auto_apply_fields": ["DENS_HAB_HA", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU4",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU4 fija densidad 900 hab/ha y 8 pisos."
+    },
+    {
+      "id": "chig-zu5-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U5"},
+      "expected": {"SUB_PREDIAL": 400, "CONSTRUCCION": 6, "OCUPACION": 0.7, "ALTURA_MAX": 34, "ANTEJARDIN": 4},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ALTURA_MAX", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU5",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU5 fija estos parámetros. La densidad figura como no exigida y no se transforma todavía a un código interno."
+    },
+    {
+      "id": "chig-zu5-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U5", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"PISOS_MAX": 12},
+      "auto_apply_fields": ["PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU5",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU5 fija 12 pisos máximos."
+    },
+    {
+      "id": "chig-zu6-parametros-vigentes",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U6"},
+      "expected": {"SUB_PREDIAL": 200, "CONSTRUCCION": 3.2, "OCUPACION": 0.8, "ALTURA_MAX": 24, "ANTEJARDIN": 4},
+      "auto_apply_fields": ["SUB_PREDIAL", "CONSTRUCCION", "OCUPACION", "ALTURA_MAX", "ANTEJARDIN"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU6",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La tabla vigente ZU6 fija estos parámetros para la zona."
+    },
+    {
+      "id": "chig-zu6-residencial-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U6", "ESPECIF_GENERAL": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 700, "PISOS_MAX": 8},
+      "auto_apply_fields": ["DENS_HAB_HA", "PISOS_MAX"],
+      "confidence": "ALTA",
+      "source": "Ordenanza PRC Chiguayante refundida 2024",
+      "page": "Tabla ZU6",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+      "reason": "La norma residencial vigente de ZU6 fija densidad 700 hab/ha y 8 pisos."
+    },
+    {
       "id": "chig-zr1-residencial-enmienda-2024",
       "comuna": "CHIGUAYANTE",
-      "where": {
-        "CODIGO_PRC": "8211-RI",
-        "ZONA": "RI",
-        "ESPECIF_ESPECIF": "RESIDENCIAL"
-      },
-      "expected": {
-        "DENS_HAB_HA": 10,
-        "OCUPACION": 0.035,
-        "CONSTRUCCION": 0.14
-      },
+      "where": {"CODIGO_PRC": "8211-RI", "ZONA": "RI", "ESPECIF_ESPECIF": "RESIDENCIAL"},
+      "expected": {"DENS_HAB_HA": 10, "OCUPACION": 0.035, "CONSTRUCCION": 0.14},
       "auto_apply_fields": ["DENS_HAB_HA", "OCUPACION", "CONSTRUCCION"],
       "confidence": "ALTA",
       "source": "Decreto Alcaldicio N.º 898 / PRC Chiguayante vigente",
@@ -51,25 +269,189 @@
     {
       "id": "chig-zr1-otros-usos-enmienda-2024",
       "comuna": "CHIGUAYANTE",
-      "where": {
-        "CODIGO_PRC": "8211-R1",
-        "ZONA": "R1",
-        "ESPECIF_ESPECIF": "EQUIPAMIENTO"
-      },
-      "expected": {
-        "DENS_HAB_HA": 10,
-        "OCUPACION": 0.1,
-        "CONSTRUCCION": 0.3
-      },
+      "where": {"CODIGO_PRC": "8211-R1", "ZONA": "R1", "ESPECIF_ESPECIF": "EQUIPAMIENTO"},
+      "expected": {"DENS_HAB_HA": 10, "OCUPACION": 0.1, "CONSTRUCCION": 0.3},
       "auto_apply_fields": ["DENS_HAB_HA"],
       "confidence": "ALTA",
       "source": "Decreto Alcaldicio N.º 898 / PRC Chiguayante vigente",
       "page": "Punto 6 - Zona Especial por Laderas ZR1",
       "source_url": "https://www.bcn.cl/leychile/navegar?idNorma=1203429",
-      "reason": "La densidad bruta máxima vigente de ZR1 es 10 hab/ha. Para otros usos se mantienen ocupación 0,10 y constructibilidad 0,30, por lo que esos valores sirven además como control positivo."
+      "reason": "La densidad bruta máxima vigente de ZR1 es 10 hab/ha. Para otros usos se mantienen ocupación 0,10 y constructibilidad 0,30."
     }
   ],
-  "review_rules": [],
+  "review_rules": [
+    {
+      "id": "chig-zm-conflicto-semantico-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "ZM"},
+      "field": "DEFINICION_ZONA",
+      "proposed": "ZONA ESPECIAL DE MIRADORES",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU + Ordenanza PRC Chiguayante vigente",
+      "page": "Zona ZM",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "La zonificación vigente identifica ZM como Zona Especial de Miradores, mientras SQL2 usa ZM para Defensas Fluviales. Debe resolverse espacialmente sin renombrar por similitud."
+    },
+    {
+      "id": "chig-u2-sin-correspondencia-vigente",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "U2"},
+      "field": "ZONA",
+      "proposed": "REVISAR CORRESPONDENCIA ESPACIAL",
+      "status": "SIN FUENTE",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Catálogo de zonas Chiguayante",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "La capa oficial vigente no contiene una zona simple ZU2/U2; contiene ZU2-A, ZU2-B y subzonas específicas. La fila debe localizarse espacialmente antes de decidir su correspondencia."
+    },
+    {
+      "id": "chig-zi-agregada-requiere-resolucion",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "ZI"},
+      "field": "ZONA",
+      "proposed": "ZIa / ZIb según localización",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Zonas ZIa y ZIb",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "La zonificación vigente separa ZIa y ZIb. La fila productiva ZI no permite determinar cuál corresponde sin geometría."
+    },
+    {
+      "id": "chig-r2-agregada-requiere-resolucion",
+      "comuna": "CHIGUAYANTE",
+      "where": {"ZONA": "R2"},
+      "field": "ZONA",
+      "proposed": "ZR2a / ZR2b / ZR2c según localización",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Zonas ZR2a, ZR2b y ZR2c",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "La zonificación vigente distingue tres subzonas sanitarias. La fila productiva R2 está agregada y requiere resolución espacial."
+    }
+  ],
+  "coverage_checks": [
+    {
+      "id": "chig-cobertura-zu2-a1",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["U2-A1", "ZU2-A1"],
+      "proposed": "ZU2-A1",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU + Ordenanza refundida 2024",
+      "page": "Zona ZU2-A1",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "ZU2-A1 existe en la zonificación vigente y no está representada como zona inequívoca en SQL2."
+    },
+    {
+      "id": "chig-cobertura-zu2-a2",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["U2-A2", "ZU2-A2"],
+      "proposed": "ZU2-A2",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU + Ordenanza refundida 2024",
+      "page": "Zona ZU2-A2",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "ZU2-A2 existe en la zonificación vigente y no está representada como zona inequívoca en SQL2."
+    },
+    {
+      "id": "chig-cobertura-zr1-a",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["R1-A", "ZR1-A"],
+      "proposed": "ZR1-A",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU + Ordenanza refundida 2024",
+      "page": "Zona ZR1-A",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "ZR1-A existe en la zonificación vigente y no está representada como zona inequívoca en SQL2."
+    },
+    {
+      "id": "chig-cobertura-zre",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["RE", "ZRE"],
+      "proposed": "ZRE",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU + Ordenanza refundida 2024",
+      "page": "Zona ZRE",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "ZRE existe en la zonificación vigente y no está representada como zona inequívoca en SQL2."
+    },
+    {
+      "id": "chig-cobertura-zia",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["ZIa"],
+      "proposed": "ZIa",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Zona ZIa",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "La zonificación vigente distingue ZIa; SQL2 sólo contiene una zona agregada ZI."
+    },
+    {
+      "id": "chig-cobertura-zib",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["ZIb"],
+      "proposed": "ZIb",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Zona ZIb",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "La zonificación vigente distingue ZIb; SQL2 sólo contiene una zona agregada ZI."
+    },
+    {
+      "id": "chig-cobertura-zr2a",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["R2a", "ZR2a"],
+      "proposed": "ZR2a",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Zona ZR2a",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "ZR2a existe en la zonificación vigente; SQL2 sólo contiene R2 agregado."
+    },
+    {
+      "id": "chig-cobertura-zr2b",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["R2b", "ZR2b"],
+      "proposed": "ZR2b",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Zona ZR2b",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "ZR2b existe en la zonificación vigente; SQL2 sólo contiene R2 agregado."
+    },
+    {
+      "id": "chig-cobertura-zr2c",
+      "comuna": "CHIGUAYANTE",
+      "field": "ZONA",
+      "accepted_values": ["R2c", "ZR2c"],
+      "proposed": "ZR2c",
+      "status": "CONFLICTO NORMATIVO",
+      "confidence": "ALTA",
+      "source": "Cartografía oficial MINVU vigente",
+      "page": "Zona ZR2c",
+      "source_url": "https://geoide.minvu.cl/server/rest/services/IPT/PRC_Biobio/FeatureServer/9",
+      "reason": "ZR2c existe en la zonificación vigente; SQL2 sólo contiene R2 agregado."
+    }
+  ],
   "cambios_no_mapeados_directamente_a_los_35_campos": [
     {
       "acto": "Decreto 898",
