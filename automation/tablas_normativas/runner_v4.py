@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-"""Runner productivo V4: compone catálogos normativos por comuna y delega en V3.
+"""Runner productivo V4: auditoría incremental con catálogos oficiales por comuna.
 
-V4 no cambia la lógica de auditoría. Su única responsabilidad es permitir que las
-fuentes oficiales crezcan por comuna sin convertir `tablas_normativas_fuente.json`
-en un archivo monolítico. El bundle generado es determinista y participa del hash
-que V3 usa para decidir si una comuna debe reprocesarse.
+Regla operacional:
+- una comuna con catálogo parcial se AUDITA y acumula QA/correcciones;
+- sólo una comuna con cobertura oficial COMPLETA puede publicarse en NORMALIZADAS;
+- los productos de auditorías parciales se escriben únicamente en un directorio temporal.
+
+La lógica normativa sigue delegada en V3. V4 compone las fuentes y separa auditoría
+de publicación para poder avanzar comuna por comuna sin relajar el control legal.
 """
 
 import argparse
@@ -19,6 +22,10 @@ from . import runner_v3
 
 def _empty_catalog() -> dict[str, Any]:
     return {"source_checks": [], "review_rules": []}
+
+
+def _key(value: Any) -> str:
+    return runner_v3.base_runner._key(value)
 
 
 def _read_catalog(path: Path) -> dict[str, Any]:
@@ -38,20 +45,36 @@ def build_source_bundle(
 ) -> dict[str, Any]:
     bundle = _empty_catalog()
     files: list[Path] = []
+    commune_catalogs: dict[str, dict[str, Any]] = {}
 
     if global_catalog_path:
         global_path = Path(global_catalog_path)
         if global_path.exists():
             files.append(global_path)
 
+    commune_files: list[Path] = []
     if commune_catalog_dir:
         directory = Path(commune_catalog_dir)
         if directory.exists():
-            files.extend(sorted(path for path in directory.glob("*.json") if path.is_file()))
+            commune_files = sorted(path for path in directory.glob("*.json") if path.is_file())
+            files.extend(commune_files)
 
     seen_rule_ids: dict[str, Path] = {}
     for path in files:
         catalog = _read_catalog(path)
+        if path in commune_files:
+            comuna = str(catalog.get("comuna") or "").strip()
+            if not comuna:
+                raise RuntimeError(f"Catálogo comunal sin COMUNA: {path}")
+            key = _key(comuna)
+            if key in commune_catalogs:
+                raise RuntimeError(f"Más de un catálogo comunal para {comuna}")
+            commune_catalogs[key] = {
+                "comuna": comuna,
+                "archivo": str(path).replace("\\", "/"),
+                "estado_cobertura": str(catalog.get("estado_cobertura") or "PARCIAL").upper(),
+            }
+
         for section in ("source_checks", "review_rules"):
             for rule in catalog.get(section, []):
                 if not isinstance(rule, dict):
@@ -66,11 +89,111 @@ def build_source_bundle(
                 seen_rule_ids[rule_id] = path
                 bundle[section].append(rule)
 
-    bundle["bundle_schema_version"] = 1
+    bundle["bundle_schema_version"] = 2
     bundle["catalog_files"] = [str(path).replace("\\", "/") for path in files]
+    bundle["commune_catalogs"] = commune_catalogs
     bundle["source_checks_count"] = len(bundle["source_checks"])
     bundle["review_rules_count"] = len(bundle["review_rules"])
     return bundle
+
+
+def _load_coverage(path: str | Path | None) -> dict[str, Any]:
+    if not path:
+        return {"schema_version": 1, "por_comuna": {}}
+    file_path = Path(path)
+    if not file_path.exists():
+        return {"schema_version": 1, "por_comuna": {}}
+    payload = json.loads(file_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise RuntimeError("Catálogo de cobertura inválido.")
+    payload.setdefault("por_comuna", {})
+    return payload
+
+
+def _coverage_state(catalog: dict[str, Any], comuna: str) -> str:
+    target = _key(comuna)
+    for name, item in (catalog.get("por_comuna") or {}).items():
+        if _key(name) != target:
+            continue
+        if isinstance(item, str):
+            return item.upper()
+        return str((item or {}).get("estado") or "PENDIENTE").upper()
+    return "PENDIENTE"
+
+
+def _promote_catalogued_communes_for_audit(
+    coverage: dict[str, Any],
+    commune_catalogs: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], set[str]]:
+    promoted = json.loads(json.dumps(coverage, ensure_ascii=False))
+    registry = promoted.setdefault("por_comuna", {})
+    partial_keys: set[str] = set()
+
+    for key, meta in commune_catalogs.items():
+        comuna = str(meta["comuna"])
+        actual = _coverage_state(coverage, comuna)
+        if actual == "COMPLETA":
+            continue
+        partial_keys.add(key)
+        found_name = next((name for name in registry if _key(name) == key), comuna)
+        current = registry.get(found_name)
+        if isinstance(current, dict):
+            item = dict(current)
+        else:
+            item = {"nota": str(current or "")}
+        item["estado"] = "COMPLETA"
+        item["_promovida_solo_para_auditoria"] = True
+        registry[found_name] = item
+
+    return promoted, partial_keys
+
+
+def _merge_partial_audit(
+    primary: dict[str, Any],
+    audit_only: dict[str, Any],
+    partial_keys: set[str],
+    coverage: dict[str, Any],
+) -> None:
+    metric_fields = {
+        "correcciones_confirmadas", "posibles", "normalizaciones_formato", "conflictos",
+        "hallazgos_bloqueantes", "confirmed_unresolved", "poligonos", "filas_normativas",
+        "codigos_prc", "codigos_tabla", "sin_normativa", "sin_geometria",
+        "campos_estructurales_reparables", "hoja", "hojas_equivalentes", "fingerprint",
+    }
+
+    for key in partial_keys:
+        audited = (audit_only.get("comunas") or {}).get(key)
+        if not audited:
+            continue
+        current = (primary.get("comunas") or {}).setdefault(key, {"comuna": audited.get("comuna", key)})
+
+        # Los errores estructurales o de vínculo siguen teniendo prioridad sobre cobertura.
+        if audited.get("estado") in {"ERROR ESTRUCTURAL", "ERROR VÍNCULO", "FALTA TABLA"}:
+            current.update(audited)
+            current["publicable"] = False
+            current["auditoria_ejecutada"] = False
+            continue
+
+        for field in metric_fields:
+            if field in audited:
+                current[field] = audited[field]
+        current["errores"] = list(audited.get("errores") or [])
+        current["cobertura_fuentes"] = _coverage_state(coverage, str(current.get("comuna") or ""))
+        current["auditoria_ejecutada"] = True
+        current["publicable"] = False
+        current.pop("salida", None)
+        current.pop("sin_cambios", None)
+
+        if audited.get("estado") == "CON OBSERVACIONES":
+            current["estado"] = "CON OBSERVACIONES"
+            current["motivo_no_publicacion"] = (
+                "La auditoría encontró hallazgos bloqueantes y la cobertura oficial aún no está completa."
+            )
+        else:
+            current["estado"] = "AUDITADA · FUENTES PARCIALES"
+            current["motivo_no_publicacion"] = (
+                "La tabla pasó los controles disponibles, pero no se publica hasta completar el catálogo oficial de la comuna."
+            )
 
 
 def run(
@@ -89,13 +212,21 @@ def run(
     state_path: str | Path | None = None,
 ) -> dict[str, Any]:
     bundle = build_source_bundle(source_rules_path, source_dir)
+    coverage = _load_coverage(coverage_path)
+    promoted_coverage, partial_keys = _promote_catalogued_communes_for_audit(
+        coverage, bundle.get("commune_catalogs", {})
+    )
+    actual_state_path = Path(state_path) if state_path else runner_v3.base_runner._default_state_path()
 
     with tempfile.TemporaryDirectory(prefix="tui_tablas_fuentes_") as tmp:
-        bundle_path = Path(tmp) / "tablas_normativas_fuentes_bundle.json"
+        tmp_root = Path(tmp)
+        bundle_path = tmp_root / "tablas_normativas_fuentes_bundle.json"
         bundle_path.write_text(
             json.dumps(bundle, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
             encoding="utf-8",
         )
+
+        # Primera pasada: publicación productiva sólo con cobertura realmente COMPLETA.
         result = runner_v3.run(
             prc_root=prc_root,
             master_path=master_path,
@@ -107,18 +238,47 @@ def run(
             aliases_path=aliases_path,
             coverage_path=coverage_path,
             structure_path=structure_path,
-            state_path=state_path,
+            state_path=actual_state_path,
         )
+
+        # Segunda pasada temporal: permite auditar comunas con catálogo parcial.
+        if partial_keys:
+            promoted_path = tmp_root / "cobertura_solo_auditoria.json"
+            promoted_path.write_text(
+                json.dumps(promoted_coverage, ensure_ascii=False, sort_keys=True),
+                encoding="utf-8",
+            )
+            audit_output = tmp_root / "salidas_no_publicables"
+            audit_state = tmp_root / "estado_auditoria_parcial.json"
+            audit_only = runner_v3.run(
+                prc_root=prc_root,
+                master_path=master_path,
+                output_dir=audit_output,
+                exact_rules_path=exact_rules_path,
+                conditional_rules_path=conditional_rules_path,
+                source_rules_path=bundle_path,
+                review_resolutions_path=review_resolutions_path,
+                aliases_path=aliases_path,
+                coverage_path=promoted_path,
+                structure_path=structure_path,
+                state_path=audit_state,
+            )
+            _merge_partial_audit(result, audit_only, partial_keys, coverage)
 
     result["source_catalog_files"] = bundle["catalog_files"]
     result["source_checks_count"] = bundle["source_checks_count"]
     result["review_rules_count"] = bundle["review_rules_count"]
+    result["commune_catalogs"] = bundle.get("commune_catalogs", {})
+    result["partial_audit_communes"] = sorted(partial_keys)
+
+    actual_state_path.parent.mkdir(parents=True, exist_ok=True)
+    actual_state_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Procesa PRC + tabla con catálogos oficiales globales y por comuna."
+        description="Audita toda comuna con catálogo y publica sólo las de cobertura oficial completa."
     )
     parser.add_argument("--prc-root", required=True)
     parser.add_argument("--master", required=True)
@@ -154,6 +314,7 @@ def main() -> int:
     print(json.dumps({
         "estados": counts,
         "catalogos_fuente": len(result.get("source_catalog_files", [])),
+        "comunas_auditadas_con_fuentes_parciales": len(result.get("partial_audit_communes", [])),
         "source_checks": result.get("source_checks_count", 0),
         "review_rules": result.get("review_rules_count", 0),
     }, ensure_ascii=False, indent=2))
