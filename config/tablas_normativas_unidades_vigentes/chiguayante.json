@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "comuna": "CHIGUAYANTE",
+  "rialcomsii": "8211",
+  "estado": "PARAMETROS_OFICIALES_CARGADOS_CODIGO_PRC_PENDIENTE",
+  "regla": "Estas unidades sirven para reconstruir la versión normativa vigente. CODIGO_PRC permanece vacío hasta acreditarlo desde la cartografía productiva. Ninguna unidad de este archivo puede publicarse directamente.",
+  "fuente_usos": "PRC_CHIGUAYANTE_BASE.xlsx / cartografía vigente recuperada desde Sistema Operativo DEI",
+  "fuente_parametros": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf",
+  "unidades": [
+    {
+      "ZONA": "ZRE",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "ZONA ESPECIAL RESIDENCIA Y EQUIPAMIENTO",
+      "UPERM": "Residencial. Equipamiento: comercio, culto y cultura, servicios. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2015-DEC-2482",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 200, "DENS_HAB_HA": 280, "OCUPACION": 0.6, "CONSTRUCCION": 2, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO EN PREDIOS >500 M2", "ALTURA_MAX": 12, "ANTEJARDIN": 3, "DETALLE_TABLA_ORDENANZA": "Distanciamiento residencial: 6 m sobre 9 m de altura."},
+        {"USO": "OTROS USOS", "SUB_PREDIAL": 200, "OCUPACION": 0.6, "CONSTRUCCION": 2, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO", "ALTURA_MAX": 9, "ANTEJARDIN": 3, "DETALLE_TABLA_ORDENANZA": "Equipamiento: distanciamiento 4 m sobre 3,5 m de altura."}
+      ]
+    },
+    {
+      "ZONA": "ZIa",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "ZONA ESPECIAL DE INDUSTRIA",
+      "UPERM": "Residencial. Equipamiento: comercio, culto y cultura, deporte, educacion, esparcimiento, seguridad, servicios, social. Actividades productivas. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 200, "DENS_HAB_HA": 600, "OCUPACION": 0.6, "CONSTRUCCION": 3, "AGRUPAMIENTO": "AISLADO", "ALTURA_MAX": 24, "PISOS_MAX": 8, "ANTEJARDIN": 4, "DETALLE_TABLA_ORDENANZA": "Distanciamientos: 6 m sobre 9 m; 8 m sobre 12 m; 10 m sobre 15 m; 12 m sobre 18 m."},
+        {"USO": "OTROS USOS", "SUB_PREDIAL": 200, "OCUPACION": 0.6, "CONSTRUCCION": 3, "AGRUPAMIENTO": "AISLADO", "ALTURA_MAX": 24, "ANTEJARDIN": 4, "DETALLE_TABLA_ORDENANZA": "Distanciamientos: 6 m sobre 9 m; 8 m sobre 12 m; 10 m sobre 15 m; 12 m sobre 18 m."}
+      ]
+    },
+    {
+      "ZONA": "ZIb",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "ZONA ESPECIAL DE INDUSTRIA",
+      "UPERM": "Residencial. Equipamiento: cientifico, comercio, culto y cultura, deporte, educacion, esparcimiento, salud, seguridad, servicios, social. Actividades productivas. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 200, "DENS_HAB_HA": 350, "OCUPACION": 0.6, "CONSTRUCCION": 2, "AGRUPAMIENTO": "AISLADO; PAREADO; SIN ADOSAMIENTO EN PREDIOS >500 M2", "ALTURA_MAX": 15, "PISOS_MAX": 5, "ANTEJARDIN": 2, "DETALLE_TABLA_ORDENANZA": "Distanciamientos: 6 m sobre 9 m y 8 m sobre 12 m."},
+        {"USO": "OTROS USOS", "SUB_PREDIAL": 200, "OCUPACION": 0.6, "CONSTRUCCION": 2, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO", "ALTURA_MAX": 15, "ANTEJARDIN": 2, "DETALLE_TABLA_ORDENANZA": "Distanciamientos: 6 m sobre 9 m y 8 m sobre 12 m."}
+      ]
+    },
+    {
+      "ZONA": "ZR1",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "ZONA ESPECIAL POR LADERAS",
+      "UPERM": "Residencial. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos, específicamente actividades productivas.",
+      "source_act": "CHIG-2024-DEC-898",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 2500, "DENS_HAB_HA": 10, "OCUPACION": 0.035, "CONSTRUCCION": 0.14, "AGRUPAMIENTO": "AISLADO", "ALTURA_MAX": 7}
+      ]
+    },
+    {
+      "ZONA": "ZR1-A",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "SUBZONA ESPECIAL POR LADERAS",
+      "UPERM": "Residencial. Equipamiento: comercio, culto y cultura, seguridad, educacion, servicios, social. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos, específicamente actividades productivas.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "NORMA GENERAL", "SUB_PREDIAL": 3000, "DENS_HAB_HA": 320, "OCUPACION": 0.13, "CONSTRUCCION": 0.7, "AGRUPAMIENTO": "AISLADO", "ALTURA_MAX": 15, "PISOS_MAX": 5, "ANTEJARDIN": 2, "DETALLE_TABLA_ORDENANZA": "Distanciamientos: 6 m sobre 9 m y 8 m sobre 12 m."}
+      ]
+    },
+    {
+      "ZONA": "ZR2a",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "ZONA DE INFRAESTRUCTURA SANITARIA",
+      "UPERM": "Residencial. Equipamiento: comercio, culto y cultura, deporte, educacion, seguridad, servicios, social. Infraestructura: sanitaria. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 300, "DENS_HAB_HA": 480, "OCUPACION": 0.4, "CONSTRUCCION": 2.4, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO EN PREDIOS >500 M2", "ALTURA_MAX": 15, "PISOS_MAX": 5, "ANTEJARDIN": 4, "DETALLE_TABLA_ORDENANZA": "Distanciamientos residenciales: 6 m sobre 9 m y 8 m sobre 12 m."},
+        {"USO": "OTROS USOS", "SUB_PREDIAL": 300, "OCUPACION": 0.4, "CONSTRUCCION": 2.4, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO", "ALTURA_MAX": 15, "ANTEJARDIN": 4, "DETALLE_TABLA_ORDENANZA": "Distanciamiento otros usos: 6 m mínimo."}
+      ]
+    },
+    {
+      "ZONA": "ZR2b",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "ZONA DE INFRAESTRUCTURA SANITARIA",
+      "UPERM": "Residencial. Equipamiento: cientifico, comercio, culto y cultura, deporte, educacion, esparcimiento, salud, seguridad, servicios, social. Infraestructura: sanitaria. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 200, "DENS_HAB_HA": 700, "OCUPACION": 0.6, "CONSTRUCCION": 3.8, "AGRUPAMIENTO": "AISLADO; PAREADO", "ALTURA_MAX": 24, "PISOS_MAX": 8, "ANTEJARDIN": 3, "DETALLE_TABLA_ORDENANZA": "Distanciamientos: 6 m sobre 9 m; 8 m sobre 12 m; 10 m sobre 15 m; 12 m sobre 18 m."},
+        {"USO": "OTROS USOS", "SUB_PREDIAL": 200, "OCUPACION": 0.6, "CONSTRUCCION": 3.8, "AGRUPAMIENTO": "AISLADO", "ALTURA_MAX": 12, "ANTEJARDIN": 3, "DETALLE_TABLA_ORDENANZA": "Sobre 9 m de altura: distanciamiento 6 m mínimo."}
+      ]
+    },
+    {
+      "ZONA": "ZR2c",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "ZONA DE INFRAESTRUCTURA SANITARIA",
+      "UPERM": "Equipamiento: comercio, esparcimiento, servicios. Infraestructura: sanitaria. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "EQUIPAMIENTO - INFRAESTRUCTURA", "SUB_PREDIAL": 300, "OCUPACION": 0.5, "CONSTRUCCION": 2, "AGRUPAMIENTO": "AISLADO"}
+      ]
+    },
+    {
+      "ZONA": "ZU2-A1",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "SUBZONA RESIDENCIAL",
+      "UPERM": "Residencial. Equipamiento: comercio, culto y cultura, deporte, educacion, seguridad, servicios, social. Actividades productivas. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 300, "DENS_HAB_HA": 480, "OCUPACION": 0.4, "CONSTRUCCION": 2.4, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO EN PREDIOS >500 M2", "ALTURA_MAX": 15, "PISOS_MAX": 5, "ANTEJARDIN": 4, "DETALLE_TABLA_ORDENANZA": "Distanciamientos residenciales: 6 m sobre 9 m y 8 m sobre 12 m."},
+        {"USO": "OTROS USOS", "SUB_PREDIAL": 300, "OCUPACION": 0.4, "CONSTRUCCION": 2.4, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO", "ALTURA_MAX": 15, "ANTEJARDIN": 4, "DETALLE_TABLA_ORDENANZA": "Distanciamiento otros usos: 6 m mínimo."}
+      ]
+    },
+    {
+      "ZONA": "ZU2-A2",
+      "CODIGO_PRC": null,
+      "DEFINICION_ZONA": "SUBZONA RESIDENCIAL",
+      "UPERM": "Residencial. Equipamiento: culto y cultura, educacion, seguridad, servicios, social. Espacio publico. Area verde.",
+      "UPROH": "Todos los usos de suelo no mencionados como permitidos.",
+      "source_act": "CHIG-2018-DEC-333",
+      "variantes": [
+        {"USO": "RESIDENCIAL", "SUB_PREDIAL": 300, "DENS_HAB_HA": 160, "OCUPACION": 0.4, "CONSTRUCCION": 1, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO EN PREDIOS >500 M2", "ALTURA_MAX": 9, "PISOS_MAX": 3, "ANTEJARDIN": 4},
+        {"USO": "OTROS USOS", "SUB_PREDIAL": 300, "OCUPACION": 0.4, "CONSTRUCCION": 1, "AGRUPAMIENTO": "AISLADO; SIN ADOSAMIENTO", "ALTURA_MAX": 9, "ANTEJARDIN": 4, "DETALLE_TABLA_ORDENANZA": "Sobre 3,5 m de altura: distanciamiento 4 m mínimo."}
+      ]
+    }
+  ]
+}
