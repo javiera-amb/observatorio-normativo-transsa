@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "comuna": "CHIGUAYANTE",
+  "mode": "VERSION_MIGRATION",
+  "estado": "EN_DESARROLLO",
+  "nota": "La tabla SQL2 representa una versión normativa anterior. La cartografía vigente contiene zonificación creada, dividida o renombrada por actos posteriores. El original se conserva intacto y la tabla vigente se reconstruye sólo con fuente oficial y vínculo espacial demostrado.",
+  "instrumentos": [
+    {
+      "id": "CHIG-2018-DEC-333",
+      "fecha": "2018-02-09",
+      "publicacion": "2018-03-16",
+      "tipo": "MODIFICACION_PRC",
+      "acto": "Decreto Alcaldicio N°333",
+      "efecto": "Crea ZU2-A1, ZU2-A2 y ZR1-A; divide/renombra ZI en ZIa/ ZIb y ZR2 en ZR2a/ ZR2b/ ZR2c; actualiza plano PRCH-7.",
+      "source_url": "https://www.chiguayante.cl/transparencia/2018/1_ACTOS%20Y%20DOC%20PUBLICADOS%20EN%20DIARIO%20OFICIAL/333.pdf"
+    },
+    {
+      "id": "CHIG-2024-DEC-898",
+      "fecha": "2024-05-09",
+      "tipo": "ENMIENDA_PRC",
+      "acto": "Decreto Alcaldicio N°898",
+      "efecto": "Ajusta ZR1, estándares de estacionamientos y volúmenes sobre antejardines.",
+      "source_url": "https://www.bcn.cl/leychile/navegar?f=2024-05-09&i=1203429"
+    },
+    {
+      "id": "CHIG-2024-DEC-1033",
+      "fecha": "2024-05-29",
+      "tipo": "COMPLEMENTO_ENMIENDA",
+      "acto": "Decreto Alcaldicio N°1033",
+      "efecto": "Complementa Decreto 898 y la regla incorporada sobre cuerpos salientes/antejardín.",
+      "source_url": "https://www.diariooficial.interior.gob.cl/"
+    }
+  ],
+  "transformaciones_zona": [
+    {
+      "type": "SPLIT",
+      "legacy_zones": ["ZI"],
+      "current_zones": ["ZIa", "ZIb"],
+      "source_act": "CHIG-2018-DEC-333",
+      "requires_spatial_code_mapping": true
+    },
+    {
+      "type": "SPLIT",
+      "legacy_zones": ["R2"],
+      "current_zones": ["ZR2a", "ZR2b", "ZR2c"],
+      "source_act": "CHIG-2018-DEC-333",
+      "requires_spatial_code_mapping": true
+    },
+    {
+      "type": "PARTIAL_SPLIT",
+      "legacy_zones": ["U2-A"],
+      "current_zones": ["ZU2-A", "ZU2-A1", "ZU2-A2"],
+      "source_act": "CHIG-2018-DEC-333",
+      "requires_spatial_code_mapping": true
+    },
+    {
+      "type": "PARTIAL_SPLIT",
+      "legacy_zones": ["R1", "RI"],
+      "current_zones": ["ZR1", "ZR1-A"],
+      "source_act": "CHIG-2018-DEC-333",
+      "requires_spatial_code_mapping": true,
+      "nota": "No se asume que RI sea un error tipográfico de R1; la asignación se resuelve espacialmente."
+    }
+  ],
+  "zonas_vigentes_esperadas": [
+    "Area verde", "ZEU1", "ZEU2", "ZEU3", "ZEU4", "ZEU5", "ZIa", "ZIb", "ZM", "ZPR",
+    "ZR1", "ZR1-A", "ZR2a", "ZR2b", "ZR2c", "ZR3", "ZR4", "ZR5", "ZR6", "ZRD", "ZRE",
+    "ZU1-A", "ZU1-B", "ZU2-A", "ZU2-A1", "ZU2-A2", "ZU2-B", "ZU3-A", "ZU3-B", "ZU4", "ZU5",
+    "ZU6", "ZU7", "ZU8-1", "ZU8-2", "ZU8-3", "ZVN", "ZVNR"
+  ],
+  "reglas_publicacion": {
+    "preservar_original": true,
+    "permitir_cambio_cantidad_filas_en_salida_vigente": true,
+    "requiere_fuente_oficial_por_unidad": true,
+    "requiere_codigo_prc_espacial_demostrado": true,
+    "no_publicar_mientras_haya_unidades_sin_mapear": true
+  }
+}
