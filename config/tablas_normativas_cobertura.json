@@ -1,10 +1,14 @@
 {
   "schema_version": 1,
-  "nota": "Una comuna sólo puede publicarse en NORMALIZADAS cuando su cobertura de fuentes oficiales está marcada COMPLETA. La ausencia de registro equivale a PENDIENTE.",
+  "nota": "Toda comuna con catálogo oficial puede auditarse incrementalmente. Sólo se publica en NORMALIZADAS cuando su cobertura de fuentes oficiales está marcada COMPLETA. La ausencia de registro equivale a PENDIENTE.",
   "por_comuna": {
     "PEÑALOLÉN": {
       "estado": "PARCIAL",
-      "nota": "Fuentes y reglas avanzadas, pero queda cobertura espacial/normativa pendiente, incluido Parque Intercomunal y casos PRMS."
+      "nota": "Fuentes y reglas avanzadas, pero queda cobertura espacial/normativa pendiente, incluido Parque Intercomunal."
+    },
+    "CHIGUAYANTE": {
+      "estado": "PARCIAL",
+      "nota": "Enmienda 2024 incorporada y ZR1 auditada. Falta completar el contraste sistemático de las demás zonas del texto refundido 2024 antes de habilitar publicación."
     }
   }
 }
