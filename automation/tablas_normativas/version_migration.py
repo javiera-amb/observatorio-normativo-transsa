@@ -14,12 +14,7 @@ def _key(value: Any) -> str:
 
 
 def load_migration_plans(path: str | Path | None) -> dict[str, dict[str, Any]]:
-    """Carga planes de migración por comuna.
-
-    Los planes no modifican datos por sí solos. Sólo describen actos que cambian la
-    estructura legal de la zonificación y permiten distinguir una versión antigua de
-    un error de vínculo accidental.
-    """
+    """Carga planes de migración por comuna sin modificar datos productivos."""
     if not path:
         return {}
     directory = Path(path)
@@ -52,19 +47,33 @@ def analyze_zone_migration(
     plan: dict[str, Any],
     legacy_zones: list[str] | set[str] | tuple[str, ...],
 ) -> dict[str, Any]:
-    """Compara la estructura de zonas de la tabla antigua con la versión vigente.
+    """Compara la estructura antigua con la zonificación vigente documentada.
 
-    Importante: una transformación legal puede justificar que la salida vigente tenga
-    un conjunto de zonas distinto al original, pero NUNCA autoriza por sí sola a
-    inventar CODIGO_PRC ni a publicar. El vínculo espacial sigue siendo obligatorio.
+    Una equivalencia de nomenclatura sólo sirve para comprender continuidad jurídica;
+    jamás cambia ZONA o CODIGO_PRC automáticamente. Los SPLIT/PARTIAL_SPLIT sí indican
+    que la versión vigente puede requerir nuevas unidades normativas, pero publicar
+    sigue exigiendo el vínculo espacial de CODIGO_PRC.
     """
     legacy_by_key = {_key(zone): str(zone) for zone in legacy_zones if str(zone or "").strip()}
     current_zones = [str(zone) for zone in (plan.get("zonas_vigentes_esperadas") or [])]
     current_by_key = {_key(zone): zone for zone in current_zones}
 
-    transformations = []
     covered_legacy: set[str] = set()
     covered_current: set[str] = set()
+    nomenclature = []
+    for legacy, current in (plan.get("equivalencias_nomenclatura") or {}).items():
+        legacy_key = _key(legacy)
+        current_key = _key(current)
+        covered_legacy.add(legacy_key)
+        covered_current.add(current_key)
+        nomenclature.append({
+            "legacy_zone": str(legacy),
+            "current_zone": str(current),
+            "legacy_present": legacy_key in legacy_by_key,
+            "current_expected": current_key in current_by_key,
+        })
+
+    transformations = []
     for item in plan.get("transformaciones_zona", []) or []:
         legacy = [str(zone) for zone in item.get("legacy_zones", []) or []]
         current = [str(zone) for zone in item.get("current_zones", []) or []]
@@ -100,6 +109,7 @@ def analyze_zone_migration(
         item["requires_spatial_code_mapping"] for item in transformations
     ) or bool((plan.get("reglas_publicacion") or {}).get("requiere_codigo_prc_espacial_demostrado", True))
 
+    structural_change = bool(transformations) or set(legacy_by_key) != set(current_by_key)
     return {
         "mode": "VERSION_MIGRATION",
         "comuna": str(plan.get("comuna") or ""),
@@ -108,11 +118,12 @@ def analyze_zone_migration(
         "current_zone_count": len(current_by_key),
         "legacy_zones": sorted(legacy_by_key.values()),
         "current_zones": sorted(current_by_key.values()),
+        "nomenclature_equivalences": nomenclature,
         "transformations": transformations,
         "unexplained_legacy_zones": unexplained_legacy,
         "unexplained_current_zones": unexplained_current,
         "spatial_code_mapping_pending": spatial_pending,
-        "migration_required": set(legacy_by_key) != set(current_by_key),
+        "migration_required": structural_change,
         "structurally_explained": not unexplained_legacy and not unexplained_current,
         "publicable": False,
         "state": "MIGRACIÓN NORMATIVA REQUERIDA",
