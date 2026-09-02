@@ -3,11 +3,15 @@ from __future__ import annotations
 """Publica un estado nacional fail-closed para el módulo Tablas Normativas."""
 
 import json
+import sys
 from pathlib import Path
 
-from automation.tablas_normativas import vigencia_gate
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from automation.tablas_normativas import vigencia_gate  # noqa: E402
+
 TRACKING = ROOT / "data" / "seguimiento_normativo.js"
 CERTIFICATES = ROOT / "config" / "tablas_normativas_vigencia"
 POLICY = ROOT / "config" / "tablas_normativas_vigencia_policy.json"
@@ -19,7 +23,9 @@ def main() -> int:
     certificates = vigencia_gate.load_certificates(CERTIFICATES)
     policy = vigencia_gate.load_policy(POLICY)
     rows = []
-    for commune_key, item in sorted(tracking.items(), key=lambda pair: str(pair[1].get("comuna") or pair[0])):
+    for commune_key, item in sorted(
+        tracking.items(), key=lambda pair: str(pair[1].get("comuna") or pair[0])
+    ):
         commune = str(item.get("comuna") or commune_key)
         assessment = vigencia_gate.evaluate(
             commune,
@@ -33,6 +39,12 @@ def main() -> int:
         assessment["actos_posteriores_detalle"] = item.get("actos_posteriores_detalle") or []
         assessment["candidatos_normativos_detalle"] = item.get("candidatos_normativos_detalle") or []
         rows.append(assessment)
+
+    expected = 346
+    if len(rows) != expected:
+        raise RuntimeError(
+            f"La vigencia nacional debe evaluar {expected} comunas y evaluó {len(rows)}."
+        )
 
     payload = {
         "schema_version": 1,
@@ -51,7 +63,7 @@ def main() -> int:
     )
     print(
         f"Vigencia de tablas exportada: {payload['certificadas']} certificadas · "
-        f"{payload['bloqueadas']} bloqueadas/revisar."
+        f"{payload['bloqueadas']} bloqueadas/revisar · {payload['total_comunas']} comunas."
     )
     return 0
 
