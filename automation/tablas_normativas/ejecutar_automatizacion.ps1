@@ -34,15 +34,15 @@ if ($python) {
 
 Push-Location $repo
 try {
-    # El motor local nunca audita contra una versión vieja del seguimiento nacional.
+    # Nunca se audita contra una versión vieja del inventario nacional.
     $git = Get-Command git -ErrorAction SilentlyContinue
-    if ($git) {
-        & $git.Source pull --ff-only
-        if ($LASTEXITCODE -ne 0) {
-            throw "No se pudo actualizar el repositorio TUI con git pull --ff-only. Se cancela para evitar auditar con normativa desactualizada."
-        }
-    } else {
+    if (-not $git) {
         throw "No se encontró Git. Se cancela para evitar auditar con normativa desactualizada."
+    }
+
+    & $git.Source pull --ff-only
+    if ($LASTEXITCODE -ne 0) {
+        throw "No se pudo actualizar el repositorio TUI con git pull --ff-only. Se cancela para evitar auditar con normativa desactualizada."
     }
 
     $arguments = @()
@@ -63,12 +63,36 @@ try {
         "--structure", (Join-Path $repo "config\tablas_normativas_estructura.json"),
         "--tracking", (Join-Path $repo "data\seguimiento_normativo.js"),
         "--certificate-dir", (Join-Path $repo "config\tablas_normativas_vigencia"),
+        "--evidence-dir", (Join-Path $repo "config\tablas_normativas_vigencia_evidencia"),
         "--policy", (Join-Path $repo "config\tablas_normativas_vigencia_policy.json"),
+        "--sig", (Join-Path $repo "consolidados\vigencia\consolidado_sig_comunal.csv"),
         "--state", $state
     )
     & $pythonExe @arguments
     if ($LASTEXITCODE -ne 0) {
         throw "El motor V5 terminó con código $LASTEXITCODE."
+    }
+
+    # Si V5 generó o renovó certificados, se publican en Git para que la TUI y
+    # GitHub Actions evalúen exactamente la misma evidencia que el equipo local.
+    & $git.Source add -- "config/tablas_normativas_vigencia/*.json"
+    & $git.Source diff --cached --quiet
+    $certificadosCambian = ($LASTEXITCODE -ne 0)
+    if ($certificadosCambian) {
+        & $git.Source config user.name "TUI DEI Vigencia Bot"
+        & $git.Source config user.email "actions@users.noreply.github.com"
+        & $git.Source commit -m "data: refrescar certificados de vigencia normativa"
+        if ($LASTEXITCODE -ne 0) {
+            throw "No se pudieron registrar los certificados de vigencia."
+        }
+        & $git.Source pull --rebase origin main
+        if ($LASTEXITCODE -ne 0) {
+            throw "No se pudo rebasar la certificación contra main."
+        }
+        & $git.Source push origin main
+        if ($LASTEXITCODE -ne 0) {
+            throw "No se pudieron publicar los certificados de vigencia en GitHub."
+        }
     }
 } finally {
     Pop-Location
