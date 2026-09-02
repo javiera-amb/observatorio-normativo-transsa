@@ -4,6 +4,9 @@ from __future__ import annotations
 
 No reemplaza el gate de vigencia. Traduce sus bloqueantes y la cobertura disponible
 en una acción operativa única y prioritaria por cada una de las 346 comunas.
+
+El indicador de completitud de la TUI cubre PRC y normativa comunal. PRI y PRM
+se mantienen fuera de ese indicador hasta que se incorporen como una fase propia.
 """
 
 import json
@@ -19,6 +22,9 @@ VIGENCIA = ROOT / "data" / "vigencia_tablas_normativas.js"
 SHAREPOINT = ROOT / "data" / "tablas_normativas_sharepoint.js"
 COVERAGE = ROOT / "config" / "tablas_normativas_cobertura.json"
 OUTPUT = ROOT / "data" / "cola_tablas_normativas.js"
+NATIONAL_TOTAL = 346
+COMPLETENESS_SCOPE = "PRC_Y_NORMATIVA_COMUNAL"
+EXCLUDED_INSTRUMENTS = ["PRI", "PRM"]
 
 
 def key(value: Any) -> str:
@@ -29,7 +35,7 @@ def key(value: Any) -> str:
 
 def read_assignment(path: Path, prefix: str) -> dict[str, Any]:
     raw = path.read_text(encoding="utf-8").strip()
-    if not raw.startswith(prefix) or not raw.endswith(";"):
+    if not raw.startswith(prefix) or not raw.endswith(';'):
         raise RuntimeError(f"Formato JS inválido: {path}")
     payload = json.loads(raw[len(prefix):-1])
     if not isinstance(payload, dict):
@@ -106,10 +112,10 @@ def main() -> int:
 
     tracking_rows = tracking_payload.get("comunas") or []
     vigencia_rows = vigencia_payload.get("comunas") or []
-    if len(tracking_rows) != 346 or len(vigencia_rows) != 346:
+    if len(tracking_rows) != NATIONAL_TOTAL or len(vigencia_rows) != NATIONAL_TOTAL:
         raise RuntimeError(
-            f"La cola nacional exige 346/346 filas: seguimiento={len(tracking_rows)}, "
-            f"vigencia={len(vigencia_rows)}."
+            f"La cola nacional exige {NATIONAL_TOTAL}/{NATIONAL_TOTAL} filas: "
+            f"seguimiento={len(tracking_rows)}, vigencia={len(vigencia_rows)}."
         )
 
     vigencia_by_key = {
@@ -158,8 +164,12 @@ def main() -> int:
 
     rows.sort(key=lambda row: (row["region"], row["comuna"]))
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "modo": "fail_closed",
+        "alcance_completitud": COMPLETENESS_SCOPE,
+        "instrumentos_excluidos_completitud": EXCLUDED_INSTRUMENTS,
+        "cobertura_plataforma": len(rows),
+        "cobertura_plataforma_objetivo": NATIONAL_TOTAL,
         "total_comunas": len(rows),
         "con_tabla_base": sum(bool(row["tiene_tabla_base"]) for row in rows),
         "sin_tabla_base": sum(not bool(row["tiene_tabla_base"]) for row in rows),
@@ -168,8 +178,10 @@ def main() -> int:
         "acciones": dict(sorted(action_counts.items())),
         "comunas": rows,
     }
-    if payload["total_comunas"] != 346:
-        raise RuntimeError(f"Cola incompleta: {payload['total_comunas']}/346 comunas.")
+    if payload["total_comunas"] != NATIONAL_TOTAL:
+        raise RuntimeError(
+            f"Cola incompleta: {payload['total_comunas']}/{NATIONAL_TOTAL} comunas."
+        )
 
     OUTPUT.write_text(
         "window.COLA_TABLAS_NORMATIVAS = "
@@ -180,6 +192,10 @@ def main() -> int:
     print(
         f"Cola nacional: {payload['total_comunas']} comunas · "
         f"{payload['con_tabla_base']} con tabla · {payload['certificadas']} certificadas."
+    )
+    print(
+        f"Alcance completitud: {COMPLETENESS_SCOPE} · "
+        f"excluidos: {', '.join(EXCLUDED_INSTRUMENTS)}."
     )
     print(json.dumps(payload["acciones"], ensure_ascii=False, indent=2))
     return 0
