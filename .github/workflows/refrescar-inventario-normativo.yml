@@ -10,7 +10,9 @@ on:
       - "data/actos_ipt_nacional_*.js"
       - "data/actos_ipt_sync.json"
       - "data/ipt_reportes.js"
+      - "data/tablas_normativas_sharepoint.js"
       - "config/vigencia_actos_verificados.json"
+      - "config/tablas_normativas_cobertura.json"
       - "config/tablas_normativas_vigencia/*.json"
       - "config/tablas_normativas_vigencia_evidencia/*.json"
       - "config/tablas_normativas_vigencia_policy.json"
@@ -19,6 +21,7 @@ on:
       - "scripts/refrescar_seguimiento_publico.py"
       - "scripts/refrescar_seguimiento_publico_v2.py"
       - "scripts/exportar_vigencia_tablas.py"
+      - "scripts/exportar_cola_tablas_normativas.py"
       - "tests/test_vigencia_nacional.py"
       - ".github/workflows/refrescar-inventario-normativo.yml"
   workflow_dispatch:
@@ -56,6 +59,9 @@ jobs:
       - name: Exportar certificación fail-closed
         run: python scripts/exportar_vigencia_tablas.py
 
+      - name: Generar cola nacional de saneamiento
+        run: python scripts/exportar_cola_tablas_normativas.py
+
       - name: Validar integridad nacional antes de publicar
         shell: bash
         run: |
@@ -77,13 +83,20 @@ jobs:
               'data/vigencia_tablas_normativas.js',
               'window.VIGENCIA_TABLAS_NORMATIVAS = '
           )
+          cola = assignment(
+              'data/cola_tablas_normativas.js',
+              'window.COLA_TABLAS_NORMATIVAS = '
+          )
 
           comunas = tracking.get('comunas') or []
           vigencia_rows = vigencia.get('comunas') or []
+          cola_rows = cola.get('comunas') or []
           if len(comunas) != 346:
               raise SystemExit(f'Seguimiento incompleto: {len(comunas)}/346 comunas.')
           if int(vigencia.get('total_comunas') or 0) != 346 or len(vigencia_rows) != 346:
               raise SystemExit('La salida de vigencia no contiene exactamente las 346 comunas.')
+          if int(cola.get('total_comunas') or 0) != 346 or len(cola_rows) != 346:
+              raise SystemExit('La cola operativa no contiene exactamente las 346 comunas.')
 
           seen = set()
           for row in comunas:
@@ -107,10 +120,9 @@ jobs:
 
           tracking_names = {str(row.get('comuna') or '').strip().casefold() for row in comunas}
           vigencia_names = {str(row.get('comuna') or '').strip().casefold() for row in vigencia_rows}
-          if tracking_names != vigencia_names:
-              faltan = sorted(tracking_names - vigencia_names)[:10]
-              sobran = sorted(vigencia_names - tracking_names)[:10]
-              raise SystemExit(f'Desalineación seguimiento/vigencia. Faltan={faltan} Sobran={sobran}')
+          cola_names = {str(row.get('comuna') or '').strip().casefold() for row in cola_rows}
+          if tracking_names != vigencia_names or tracking_names != cola_names:
+              raise SystemExit('Seguimiento, vigencia y cola nacional no contienen el mismo universo comunal.')
 
           certified = 0
           for row in vigencia_rows:
@@ -138,19 +150,31 @@ jobs:
               raise SystemExit('El contador global de certificadas no coincide con el detalle.')
           if int(vigencia.get('bloqueadas') or 0) != 346 - certified:
               raise SystemExit('El contador global de bloqueadas no coincide con el detalle.')
+          if int(cola.get('certificadas') or 0) != certified:
+              raise SystemExit('La cola y el gate no coinciden en cantidad de comunas certificadas.')
+
+          for row in cola_rows:
+              action = str(row.get('accion_prioritaria') or '').strip()
+              if not action:
+                  raise SystemExit(f"Comuna sin acción operativa: {row.get('comuna')}")
+              if row.get('vigencia_certificada') and action != 'CERTIFICADA':
+                  raise SystemExit(f"Comuna certificada con acción incoherente: {row.get('comuna')}")
+              if not row.get('vigencia_certificada') and action == 'CERTIFICADA':
+                  raise SystemExit(f"Comuna bloqueada marcada CERTIFICADA: {row.get('comuna')}")
 
           print(f'QA nacional OK: 346 comunas · {certified} certificadas actualmente.')
+          print('Acciones operativas:', json.dumps(cola.get('acciones') or {}, ensure_ascii=False))
           PY
 
       - name: Guardar salidas nacionales
         run: |
-          if git diff --quiet -- data/seguimiento_normativo.js data/vigencia_tablas_normativas.js; then
-            echo "Sin cambios de inventario/certificación."
+          if git diff --quiet -- data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/cola_tablas_normativas.js; then
+            echo "Sin cambios de inventario/certificación/cola."
             exit 0
           fi
           git config user.name "Observatorio IPT Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/seguimiento_normativo.js data/vigencia_tablas_normativas.js
+          git add data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/cola_tablas_normativas.js
           git commit -m "data: sincronizar vigencia normativa nacional"
           git pull --rebase origin main
           git push origin main
