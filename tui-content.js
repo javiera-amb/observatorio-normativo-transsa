@@ -88,7 +88,7 @@
   }
 
   async function loadTablasNormativas() {
-    const release = "20260902-641b96dd1958";
+    const release = "20260902-a2ca329f552b";
     try {
       await loadScript(`data/tablas_normativas_sharepoint.js?v=${release}`, "tablas-normativas-sharepoint-data");
       await loadScript(`tablas-normativas-ipt-v2.js?v=${release}`, "tablas-normativas-ipt-v2");
