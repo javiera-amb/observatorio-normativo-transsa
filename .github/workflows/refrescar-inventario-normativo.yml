@@ -79,10 +79,11 @@ jobs:
           )
 
           comunas = tracking.get('comunas') or []
+          vigencia_rows = vigencia.get('comunas') or []
           if len(comunas) != 346:
               raise SystemExit(f'Seguimiento incompleto: {len(comunas)}/346 comunas.')
-          if int(vigencia.get('total_comunas') or 0) != 346:
-              raise SystemExit('La salida de vigencia no contiene las 346 comunas.')
+          if int(vigencia.get('total_comunas') or 0) != 346 or len(vigencia_rows) != 346:
+              raise SystemExit('La salida de vigencia no contiene exactamente las 346 comunas.')
 
           seen = set()
           for row in comunas:
@@ -104,18 +105,39 @@ jobs:
                       f'Inventario inconsistente en {comuna}: contador={expected}, ids={len(ids)}.'
                   )
 
+          tracking_names = {str(row.get('comuna') or '').strip().casefold() for row in comunas}
+          vigencia_names = {str(row.get('comuna') or '').strip().casefold() for row in vigencia_rows}
+          if tracking_names != vigencia_names:
+              faltan = sorted(tracking_names - vigencia_names)[:10]
+              sobran = sorted(vigencia_names - tracking_names)[:10]
+              raise SystemExit(f'Desalineación seguimiento/vigencia. Faltan={faltan} Sobran={sobran}')
+
           certified = 0
-          for row in vigencia.get('comunas') or []:
+          for row in vigencia_rows:
+              blockers = row.get('bloqueantes_vigencia') or []
               if row.get('vigencia_certificada'):
                   certified += 1
-                  if row.get('bloqueantes'):
+                  if blockers:
                       raise SystemExit(
                           f"Certificación inválida con bloqueantes: {row.get('comuna')}"
+                      )
+                  if row.get('estado_vigencia') != 'VIGENTE_SINCRONIZADA':
+                      raise SystemExit(
+                          f"Certificación con estado incoherente: {row.get('comuna')}"
                       )
                   if not row.get('version_normativa_id'):
                       raise SystemExit(
                           f"Certificación sin versión normativa: {row.get('comuna')}"
                       )
+              elif row.get('estado_vigencia') == 'VIGENTE_SINCRONIZADA':
+                  raise SystemExit(
+                      f"Comuna marcada sincronizada sin certificación: {row.get('comuna')}"
+                  )
+
+          if int(vigencia.get('certificadas') or 0) != certified:
+              raise SystemExit('El contador global de certificadas no coincide con el detalle.')
+          if int(vigencia.get('bloqueadas') or 0) != 346 - certified:
+              raise SystemExit('El contador global de bloqueadas no coincide con el detalle.')
 
           print(f'QA nacional OK: 346 comunas · {certified} certificadas actualmente.')
           PY
