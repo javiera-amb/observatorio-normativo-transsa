@@ -207,7 +207,7 @@
 
     try {
       await loadScript("data/noticias.js?v=20260813-noticias-1", "data-noticias");
-      await loadScript("tui-content.js?v=20260902-d39410445be6", "tui-content");
+      await loadScript("tui-content.js?v=20260902-641b96dd1958", "tui-content");
     } catch (error) {
       console.error("No se pudo cargar el módulo de noticias:", error);
     }
