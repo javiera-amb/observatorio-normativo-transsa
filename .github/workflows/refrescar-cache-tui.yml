@@ -1,0 +1,102 @@
+name: Refrescar cache TUI normativa
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/refrescar-cache-tui.yml"
+      - "data/seguimiento_normativo.js"
+      - "data/tablas_normativas_sharepoint.js"
+      - "data/tablas_normativas_chiguayante_ui.js"
+      - "tablas-normativas-fuentes.js"
+      - "config/tablas_normativas_fuentes/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refrescar-cache-tui-normativa
+  cancel-in-progress: false
+
+jobs:
+  refrescar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Actualizar versiones y carga de fuentes comunales
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          release = f"20260902-{os.environ['RELEASE_SHA'][:12]}"
+
+          index = Path('index.html')
+          text = index.read_text(encoding='utf-8')
+          text = re.sub(
+              r'data/seguimiento_normativo\.js\?v=[^"\']+',
+              f'data/seguimiento_normativo.js?v={release}',
+              text,
+          )
+          text = re.sub(
+              r'ux-refresh\.js\?v=[^"\']+',
+              f'ux-refresh.js?v={release}',
+              text,
+          )
+          index.write_text(text, encoding='utf-8')
+
+          ux = Path('ux-refresh.js')
+          text = ux.read_text(encoding='utf-8')
+          text = re.sub(
+              r'tui-content\.js\?v=[^"\']+',
+              f'tui-content.js?v={release}',
+              text,
+          )
+          ux.write_text(text, encoding='utf-8')
+
+          tui = Path('tui-content.js')
+          text = tui.read_text(encoding='utf-8')
+          text = re.sub(
+              r'const release = "[^"]+";',
+              f'const release = "{release}";',
+              text,
+              count=1,
+          )
+          anchor = '      await loadScript(`tablas-normativas-fuentes.js?v=${release}`, "tablas-normativas-fuentes");'
+          communal = '      await loadScript(`data/tablas_normativas_chiguayante_ui.js?v=${release}`, "tablas-normativas-chiguayante-ui");'
+          if communal not in text:
+              if anchor not in text:
+                  raise RuntimeError('No se encontró el ancla del módulo de fuentes normativas.')
+              text = text.replace(anchor, communal + '\n' + anchor)
+          tui.write_text(text, encoding='utf-8')
+
+          print('Release TUI:', release)
+          PY
+
+      - name: Validar referencias críticas
+        run: |
+          grep -q "data/seguimiento_normativo.js?v=20260902-" index.html
+          grep -q "ux-refresh.js?v=20260902-" index.html
+          grep -q "tui-content.js?v=20260902-" ux-refresh.js
+          grep -q "tablas_normativas_chiguayante_ui.js" tui-content.js
+          grep -q "1203429" data/tablas_normativas_chiguayante_ui.js
+          grep -q "1203864" data/tablas_normativas_chiguayante_ui.js
+
+      - name: Publicar cache-bust
+        run: |
+          if git diff --quiet -- index.html ux-refresh.js tui-content.js; then
+            echo "Las referencias ya estaban actualizadas."
+            exit 0
+          fi
+          git config user.name "Observatorio IPT Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html ux-refresh.js tui-content.js
+          git commit -m "Refrescar cache TUI normativa"
+          git push
