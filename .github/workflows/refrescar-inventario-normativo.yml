@@ -19,6 +19,7 @@ on:
       - "scripts/refrescar_seguimiento_publico.py"
       - "scripts/refrescar_seguimiento_publico_v2.py"
       - "scripts/exportar_vigencia_tablas.py"
+      - "tests/test_vigencia_nacional.py"
       - ".github/workflows/refrescar-inventario-normativo.yml"
   workflow_dispatch:
 
@@ -45,6 +46,9 @@ jobs:
           cache-dependency-path: automation/requirements.txt
 
       - run: pip install -r automation/requirements.txt
+
+      - name: Probar gate y certificación fail-closed
+        run: python tests/test_vigencia_nacional.py
 
       - name: Generar seguimiento detallado de las 346 comunas
         run: python scripts/refrescar_seguimiento_publico_v2.py
