@@ -101,7 +101,7 @@ jobs:
           print('Release TUI:', release)
           PY
 
-      - name: Validar referencias críticas
+      - name: Validar cobertura nacional y referencias críticas
         run: |
           grep -q "data/seguimiento_normativo.js?v=20260902-" index.html
           grep -q "ux-refresh.js?v=20260902-" index.html
@@ -110,10 +110,49 @@ jobs:
           grep -q "vigencia_tablas_normativas.js" tui-content.js
           grep -q "cola_tablas_normativas.js" tui-content.js
           grep -q "vigencia-tablas-ui.js" tui-content.js
-          grep -q "1203429" data/tablas_normativas_chiguayante_ui.js
-          grep -q "1203864" data/tablas_normativas_chiguayante_ui.js
           test -f data/cola_tablas_normativas.js
           node --check vigencia-tablas-ui.js
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = 'data/cola_tablas_normativas.js';
+          const raw = fs.readFileSync(path, 'utf8').trim();
+          const prefix = 'window.COLA_TABLAS_NORMATIVAS = ';
+          if (!raw.startsWith(prefix) || !raw.endsWith(';')) {
+            throw new Error('Formato inválido de la cola nacional.');
+          }
+          const queue = JSON.parse(raw.slice(prefix.length, -1));
+          const rows = Array.isArray(queue.comunas) ? queue.comunas : [];
+          const exclusions = Array.isArray(queue.instrumentos_excluidos_completitud)
+            ? queue.instrumentos_excluidos_completitud : [];
+          const names = rows.map(row => String(row.comuna || '').trim()).filter(Boolean);
+          const unique = new Set(names);
+          const incomplete = rows.filter(row =>
+            !String(row.comuna || '').trim() ||
+            !String(row.region || '').trim() ||
+            !String(row.accion_prioritaria || '').trim() ||
+            !String(row.estado_vigencia || '').trim()
+          );
+
+          if (Number(queue.total_comunas) !== 346 || rows.length !== 346) {
+            throw new Error(`Cobertura incompleta: ${rows.length}/346 comunas.`);
+          }
+          if (Number(queue.cobertura_plataforma) !== 346 || Number(queue.cobertura_plataforma_objetivo) !== 346) {
+            throw new Error('La cobertura operativa de plataforma debe ser 346/346.');
+          }
+          if (unique.size !== 346) {
+            throw new Error(`Hay comunas duplicadas o sin nombre: ${unique.size}/346 únicas.`);
+          }
+          if (incomplete.length) {
+            throw new Error(`Hay ${incomplete.length} comuna(s) sin estado/acción nacional completa.`);
+          }
+          if (queue.alcance_completitud !== 'PRC_Y_NORMATIVA_COMUNAL') {
+            throw new Error('El alcance de completitud no corresponde a PRC + normativa comunal.');
+          }
+          if (!exclusions.includes('PRI') || !exclusions.includes('PRM')) {
+            throw new Error('PRI/PRM deben quedar explícitamente fuera del indicador de completitud.');
+          }
+          console.log(`QA nacional OK: ${rows.length}/346 comunas · certificadas=${Number(queue.certificadas || 0)} · PRI/PRM excluidos.`);
+          NODE
 
       - name: Publicar cache-bust
         run: |
