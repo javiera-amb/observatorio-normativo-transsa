@@ -7,9 +7,9 @@ cuando la auditoría tabular ya es publicable y existe evidencia suficiente para
 acreditar la misma versión normativa en tabla y SIG.
 
 Reglas:
-- cero actos posteriores: puede certificarse automáticamente si la tabla V4 es
-  publicable, el inventario normativo está completo, no hay candidatos pendientes
-  y el consolidado SIG marca la comuna como SI;
+- cero actos posteriores: puede certificarse automáticamente si la tabla V4 queda
+  LISTA PARA STAGING con cobertura oficial completa, el inventario normativo está
+  completo, no hay candidatos pendientes y el consolidado SIG marca la comuna SI;
 - uno o más actos posteriores: exige una evidencia explícita por comuna/version
   con todos los official_id/id aplicados y los controles tabla/SIG aprobados;
 - un cambio de version_normativa_id nunca reutiliza evidencia de una versión previa.
@@ -74,17 +74,15 @@ def _positive_sig(row: dict[str, Any] | None) -> bool:
 def _table_is_audited_and_publishable(item: dict[str, Any] | None) -> bool:
     if not item:
         return False
-    if item.get("publicable") is not True:
+    if item.get("publicable") is False:
         return False
     if item.get("migracion_normativa", {}).get("migration_required") is True:
         return False
-    if str(item.get("estado") or "").upper() in {
-        "ERROR ESTRUCTURAL",
-        "ERROR VÍNCULO",
-        "FALTA TABLA",
-        "CON OBSERVACIONES",
-        "MIGRACIÓN NORMATIVA REQUERIDA",
-    }:
+    if str(item.get("cobertura_fuentes") or "").upper() != "COMPLETA":
+        return False
+    if int(item.get("hallazgos_bloqueantes") or 0) > 0:
+        return False
+    if str(item.get("estado") or "").upper() != "LISTA PARA STAGING":
         return False
     return True
 
@@ -122,14 +120,12 @@ def _assessment_reason(
     if expected_count == 0:
         if not _positive_sig(sig_row):
             blockers.append("El SIG no está marcado SI para la versión base sin actos posteriores.")
-        applied: set[str] = set()
         evidence_file = ""
     else:
         if not evidence:
             blockers.append(
                 "Existen actos posteriores: falta evidencia explícita de aplicación en tabla y SIG."
             )
-            applied = set()
             evidence_file = ""
         else:
             evidence_version = str(evidence.get("version_normativa_id") or "").strip()
@@ -168,7 +164,7 @@ def _assessment_reason(
         "comuna": commune,
         "version_normativa_id": version,
         "fecha_revision": date.today().isoformat(),
-        "actos_aplicados": sorted(expected_ids if expected_count else set()),
+        "actos_aplicados": sorted(expected_ids),
         "checks": {
             "instrumento_base_verificado": True,
             "inventario_actos_posteriores_completo": True,
@@ -228,6 +224,7 @@ def refresh_certificates(
         serialized = json.dumps(certificate, ensure_ascii=False, indent=2) + "\n"
         if not path.exists() or path.read_text(encoding="utf-8") != serialized:
             path.write_text(serialized, encoding="utf-8")
+        table_item["publicable"] = True
         generated += 1
 
     result["certificacion_automatica_generada"] = generated
