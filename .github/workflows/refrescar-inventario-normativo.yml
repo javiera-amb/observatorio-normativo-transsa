@@ -1,0 +1,56 @@
+name: Refrescar inventario normativo detallado
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/actos_ipt_nacional_*.js"
+      - "data/actos_ipt_sync.json"
+      - "data/ipt_reportes.js"
+      - "config/vigencia_actos_verificados.json"
+      - "scripts/refrescar_seguimiento_publico.py"
+      - "scripts/refrescar_seguimiento_publico_v2.py"
+      - ".github/workflows/refrescar-inventario-normativo.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refrescar-inventario-normativo
+  cancel-in-progress: true
+
+jobs:
+  refrescar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: automation/requirements.txt
+
+      - run: pip install -r automation/requirements.txt
+
+      - name: Generar seguimiento detallado
+        run: python scripts/refrescar_seguimiento_publico_v2.py
+
+      - name: Exportar vigencia de tablas
+        run: python scripts/exportar_vigencia_tablas.py
+
+      - name: Guardar salidas
+        run: |
+          if git diff --quiet -- data/seguimiento_normativo.js data/vigencia_tablas_normativas.js; then
+            echo "Sin cambios."
+            exit 0
+          fi
+          git config user.name "Observatorio IPT Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/seguimiento_normativo.js data/vigencia_tablas_normativas.js
+          git commit -m "Refrescar inventario normativo detallado"
+          git pull --rebase origin main
+          git push origin main
