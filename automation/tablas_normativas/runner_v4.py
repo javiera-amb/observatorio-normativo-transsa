@@ -70,13 +70,26 @@ def build_source_bundle(
             if not comuna:
                 raise RuntimeError(f"Catálogo comunal sin COMUNA: {path}")
             key = _key(comuna)
-            if key in commune_catalogs:
-                raise RuntimeError(f"Más de un catálogo comunal para {comuna}")
-            commune_catalogs[key] = {
+            path_text = str(path).replace("\\", "/")
+            entry = commune_catalogs.setdefault(key, {
                 "comuna": comuna,
-                "archivo": str(path).replace("\\", "/"),
-                "estado_cobertura": str(catalog.get("estado_cobertura") or "PARCIAL").upper(),
-            }
+                "archivo": path_text,
+                "archivos": [],
+                "estado_cobertura": "PARCIAL",
+                "_estados_cobertura_explicitos": [],
+            })
+            entry["archivos"].append(path_text)
+            explicit_state = str(catalog.get("estado_cobertura") or "").strip().upper()
+            if explicit_state:
+                entry["_estados_cobertura_explicitos"].append(explicit_state)
+                entry["estado_cobertura"] = (
+                    "COMPLETA"
+                    if all(
+                        state == "COMPLETA"
+                        for state in entry["_estados_cobertura_explicitos"]
+                    )
+                    else "PARCIAL"
+                )
 
         for section in _CATALOG_SECTIONS:
             for rule in catalog.get(section, []):
@@ -92,7 +105,10 @@ def build_source_bundle(
                 seen_rule_ids[rule_id] = path
                 bundle[section].append(rule)
 
-    bundle["bundle_schema_version"] = 3
+    for meta in commune_catalogs.values():
+        meta.pop("_estados_cobertura_explicitos", None)
+
+    bundle["bundle_schema_version"] = 4
     bundle["catalog_files"] = [str(path).replace("\\", "/") for path in files]
     bundle["commune_catalogs"] = commune_catalogs
     bundle["source_checks_count"] = len(bundle["source_checks"])
