@@ -99,7 +99,10 @@ class VigenciaNacionalTests(unittest.TestCase):
         )
         self.assertFalse(assessment["vigencia_certificada"])
         self.assertTrue(
-            any("version_normativa_id" in item for item in assessment["bloqueantes"])
+            any(
+                "versión normativa" in item.lower()
+                for item in assessment["bloqueantes_vigencia"]
+            )
         )
 
 
