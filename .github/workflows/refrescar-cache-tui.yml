@@ -7,8 +7,10 @@ on:
       - ".github/workflows/refrescar-cache-tui.yml"
       - "data/seguimiento_normativo.js"
       - "data/vigencia_tablas_normativas.js"
+      - "data/cola_tablas_normativas.js"
       - "data/tablas_normativas_sharepoint.js"
       - "data/tablas_normativas_chiguayante_ui.js"
+      - "tui-content.js"
       - "vigencia-tablas-ui.js"
       - "tablas-normativas-fuentes.js"
       - "config/tablas_normativas_fuentes/**"
@@ -76,15 +78,24 @@ jobs:
           anchor = '      await loadScript(`tablas-normativas-fuentes.js?v=${release}`, "tablas-normativas-fuentes");'
           communal = '      await loadScript(`data/tablas_normativas_chiguayante_ui.js?v=${release}`, "tablas-normativas-chiguayante-ui");'
           cert_data = '      await loadScript(`data/vigencia_tablas_normativas.js?v=${release}`, "vigencia-tablas-data");'
+          queue_data = '      await loadScript(`data/cola_tablas_normativas.js?v=${release}`, "cola-tablas-data");'
           cert_ui = '      await loadScript(`vigencia-tablas-ui.js?v=${release}`, "vigencia-tablas-ui");'
           if communal not in text:
               if anchor not in text:
                   raise RuntimeError('No se encontró el ancla del módulo de fuentes normativas.')
               text = text.replace(anchor, communal + '\n' + anchor)
-          if cert_data not in text or cert_ui not in text:
+          if cert_data not in text:
               if anchor not in text:
                   raise RuntimeError('No se encontró el ancla para certificación normativa.')
-              text = text.replace(anchor, anchor + '\n' + cert_data + '\n' + cert_ui)
+              text = text.replace(anchor, anchor + '\n' + cert_data)
+          if queue_data not in text:
+              if cert_data not in text:
+                  raise RuntimeError('No se encontró el ancla para la cola nacional.')
+              text = text.replace(cert_data, cert_data + '\n' + queue_data)
+          if cert_ui not in text:
+              if queue_data not in text:
+                  raise RuntimeError('No se encontró el ancla para la interfaz de vigencia.')
+              text = text.replace(queue_data, queue_data + '\n' + cert_ui)
           tui.write_text(text, encoding='utf-8')
 
           print('Release TUI:', release)
@@ -97,9 +108,11 @@ jobs:
           grep -q "tui-content.js?v=20260902-" ux-refresh.js
           grep -q "tablas_normativas_chiguayante_ui.js" tui-content.js
           grep -q "vigencia_tablas_normativas.js" tui-content.js
+          grep -q "cola_tablas_normativas.js" tui-content.js
           grep -q "vigencia-tablas-ui.js" tui-content.js
           grep -q "1203429" data/tablas_normativas_chiguayante_ui.js
           grep -q "1203864" data/tablas_normativas_chiguayante_ui.js
+          test -f data/cola_tablas_normativas.js
           node --check vigencia-tablas-ui.js
 
       - name: Publicar cache-bust
