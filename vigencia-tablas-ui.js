@@ -70,6 +70,11 @@
     }
 
     const actions = queue.acciones || {};
+    const coverage = Number(queue.cobertura_plataforma || queue.total_comunas || 0);
+    const coverageTarget = Number(queue.cobertura_plataforma_objetivo || 346);
+    const certified = Number(queue.certificadas || 0);
+    const excluded = Array.isArray(queue.instrumentos_excluidos_completitud)
+      ? queue.instrumentos_excluidos_completitud.join("/") : "PRI/PRM";
     const actionRows = Object.entries(actions)
       .filter(([, count]) => Number(count || 0) > 0)
       .sort((a, b) => Number(b[1]) - Number(a[1]))
@@ -78,14 +83,21 @@
 
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-        <div><strong>Control nacional de vigencia</strong><div class="tn-subtle">Las 346 comunas están dentro del gate. Bloqueada significa “no usar como vigente” hasta cerrar su evidencia.</div></div>
-        <span class="tn-pill" style="background:${Number(queue.bloqueadas || 0) ? "#fff0f0" : "#edf7f2"};color:${Number(queue.bloqueadas || 0) ? "#a02f2f" : "#2b7a5a"};font-weight:700">${Number(queue.certificadas || 0)}/${Number(queue.total_comunas || 0)} certificadas</span>
+        <div>
+          <strong>Cobertura operativa nacional</strong>
+          <div class="tn-subtle">La TUI incorpora las 346 comunas para PRC + normativa comunal. La certificación normativa es un control independiente y sólo aumenta con evidencia validada.</div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
+          <span class="tn-pill" style="background:${coverage === coverageTarget ? "#edf7f2" : "#fff0f0"};color:${coverage === coverageTarget ? "#2b7a5a" : "#a02f2f"};font-weight:700">${coverage}/${coverageTarget} en plataforma</span>
+          <span class="tn-pill" style="background:${Number(queue.bloqueadas || 0) ? "#fff0f0" : "#edf7f2"};color:${Number(queue.bloqueadas || 0) ? "#a02f2f" : "#2b7a5a"};font-weight:700">${certified}/${Number(queue.total_comunas || 0)} certificadas</span>
+        </div>
       </div>
+      <div style="margin-top:10px;padding:9px 11px;border-radius:10px;background:#f7f8fa;font-size:12px;color:#596575"><strong>Alcance del 100% TUI:</strong> PRC + normativa comunal. <strong>${esc(excluded)}</strong> quedan fuera de este indicador por ahora.</div>
       <div class="tn-summary-grid" style="margin-top:12px;margin-bottom:10px">
-        <div><span>Universo nacional</span><strong>${Number(queue.total_comunas || 0)}</strong></div>
+        <div><span>Comunas en plataforma</span><strong>${coverage}</strong></div>
         <div><span>Con tabla base</span><strong>${Number(queue.con_tabla_base || 0)}</strong></div>
         <div><span>Sin tabla base</span><strong>${Number(queue.sin_tabla_base || 0)}</strong></div>
-        <div><span>Bloqueadas</span><strong>${Number(queue.bloqueadas || 0)}</strong></div>
+        <div><span>Pendientes de certificar</span><strong>${Number(queue.bloqueadas || 0)}</strong></div>
       </div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">${actionRows}</div>`;
   }
