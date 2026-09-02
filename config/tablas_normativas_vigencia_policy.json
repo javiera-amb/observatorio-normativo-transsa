@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "publication_mode": "fail_closed",
+  "scope": "346 comunas de Chile",
+  "max_review_age_days": 8,
+  "required_checks": [
+    "instrumento_base_verificado",
+    "inventario_actos_posteriores_completo",
+    "actos_posteriores_verificados",
+    "actos_posteriores_aplicados_tabla",
+    "actos_posteriores_aplicados_sig",
+    "texto_vigente_verificado",
+    "tabla_normativa_auditada",
+    "version_normativa_coincidente"
+  ],
+  "rule": "Una comuna solo puede mostrarse ACTUALIZADA/NORMALIZADA cuando seguimiento normativo, tabla y SIG acrediten la misma version_normativa_id. Cualquier acto nuevo invalida automáticamente la certificación anterior hasta su aplicación y auditoría.",
+  "uncertified_status": "REVISAR",
+  "stale_status": "REVISAR",
+  "missing_act_status": "BLOQUEADA_ACTO_PENDIENTE"
+}
