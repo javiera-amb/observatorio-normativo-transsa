@@ -97,6 +97,13 @@ jobs:
               raise SystemExit('La salida de vigencia no contiene exactamente las 346 comunas.')
           if int(cola.get('total_comunas') or 0) != 346 or len(cola_rows) != 346:
               raise SystemExit('La cola operativa no contiene exactamente las 346 comunas.')
+          if int(cola.get('cobertura_plataforma') or 0) != 346:
+              raise SystemExit('La cobertura operativa de plataforma debe ser 346/346.')
+          if cola.get('alcance_completitud') != 'PRC_Y_NORMATIVA_COMUNAL':
+              raise SystemExit('El alcance de completitud debe ser PRC + normativa comunal.')
+          excluded = set(cola.get('instrumentos_excluidos_completitud') or [])
+          if not {'PRI', 'PRM'}.issubset(excluded):
+              raise SystemExit('PRI y PRM deben quedar fuera del indicador de completitud.')
 
           seen = set()
           for row in comunas:
@@ -168,10 +175,12 @@ jobs:
 
       - name: Guardar salidas nacionales
         run: |
-          if git diff --quiet -- data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/cola_tablas_normativas.js; then
+          CHANGES="$(git status --porcelain -- data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/cola_tablas_normativas.js)"
+          if [ -z "$CHANGES" ]; then
             echo "Sin cambios de inventario/certificación/cola."
             exit 0
           fi
+          echo "$CHANGES"
           git config user.name "Observatorio IPT Bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/cola_tablas_normativas.js
