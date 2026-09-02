@@ -34,10 +34,21 @@ if ($python) {
 
 Push-Location $repo
 try {
+    # El motor local nunca audita contra una versión vieja del seguimiento nacional.
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($git) {
+        & $git.Source pull --ff-only
+        if ($LASTEXITCODE -ne 0) {
+            throw "No se pudo actualizar el repositorio TUI con git pull --ff-only. Se cancela para evitar auditar con normativa desactualizada."
+        }
+    } else {
+        throw "No se encontró Git. Se cancela para evitar auditar con normativa desactualizada."
+    }
+
     $arguments = @()
     $arguments += $pythonPrefix
     $arguments += @(
-        "-m", "automation.tablas_normativas.runner_v4",
+        "-m", "automation.tablas_normativas.runner_v5",
         "--prc-root", $prcRoot,
         "--master", $master,
         "--output", $output,
@@ -45,15 +56,19 @@ try {
         "--conditional-rules", (Join-Path $repo "config\tablas_normativas_condicionales.json"),
         "--source-rules", (Join-Path $repo "config\tablas_normativas_fuente.json"),
         "--source-dir", (Join-Path $repo "config\tablas_normativas_fuentes"),
+        "--migration-dir", (Join-Path $repo "config\tablas_normativas_migraciones"),
         "--review-resolutions", (Join-Path $repo "config\tablas_normativas_revisiones_resueltas.json"),
         "--aliases", (Join-Path $repo "config\tablas_normativas_codigo_aliases.json"),
         "--coverage", (Join-Path $repo "config\tablas_normativas_cobertura.json"),
         "--structure", (Join-Path $repo "config\tablas_normativas_estructura.json"),
+        "--tracking", (Join-Path $repo "data\seguimiento_normativo.js"),
+        "--certificate-dir", (Join-Path $repo "config\tablas_normativas_vigencia"),
+        "--policy", (Join-Path $repo "config\tablas_normativas_vigencia_policy.json"),
         "--state", $state
     )
     & $pythonExe @arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "El motor terminó con código $LASTEXITCODE."
+        throw "El motor V5 terminó con código $LASTEXITCODE."
     }
 } finally {
     Pop-Location
