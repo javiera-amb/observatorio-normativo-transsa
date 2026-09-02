@@ -65,14 +65,11 @@ def load_certificates(directory: str | Path) -> dict[str, dict[str, Any]]:
 
 def act_ids(tracking: dict[str, Any]) -> set[str]:
     details = tracking.get("actos_posteriores_detalle") or []
-    if details:
-        return {
-            str(item.get("official_id") or item.get("id") or "").strip()
-            for item in details if isinstance(item, dict)
-            and str(item.get("official_id") or item.get("id") or "").strip()
-        }
-    # Compatibilidad transitoria: si aún no existe detalle, el contador impide certificar.
-    return set()
+    return {
+        str(item.get("official_id") or item.get("id") or "").strip()
+        for item in details if isinstance(item, dict)
+        and str(item.get("official_id") or item.get("id") or "").strip()
+    }
 
 
 def evaluate(
@@ -89,6 +86,7 @@ def evaluate(
         "version_normativa_id": "",
         "actos_seguimiento": 0,
         "actos_aplicados": 0,
+        "candidatos_pendientes": 0,
     }
     blockers: list[str] = result["bloqueantes_vigencia"]
     if not tracking:
@@ -97,13 +95,22 @@ def evaluate(
 
     expected_count = int(tracking.get("actos_posteriores") or 0)
     expected_ids = act_ids(tracking)
+    candidates = [
+        item for item in (tracking.get("candidatos_normativos_detalle") or [])
+        if isinstance(item, dict)
+    ]
     version = str(tracking.get("version_normativa_id") or "").strip()
     result["version_normativa_id"] = version
     result["actos_seguimiento"] = expected_count
+    result["candidatos_pendientes"] = len(candidates)
 
-    if expected_count and len(expected_ids) != expected_count:
+    if candidates:
         blockers.append(
-            f"El seguimiento registra {expected_count} actos, pero no existe detalle completo de los {expected_count}."
+            f"Hay {len(candidates)} antecedentes normativos oficiales recientes pendientes de conciliación."
+        )
+    if expected_count != len(expected_ids):
+        blockers.append(
+            f"Detalle de actos incompleto: seguimiento={expected_count}, identificados={len(expected_ids)}."
         )
     if not certificate:
         blockers.append("No existe certificación de aplicación tabla/SIG para la versión normativa actual.")
@@ -146,7 +153,9 @@ def evaluate(
 
     if blockers:
         result["estado_vigencia"] = (
-            "BLOQUEADA_ACTO_PENDIENTE" if missing or expected_count != len(applied) else "REVISAR"
+            "BLOQUEADA_ACTO_PENDIENTE"
+            if candidates or missing or expected_count != len(applied)
+            else "REVISAR"
         )
         return result
 
