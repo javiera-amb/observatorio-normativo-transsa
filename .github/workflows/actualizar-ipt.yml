@@ -48,6 +48,9 @@ jobs:
       - name: Refrescar inventario normativo detallado nacional
         run: python scripts/refrescar_seguimiento_publico_v2.py
 
+      - name: Exportar certificación normativa de tablas
+        run: python scripts/exportar_vigencia_tablas.py
+
       - name: Actualizar vigencia cartográfica complementaria
         run: python automation/actualizar_vigencia_cartografica.py
 
@@ -65,7 +68,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add \
             data/actos_ipt.js data/actos_ipt_nacional_*.js data/actos_ipt_sync.json \
-            data/ipt_reportes.js data/seguimiento_normativo.js data/vigencia_cartografica.js \
+            data/ipt_reportes.js data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/vigencia_cartografica.js \
             documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
           git commit -m "Sincronización normativa diaria $(date +'%Y-%m-%d')"
           git push
