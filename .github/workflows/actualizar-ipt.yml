@@ -1,8 +1,8 @@
-name: Actualizar IPT semanal
+name: Actualizar IPT y vigencia diaria
 
 on:
   schedule:
-    - cron: "0 7 * * 1"
+    - cron: "0 7 * * *"
       timezone: "America/Santiago"
   workflow_dispatch:
 
@@ -10,12 +10,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: actualizar-ipt-semanal
+  group: actualizar-ipt-diaria
   cancel-in-progress: false
 
 jobs:
   actualizar:
-    name: Revisar IPT y fuentes públicas de Chile
+    name: Revisar IPT, actos y vigencia de Chile
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -39,14 +39,14 @@ jobs:
       - name: Sincronizar Portal IPT MINVU
         run: python scripts/sincronizar_portal_ipt.py
 
-      - name: Barrido multifuente incremental semanal
+      - name: Barrido multifuente oficial con ventana solapada
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
         run: python automation/actualizar_ipt_semanal.py
 
-      - name: Refrescar seguimiento normativo nacional
-        run: python scripts/refrescar_seguimiento_publico.py
+      - name: Refrescar inventario normativo detallado nacional
+        run: python scripts/refrescar_seguimiento_publico_v2.py
 
       - name: Actualizar vigencia cartográfica complementaria
         run: python automation/actualizar_vigencia_cartografica.py
@@ -67,5 +67,5 @@ jobs:
             data/actos_ipt.js data/actos_ipt_nacional_*.js data/actos_ipt_sync.json \
             data/ipt_reportes.js data/seguimiento_normativo.js data/vigencia_cartografica.js \
             documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
-          git commit -m "Actualización normativa semanal $(date +'%Y-%m-%d')"
+          git commit -m "Sincronización normativa diaria $(date +'%Y-%m-%d')"
           git push
