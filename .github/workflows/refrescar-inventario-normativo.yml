@@ -1,6 +1,9 @@
-name: Refrescar inventario normativo detallado
+name: Sincronizar vigencia normativa nacional
 
 on:
+  schedule:
+    # Después de la sincronización diaria del Portal IPT (12:45 UTC).
+    - cron: "20 13 * * *"
   push:
     branches: [main]
     paths:
@@ -8,8 +11,14 @@ on:
       - "data/actos_ipt_sync.json"
       - "data/ipt_reportes.js"
       - "config/vigencia_actos_verificados.json"
+      - "config/tablas_normativas_vigencia/*.json"
+      - "config/tablas_normativas_vigencia_evidencia/*.json"
+      - "config/tablas_normativas_vigencia_policy.json"
+      - "automation/tablas_normativas/vigencia_gate.py"
+      - "automation/tablas_normativas/certification.py"
       - "scripts/refrescar_seguimiento_publico.py"
       - "scripts/refrescar_seguimiento_publico_v2.py"
+      - "scripts/exportar_vigencia_tablas.py"
       - ".github/workflows/refrescar-inventario-normativo.yml"
   workflow_dispatch:
 
@@ -17,12 +26,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: refrescar-inventario-normativo
+  group: sincronizar-vigencia-normativa-nacional
   cancel-in-progress: true
 
 jobs:
   refrescar:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,21 +46,85 @@ jobs:
 
       - run: pip install -r automation/requirements.txt
 
-      - name: Generar seguimiento detallado
+      - name: Generar seguimiento detallado de las 346 comunas
         run: python scripts/refrescar_seguimiento_publico_v2.py
 
-      - name: Exportar vigencia de tablas
+      - name: Exportar certificación fail-closed
         run: python scripts/exportar_vigencia_tablas.py
 
-      - name: Guardar salidas
+      - name: Validar integridad nacional antes de publicar
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          def assignment(path, prefix):
+              raw = Path(path).read_text(encoding='utf-8').strip()
+              if not raw.startswith(prefix) or not raw.endswith(';'):
+                  raise SystemExit(f'Formato inválido: {path}')
+              return json.loads(raw[len(prefix):-1])
+
+          tracking = assignment(
+              'data/seguimiento_normativo.js',
+              'window.SEGUIMIENTO_NORMATIVO = '
+          )
+          vigencia = assignment(
+              'data/vigencia_tablas_normativas.js',
+              'window.VIGENCIA_TABLAS_NORMATIVAS = '
+          )
+
+          comunas = tracking.get('comunas') or []
+          if len(comunas) != 346:
+              raise SystemExit(f'Seguimiento incompleto: {len(comunas)}/346 comunas.')
+          if int(vigencia.get('total_comunas') or 0) != 346:
+              raise SystemExit('La salida de vigencia no contiene las 346 comunas.')
+
+          seen = set()
+          for row in comunas:
+              comuna = str(row.get('comuna') or '').strip()
+              region = str(row.get('region') or '').strip()
+              key = (region.casefold(), comuna.casefold())
+              if not comuna or not region:
+                  raise SystemExit('Hay una fila nacional sin región o comuna.')
+              if key in seen:
+                  raise SystemExit(f'Comuna duplicada en seguimiento: {region} / {comuna}')
+              seen.add(key)
+
+              expected = int(row.get('actos_posteriores') or 0)
+              detail = row.get('actos_posteriores_detalle') or []
+              ids = [str(item.get('official_id') or item.get('id') or '').strip() for item in detail]
+              ids = [value for value in ids if value]
+              if expected != len(ids) or len(ids) != len(set(ids)):
+                  raise SystemExit(
+                      f'Inventario inconsistente en {comuna}: contador={expected}, ids={len(ids)}.'
+                  )
+
+          certified = 0
+          for row in vigencia.get('comunas') or []:
+              if row.get('vigencia_certificada'):
+                  certified += 1
+                  if row.get('bloqueantes'):
+                      raise SystemExit(
+                          f"Certificación inválida con bloqueantes: {row.get('comuna')}"
+                      )
+                  if not row.get('version_normativa_id'):
+                      raise SystemExit(
+                          f"Certificación sin versión normativa: {row.get('comuna')}"
+                      )
+
+          print(f'QA nacional OK: 346 comunas · {certified} certificadas actualmente.')
+          PY
+
+      - name: Guardar salidas nacionales
         run: |
           if git diff --quiet -- data/seguimiento_normativo.js data/vigencia_tablas_normativas.js; then
-            echo "Sin cambios."
+            echo "Sin cambios de inventario/certificación."
             exit 0
           fi
           git config user.name "Observatorio IPT Bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/seguimiento_normativo.js data/vigencia_tablas_normativas.js
-          git commit -m "Refrescar inventario normativo detallado"
+          git commit -m "data: sincronizar vigencia normativa nacional"
           git pull --rebase origin main
           git push origin main
