@@ -12,6 +12,7 @@ on:
       - ".github/workflows/actualizar-ipt.yml"
       - "automation/actualizar_ipt_semanal.py"
       - "scripts/sincronizar_portal_ipt.py"
+      - "scripts/sincronizar_portal_ipt_v2.py"
       - "scripts/refrescar_seguimiento_publico.py"
       - "scripts/refrescar_seguimiento_publico_v2.py"
       - "scripts/validar_frescura_normativa.py"
@@ -49,7 +50,7 @@ jobs:
       - name: Sincronizar Portal IPT MINVU
         id: portal
         continue-on-error: true
-        run: python scripts/sincronizar_portal_ipt.py
+        run: python scripts/sincronizar_portal_ipt_v2.py
 
       - name: Barrido multifuente oficial con recuperación de huecos
         id: multifuente
