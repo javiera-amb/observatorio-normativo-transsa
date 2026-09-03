@@ -1,0 +1,83 @@
+name: Revisar BCN LeyChile PRC nacional
+
+on:
+  schedule:
+    - cron: "15 9 * * 1"
+      timezone: "America/Santiago"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/actualizar-bcn-prc.yml"
+      - "scripts/barrido_bcn_leychile_prc.py"
+      - "scripts/refrescar_seguimiento_publico_v2.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar-bcn-prc
+  cancel-in-progress: false
+
+jobs:
+  revisar-bcn:
+    name: Revisar 346 comunas en BCN LeyChile
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: automation/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r automation/requirements.txt
+
+      - name: Barrer BCN LeyChile nacional
+        run: python scripts/barrido_bcn_leychile_prc.py --lookback-days 21 --bootstrap-days 730
+
+      - name: Recalcular seguimiento normativo nacional
+        run: python scripts/refrescar_seguimiento_publico_v2.py
+
+      - name: Exportar gate de vigencia de tablas
+        run: python scripts/exportar_vigencia_tablas.py
+
+      - name: Validar estructura de la TUI
+        run: python automation/validar_sitio.py
+
+      - name: Guardar hallazgos BCN y seguimiento
+        run: |
+          if [ -z "$(git status --porcelain -- data documentos consolidados)" ]; then
+            echo "BCN revisada: no hubo cambios de archivos."
+            exit 0
+          fi
+
+          git config user.name "Observatorio BCN Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A data documentos consolidados
+          git commit -m "Revisión BCN LeyChile PRC $(date +'%Y-%m-%d')"
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Confirmar cobertura BCN 346 de 346
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('data/bcn_prc_candidatos.json').read_text(encoding='utf-8'))
+          assert p.get('bootstrap_complete') is True
+          assert p.get('comunas_esperadas') == 346
+          assert p.get('comunas_revisadas') == 346
+          assert not p.get('fallos')
+          print(
+              f"BCN OK: {p['comunas_revisadas']}/346 comunas; "
+              f"{p.get('actos_relevantes_acumulados', 0)} actos PRC acumulados."
+          )
+          PY
