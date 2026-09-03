@@ -11,6 +11,8 @@ como incorporados en tabla/SIG. Se exportan a ``data/bcn_prc_candidatos.json`` y
 el seguimiento nacional los usa para bloquear certificación hasta conciliarlos.
 
 Estrategia:
+- resuelve el nombre oficial acentuado de las 346 comunas desde el catálogo
+  territorial MINVU. Ese catálogo se usa SOLO para nombres, no como fuente legal;
 - primera ejecución: backfill de los últimos ``--bootstrap-days`` días, leyendo
   cuerpo sólo para títulos con señales urbanísticas o títulos genéricos de riesgo;
 - ejecuciones siguientes: ventana solapada de ``--lookback-days`` días y lectura
@@ -38,6 +40,10 @@ TRACKING = ROOT / "data" / "seguimiento_normativo.js"
 OUTPUT = ROOT / "data" / "bcn_prc_candidatos.json"
 TIMEZONE = ZoneInfo("America/Santiago")
 REPORT_URL = "https://www.bcn.cl/siit/reportescomunales/normas.html?com={comuna}"
+COMMUNE_DOMAIN_URL = (
+    "https://geoide.minvu.cl/server/rest/services/IPT/Limites_Urbanos/"
+    "FeatureServer/2?f=pjson"
+)
 USER_AGENT = "Observatorio-Normativo-Transsa/1.0 (+GitHub Actions; fuente publica BCN)"
 
 DIRECT_TITLE_SIGNALS = (
@@ -85,6 +91,14 @@ def norm(value: object) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def loose_name(value: object) -> str:
+    """Clave tolerante a artículos omitidos en inventarios históricos."""
+    words = norm(value).split()
+    while words and words[0] in {"la", "el", "los", "las"}:
+        words.pop(0)
+    return " ".join(words)
+
+
 def read_assignment(path: Path, prefix: str) -> Any:
     raw = path.read_text(encoding="utf-8").strip()
     if not raw.startswith(prefix) or not raw.endswith(";"):
@@ -115,25 +129,75 @@ def session() -> requests.Session:
         {
             "User-Agent": USER_AGENT,
             "Accept-Language": "es-CL,es;q=0.9",
-            "Accept": "text/html,application/xhtml+xml",
+            "Accept": "text/html,application/xhtml+xml,application/json",
         }
     )
     return http
 
 
-def get_text(http: requests.Session, url: str, *, attempts: int = 3) -> str:
+def get_response(http: requests.Session, url: str, *, attempts: int = 3) -> requests.Response:
     last: Exception | None = None
     for attempt in range(1, attempts + 1):
         try:
             response = http.get(url, timeout=35, allow_redirects=True)
             response.raise_for_status()
-            response.encoding = response.apparent_encoding or response.encoding or "utf-8"
-            return response.text
+            return response
         except Exception as error:  # noqa: BLE001 - reintentos de red intencionales
             last = error
             if attempt < attempts:
                 time.sleep(0.7 * attempt)
     raise RuntimeError(f"No se pudo consultar {url}: {type(last).__name__}: {last}")
+
+
+def get_text(http: requests.Session, url: str, *, attempts: int = 3) -> str:
+    response = get_response(http, url, attempts=attempts)
+    response.encoding = response.apparent_encoding or response.encoding or "utf-8"
+    return response.text
+
+
+def get_json(http: requests.Session, url: str, *, attempts: int = 3) -> Any:
+    response = get_response(http, url, attempts=attempts)
+    try:
+        return response.json()
+    except ValueError as error:
+        raise RuntimeError(f"Respuesta JSON inválida en {url}") from error
+
+
+def official_name_index(http: requests.Session) -> tuple[dict[str, str], dict[str, str]]:
+    """Obtiene los nombres oficiales (con tildes/artículos) del dominio COM MINVU."""
+    payload = get_json(http, COMMUNE_DOMAIN_URL)
+    fields = payload.get("fields", []) if isinstance(payload, dict) else []
+    names: list[str] = []
+    for field in fields:
+        if not isinstance(field, dict) or str(field.get("name") or "").upper() != "COM":
+            continue
+        domain = field.get("domain") or {}
+        values = domain.get("codedValues", []) if isinstance(domain, dict) else []
+        names.extend(
+            str(item.get("name") or "").strip()
+            for item in values
+            if isinstance(item, dict) and str(item.get("name") or "").strip()
+        )
+    names = sorted(set(names))
+    if len(names) < 346:
+        raise RuntimeError(
+            f"El catálogo oficial de nombres comunales devolvió {len(names)} nombres; se esperaban 346."
+        )
+
+    exact = {norm(name): name for name in names}
+    loose_groups: dict[str, list[str]] = {}
+    for name in names:
+        loose_groups.setdefault(loose_name(name), []).append(name)
+    loose = {
+        key: values[0]
+        for key, values in loose_groups.items()
+        if key and len(values) == 1
+    }
+    return exact, loose
+
+
+def resolve_official_name(name: str, exact: dict[str, str], loose: dict[str, str]) -> str:
+    return exact.get(norm(name)) or loose.get(loose_name(name)) or name
 
 
 def parse_date(text: str) -> date | None:
@@ -210,8 +274,6 @@ def prc_relevant(title: str, body: str) -> bool:
     body_key = norm(body[:60_000])
     combined = f"{title_key} {body_key}"
 
-    # PRI/PRM quedan fuera del alcance solicitado salvo que el mismo acto también
-    # haga referencia expresa a un Plan Regulador Comunal.
     if (
         ("plan regulador intercomunal" in combined or "plan regulador metropolitano" in combined)
         and "plan regulador comunal" not in combined
@@ -223,7 +285,6 @@ def prc_relevant(title: str, body: str) -> bool:
     if any(re.search(pattern, combined) for pattern in ACTION_PATTERNS):
         return True
 
-    # Títulos inequívocos: el cuerpo debe al menos confirmar PRC/Seccional.
     if any(norm(signal) in title_key for signal in DIRECT_TITLE_SIGNALS):
         return "plan regulador comunal" in combined or "plan seccional" in combined
     return False
@@ -284,7 +345,7 @@ def previous_payload() -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lookback-days", type=int, default=21)
-    parser.add_argument("--bootstrap-days", type=int, default=730)
+    parser.add_argument("--bootstrap-days", type=int, default=1000)
     args = parser.parse_args()
     if args.lookback_days < 8:
         raise SystemExit("--lookback-days debe ser al menos 8 para asegurar solapamiento semanal.")
@@ -293,11 +354,27 @@ def main() -> int:
 
     today = datetime.now(TIMEZONE).date()
     previous = previous_payload()
-    bootstrap = not bool(previous.get("bootstrap_complete"))
+    previous_bootstrap_days = int(previous.get("bootstrap_days") or 0)
+    bootstrap = (
+        not bool(previous.get("bootstrap_complete"))
+        or previous_bootstrap_days < args.bootstrap_days
+    )
     window_days = args.bootstrap_days if bootstrap else args.lookback_days
     since = today - timedelta(days=window_days)
     catalog = commune_catalog()
     http = session()
+    official_exact, official_loose = official_name_index(http)
+
+    unresolved_names = [
+        item["comuna"]
+        for item in catalog
+        if resolve_official_name(item["comuna"], official_exact, official_loose) == item["comuna"]
+        and norm(item["comuna"]) not in official_exact
+    ]
+    if unresolved_names:
+        raise RuntimeError(
+            "No se pudieron resolver nombres oficiales para: " + ", ".join(unresolved_names[:20])
+        )
 
     prior_acts = previous.get("actos", []) if isinstance(previous.get("actos"), list) else []
     by_id: dict[str, dict[str, Any]] = {
@@ -312,11 +389,14 @@ def main() -> int:
 
     for index, item in enumerate(catalog, start=1):
         commune = item["comuna"]
-        page_url = REPORT_URL.format(comuna=quote(commune, safe=""))
+        official_commune = resolve_official_name(commune, official_exact, official_loose)
+        page_url = REPORT_URL.format(comuna=quote(official_commune, safe=""))
         try:
             rows = parse_report(get_text(http, page_url), page_url)
         except Exception as error:  # noqa: BLE001 - acumulamos para fail-closed nacional
-            failures.append(f"{commune}: {type(error).__name__}: {error}")
+            failures.append(
+                f"{commune} [{official_commune}]: {type(error).__name__}: {error}"
+            )
             continue
         checked.append(commune)
 
@@ -330,7 +410,7 @@ def main() -> int:
 
             try:
                 html = get_text(http, row["url"])
-            except Exception as error:  # una norma potencial no puede omitirse silenciosamente
+            except Exception as error:
                 failures.append(
                     f"{commune} · {row['fecha']} · {row['titulo'][:80]}: "
                     f"{type(error).__name__}: {error}"
@@ -353,6 +433,7 @@ def main() -> int:
                 "official_id": f"BCN-{idnorma}" if idnorma else "",
                 "region": item["region"],
                 "comunas": [commune],
+                "comuna_bcn": official_commune,
                 "nivel": "Comunal",
                 "tipo_ipt": tipo_ipt,
                 "titulo": row["titulo"],
@@ -390,8 +471,9 @@ def main() -> int:
         ),
     )
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "fuente": "Biblioteca del Congreso Nacional - LeyChile / Normas que la rigen",
+        "catalogo_nombres": "MINVU dominio COM (solo normalización territorial)",
         "ultima_revision": today.isoformat(),
         "ventana_desde": since.isoformat(),
         "bootstrap_complete": True,
