@@ -1,16 +1,52 @@
 from __future__ import annotations
 
-"""Sincronizador Portal IPT con navegación tolerante a cambios de interfaz.
+"""Sincronizador Portal IPT tolerante a cambios de interfaz.
 
-Reutiliza toda la lógica de validación y exportación del sincronizador estable,
-pero reemplaza únicamente la descarga Playwright. Evita depender de una frase
-exacta del botón y deja diagnóstico útil si el portal cambia nuevamente.
+Reutiliza la validación/exportación estable, pero reemplaza la descarga. Además
+de aceptar distintos nombres del control, captura CSV servidos como descarga,
+respuesta HTTP, data URL o blob generado en el navegador.
 """
 
+import base64
 import re
 from pathlib import Path
 
 import sincronizar_portal_ipt as base
+
+
+def _save_browser_url(page, href: str, destination: Path) -> bool:
+    if not href:
+        return False
+    try:
+        if href.startswith("data:"):
+            header, payload = href.split(",", 1)
+            if ";base64" in header:
+                destination.write_bytes(base64.b64decode(payload))
+            else:
+                from urllib.parse import unquote_to_bytes
+                destination.write_bytes(unquote_to_bytes(payload))
+            return destination.stat().st_size > 0
+
+        if href.startswith("blob:"):
+            data_url = page.evaluate(
+                """async href => {
+                    const response = await fetch(href);
+                    const blob = await response.blob();
+                    return await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(blob);
+                    });
+                }""",
+                href,
+            )
+            if isinstance(data_url, str) and "," in data_url:
+                destination.write_bytes(base64.b64decode(data_url.split(",", 1)[1]))
+                return destination.stat().st_size > 0
+    except Exception:
+        return False
+    return False
 
 
 def robust_download_report(destination: Path) -> Path:
@@ -23,10 +59,21 @@ def robust_download_report(destination: Path) -> Path:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         page = browser.new_page(accept_downloads=True, locale="es-CL")
+        csv_responses = []
+
+        def remember_response(response) -> None:
+            try:
+                content_type = str(response.headers.get("content-type", "")).lower()
+                disposition = str(response.headers.get("content-disposition", "")).lower()
+                url = response.url.lower()
+                if "csv" in content_type or "csv" in disposition or ".csv" in url:
+                    csv_responses.append(response)
+            except Exception:
+                return
+
+        page.on("response", remember_response)
         page.goto(base.PORTAL_URL, wait_until="domcontentloaded", timeout=120_000)
 
-        # El listado se hidrata del lado cliente. networkidle no siempre ocurre,
-        # por lo que esperamos además la tabla y damos margen a la API del portal.
         try:
             page.wait_for_selector("table", timeout=45_000)
         except PlaywrightTimeoutError:
@@ -36,6 +83,36 @@ def robust_download_report(destination: Path) -> Path:
         except PlaywrightTimeoutError:
             pass
         page.wait_for_timeout(8_000)
+
+        # Captura enlaces efímeros creados por librerías tipo export-to-csv.
+        page.evaluate(
+            """() => {
+                window.__tuiDownloads = [];
+                const remember = anchor => {
+                    if (!anchor) return;
+                    const href = anchor.href || anchor.getAttribute('href') || '';
+                    const download = anchor.download || anchor.getAttribute('download') || '';
+                    if (href && (download || href.startsWith('blob:') || href.startsWith('data:'))) {
+                        window.__tuiDownloads.push({href, download});
+                    }
+                };
+                document.addEventListener('click', event => remember(event.target.closest?.('a')), true);
+                const originalClick = HTMLAnchorElement.prototype.click;
+                HTMLAnchorElement.prototype.click = function(...args) {
+                    remember(this);
+                    return originalClick.apply(this, args);
+                };
+                new MutationObserver(mutations => {
+                    for (const mutation of mutations) {
+                        for (const node of mutation.addedNodes) {
+                            if (!(node instanceof Element)) continue;
+                            if (node.matches?.('a')) remember(node);
+                            node.querySelectorAll?.('a').forEach(remember);
+                        }
+                    }
+                }).observe(document.documentElement, {childList: true, subtree: true});
+            }"""
+        )
 
         selectors = [
             page.get_by_role("button", name=re.compile(r"descarg|export", re.I)),
@@ -47,6 +124,7 @@ def robust_download_report(destination: Path) -> Path:
         ]
 
         targets = []
+        signatures = []
         seen = set()
         for locator in selectors:
             try:
@@ -64,27 +142,51 @@ def robust_download_report(destination: Path) -> Path:
                         candidate.get_attribute("aria-label") or "",
                         candidate.get_attribute("title") or "",
                         candidate.get_attribute("href") or "",
+                        candidate.get_attribute("class") or "",
                     )
                 except Exception:
                     continue
                 if signature in seen:
                     continue
                 seen.add(signature)
+                signatures.append(signature)
                 targets.append(candidate)
 
-        errors: list[str] = []
         for target in targets:
+            # Camino estándar de Playwright.
             try:
-                with page.expect_download(timeout=45_000) as download_info:
-                    target.click(timeout=10_000)
+                with page.expect_download(timeout=12_000) as download_info:
+                    target.click(timeout=10_000, force=True)
                 download_info.value.save_as(destination)
-                browser.close()
-                return destination
-            except Exception as error:
-                errors.append(type(error).__name__)
+                if destination.exists() and destination.stat().st_size:
+                    browser.close()
+                    return destination
+            except Exception:
+                pass
 
-        # Diagnóstico sin exponer HTML completo: permite saber qué controles
-        # ofrecía el portal el día de la falla.
+            page.wait_for_timeout(1_500)
+
+            # Camino blob/data creado íntegramente en el frontend.
+            try:
+                captured = page.evaluate("() => window.__tuiDownloads || []")
+            except Exception:
+                captured = []
+            for item in reversed(captured or []):
+                if _save_browser_url(page, str(item.get("href") or ""), destination):
+                    browser.close()
+                    return destination
+
+            # Camino respuesta HTTP CSV sin evento de descarga.
+            for response in reversed(csv_responses):
+                try:
+                    body = response.body()
+                    if body:
+                        destination.write_bytes(body)
+                        browser.close()
+                        return destination
+                except Exception:
+                    continue
+
         controls = page.locator("button, a, [role=button]")
         labels: list[str] = []
         try:
@@ -115,10 +217,11 @@ def robust_download_report(destination: Path) -> Path:
         browser.close()
 
         detail = "; ".join(labels[:12]) or "sin controles visibles identificables"
+        signature_text = "; ".join(str(value)[:220] for value in signatures[:4]) or "sin candidatos"
         suffix = " El portal mostró 0 registros." if no_records else ""
         raise RuntimeError(
-            "No se pudo activar una descarga del Portal IPT con los selectores tolerantes. "
-            f"Controles visibles: {detail}.{suffix} Intentos: {len(targets)}."
+            "No se pudo recuperar el CSV del Portal IPT. "
+            f"Controles visibles: {detail}. Candidatos: {signature_text}.{suffix}"
         )
 
 
