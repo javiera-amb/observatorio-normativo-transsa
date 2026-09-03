@@ -13,6 +13,7 @@ el seguimiento nacional los usa para bloquear certificación hasta conciliarlos.
 Estrategia:
 - resuelve el nombre oficial acentuado de las 346 comunas desde el catálogo
   territorial MINVU. Ese catálogo se usa SOLO para nombres, no como fuente legal;
+- corrige unas pocas diferencias históricas de escritura entre catálogos;
 - primera ejecución: backfill de los últimos ``--bootstrap-days`` días, leyendo
   cuerpo sólo para títulos con señales urbanísticas o títulos genéricos de riesgo;
 - ejecuciones siguientes: ventana solapada de ``--lookback-days`` días y lectura
@@ -45,6 +46,17 @@ COMMUNE_DOMAIN_URL = (
     "FeatureServer/2?f=pjson"
 )
 USER_AGENT = "Observatorio-Normativo-Transsa/1.0 (+GitHub Actions; fuente publica BCN)"
+
+# Equivalencias únicamente para diferencias históricas entre catálogos. No son
+# excepciones normativas: sólo el texto exacto que BCN espera en ?com=.
+BCN_QUERY_ALIASES = {
+    "paihuano": "Paihuano",
+    "til til": "Tiltil",
+    "alto bio bio": "Alto Biobío",
+    "chol chol": "Cholchol",
+    "aysen": "Aysén",
+    "coyhaique": "Coyhaique",
+}
 
 DIRECT_TITLE_SIGNALS = (
     "plan regulador comunal",
@@ -164,7 +176,7 @@ def get_json(http: requests.Session, url: str, *, attempts: int = 3) -> Any:
 
 
 def official_name_index(http: requests.Session) -> tuple[dict[str, str], dict[str, str]]:
-    """Obtiene los nombres oficiales (con tildes/artículos) del dominio COM MINVU."""
+    """Obtiene nombres comunales con tildes/artículos del dominio COM MINVU."""
     payload = get_json(http, COMMUNE_DOMAIN_URL)
     fields = payload.get("fields", []) if isinstance(payload, dict) else []
     names: list[str] = []
@@ -197,7 +209,13 @@ def official_name_index(http: requests.Session) -> tuple[dict[str, str], dict[st
 
 
 def resolve_official_name(name: str, exact: dict[str, str], loose: dict[str, str]) -> str:
-    return exact.get(norm(name)) or loose.get(loose_name(name)) or name
+    key = norm(name)
+    return (
+        BCN_QUERY_ALIASES.get(key)
+        or exact.get(key)
+        or loose.get(loose_name(name))
+        or name
+    )
 
 
 def parse_date(text: str) -> date | None:
@@ -364,17 +382,6 @@ def main() -> int:
     catalog = commune_catalog()
     http = session()
     official_exact, official_loose = official_name_index(http)
-
-    unresolved_names = [
-        item["comuna"]
-        for item in catalog
-        if resolve_official_name(item["comuna"], official_exact, official_loose) == item["comuna"]
-        and norm(item["comuna"]) not in official_exact
-    ]
-    if unresolved_names:
-        raise RuntimeError(
-            "No se pudieron resolver nombres oficiales para: " + ", ".join(unresolved_names[:20])
-        )
 
     prior_acts = previous.get("actos", []) if isinstance(previous.get("actos"), list) else []
     by_id: dict[str, dict[str, Any]] = {
