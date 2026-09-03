@@ -47,6 +47,8 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Sincronizar Portal IPT MINVU
+        id: portal
+        continue-on-error: true
         run: python scripts/sincronizar_portal_ipt.py
 
       - name: Barrido multifuente oficial con recuperación de huecos
@@ -69,10 +71,7 @@ jobs:
       - name: Validar estructura del portal
         run: python automation/validar_sitio.py
 
-      - name: Validar sincronización nacional básica
-        run: python scripts/validar_frescura_normativa.py --max-age-days 8
-
-      - name: Guardar cambios normativos
+      - name: Guardar cambios normativos disponibles
         id: publicar
         run: |
           if git diff --quiet; then
@@ -90,11 +89,15 @@ jobs:
           git pull --rebase origin main
           git push origin main
 
-      - name: Exigir barrido multifuente al menos semanal
+      - name: Comprobar frescura integral
         if: always() && steps.publicar.outcome == 'success'
         run: |
           python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente
+          if [ "${{ steps.portal.outcome }}" != "success" ]; then
+            echo "El Portal IPT no pudo sincronizarse en esta ejecución; se conservó su último snapshot y continuó el barrido multifuente."
+            exit 1
+          fi
           if [ "${{ steps.multifuente.outcome }}" != "success" ]; then
-            echo "El Portal IPT quedó actualizado, pero el barrido multifuente falló en esta ejecución."
+            echo "El barrido multifuente falló en esta ejecución."
             exit 1
           fi
