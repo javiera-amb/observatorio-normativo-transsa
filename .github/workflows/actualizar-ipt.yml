@@ -5,6 +5,16 @@ on:
     - cron: "0 7 * * *"
       timezone: "America/Santiago"
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/actualizar-ipt.yml"
+      - "automation/actualizar_ipt_semanal.py"
+      - "scripts/sincronizar_portal_ipt.py"
+      - "scripts/refrescar_seguimiento_publico.py"
+      - "scripts/refrescar_seguimiento_publico_v2.py"
+      - "scripts/validar_frescura_normativa.py"
 
 permissions:
   contents: write
@@ -39,7 +49,9 @@ jobs:
       - name: Sincronizar Portal IPT MINVU
         run: python scripts/sincronizar_portal_ipt.py
 
-      - name: Barrido multifuente oficial con ventana solapada
+      - name: Barrido multifuente oficial con recuperación de huecos
+        id: multifuente
+        continue-on-error: true
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
@@ -54,10 +66,14 @@ jobs:
       - name: Actualizar vigencia cartográfica complementaria
         run: python automation/actualizar_vigencia_cartografica.py
 
-      - name: Validar portal
+      - name: Validar estructura del portal
         run: python automation/validar_sitio.py
 
-      - name: Guardar cambios
+      - name: Validar sincronización nacional básica
+        run: python scripts/validar_frescura_normativa.py --max-age-days 8
+
+      - name: Guardar cambios normativos
+        id: publicar
         run: |
           if git diff --quiet; then
             echo "La revisión terminó sin cambios de archivos."
@@ -70,5 +86,15 @@ jobs:
             data/actos_ipt.js data/actos_ipt_nacional_*.js data/actos_ipt_sync.json \
             data/ipt_reportes.js data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/vigencia_cartografica.js \
             documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
-          git commit -m "Sincronización normativa diaria $(date +'%Y-%m-%d')"
-          git push
+          git commit -m "Sincronización normativa nacional $(date +'%Y-%m-%d')"
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Exigir barrido multifuente al menos semanal
+        if: always() && steps.publicar.outcome == 'success'
+        run: |
+          python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente
+          if [ "${{ steps.multifuente.outcome }}" != "success" ]; then
+            echo "El Portal IPT quedó actualizado, pero el barrido multifuente falló en esta ejecución."
+            exit 1
+          fi
