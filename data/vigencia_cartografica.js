@@ -1,10 +1,11 @@
-window.VIGENCIA_IPT_ROWS=[];
-document.write('<script src="data/ipt_vigentes_01.js"><\/script>');
-document.write('<script src="data/ipt_vigentes_02.js"><\/script>');
-document.write('<script src="data/ipt_vigentes_03.js"><\/script>');
-document.write('<script src="data/ipt_vigentes_04.js"><\/script>');
-document.write('<script src="data/ipt_vigentes_05.js"><\/script>');
-document.write('<script src="data/ipt_aplicacion_overrides.js?v=20260813-correcciones-1"><\/script>');
-document.write('<script src="data/comparaciones_ipt.js"><\/script>');
-document.write('<script src="data/actos_ipt.js"><\/script>');
-document.write('<script src="data/vigencia_finalizar.js"><\/script>');
+// Compatibilidad temporal: la vista IPT/vigencia ya no carga catálogos legacy.
+// La fuente canónica se inicializa desde data/seguimiento_normativo.js y
+// vigencia-seguimiento-unificado.js reemplaza este objeto al iniciar la vista.
+window.VIGENCIA_CARTOGRAFICA = {
+  fuente: "SEGUIMIENTO_NORMATIVO",
+  deprecated_legacy_loader: true,
+  resumen: {},
+  instrumentos: [],
+  word_url: "",
+  csv_url: ""
+};
