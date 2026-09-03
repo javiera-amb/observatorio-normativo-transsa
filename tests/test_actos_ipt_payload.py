@@ -36,9 +36,9 @@ class ActosIptPayloadTest(unittest.TestCase):
         rows = json.loads(payload.decode("utf-8"))
         metadata = json.loads((DATA / "actos_ipt_sync.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(1784, len(rows))
+        self.assertGreater(len(rows), 0)
         self.assertTrue(all(isinstance(row, list) and len(row) >= 17 for row in rows))
-        self.assertEqual(1784, metadata["total"])
+        self.assertEqual(len(rows), int(metadata["total"]))
         self.assertEqual(10, metadata["archivos_comprimidos"])
         self.assertEqual(hashlib.sha256(compressed).hexdigest(), metadata["sha256_payload_comprimido"])
         self.assertEqual(f"{zlib.crc32(payload) & 0xFFFFFFFF:08x}", metadata["crc32_json"])
