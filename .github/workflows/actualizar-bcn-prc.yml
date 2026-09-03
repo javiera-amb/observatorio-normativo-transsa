@@ -11,6 +11,7 @@ on:
     paths:
       - ".github/workflows/actualizar-bcn-prc.yml"
       - "scripts/barrido_bcn_leychile_prc.py"
+      - "scripts/barrido_bcn_leychile_prc_v2.py"
       - "scripts/refrescar_seguimiento_publico_v2.py"
       - "scripts/validar_frescura_normativa.py"
 
@@ -42,7 +43,7 @@ jobs:
         run: pip install -r automation/requirements.txt
 
       - name: Barrer BCN LeyChile nacional
-        run: python scripts/barrido_bcn_leychile_prc.py --lookback-days 21 --bootstrap-days 1000
+        run: python scripts/barrido_bcn_leychile_prc_v2.py --lookback-days 21 --bootstrap-days 1000
 
       - name: Recalcular seguimiento normativo nacional
         run: python scripts/refrescar_seguimiento_publico_v2.py
