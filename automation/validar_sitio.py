@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import base64
-import gzip
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -21,15 +18,23 @@ HISTORIC_REQUIRED = {
     "resumen", "implicancia", "estado", "fuente",
 }
 
-VIGENCIA_INSTRUMENT_REQUIRED = {
-    "id", "region", "comuna", "tipo_ipt", "nombre",
-    "estado_alerta", "confianza", "resumen_alerta",
-    "linea_tiempo", "alertas", "mapa",
-}
-
 IPT_CHANGE_REQUIRED = {
     "region", "comuna", "territorio", "tipo_ipt", "acto", "numero",
     "fecha_publicacion", "estado", "resumen", "vigencia", "fuente",
+}
+
+SEGUIMIENTO_COMMUNE_REQUIRED = {
+    "region", "comuna", "prc_nombre", "prc_fecha", "estado_fuente",
+    "apto_para_visor", "consumo_propieteq", "estado_auditoria", "motivo",
+    "actos_posteriores", "ultimo_acto_posterior", "archivo_recomendado",
+    "capa_recomendada", "ultima_revision_normativa", "corte_base_portal_ipt",
+    "actos_posteriores_detalle", "candidatos_normativos_detalle",
+    "version_normativa_id", "estado_sincronizacion_normativa",
+}
+
+SEGUIMIENTO_ACT_REQUIRED = {
+    "id", "fecha", "tipo_acto", "titulo", "estado", "origen", "fuente",
+    "verificado_fuente",
 }
 
 
@@ -59,110 +64,73 @@ def validate_file(path: Path, label: str) -> None:
 
 
 def load_vigencia_source_rows() -> list:
-    loader_path = ROOT / "data" / "vigencia_cartografica.js"
-    raw = loader_path.read_text(encoding="utf-8").strip()
+    """Carga la única fuente canónica de IPT/vigencia: Seguimiento Normativo."""
+    source_path = ROOT / "data" / "seguimiento_normativo.js"
+    data = load_js_object(source_path, "window.SEGUIMIENTO_NORMATIVO = ")
+    summary = data.get("resumen")
+    communes = data.get("comunas")
 
-    direct_prefix = "window.VIGENCIA_CARTOGRAFICA = "
-    if raw.startswith(direct_prefix):
-        direct = load_js_object(loader_path, direct_prefix)
-        instruments = direct.get("instrumentos")
-        if not isinstance(instruments, list):
-            raise ValueError("La base de vigencia no contiene una lista de instrumentos.")
-        for position, instrument in enumerate(instruments):
-            missing = sorted(VIGENCIA_INSTRUMENT_REQUIRED - set(instrument))
-            if missing:
-                raise ValueError(
-                    f"Instrumento cartográfico {position} incompleto: {', '.join(missing)}"
-                )
-        return instruments
+    if not isinstance(summary, dict):
+        raise ValueError("Seguimiento Normativo no contiene resumen.")
+    if not isinstance(communes, list):
+        raise ValueError("Seguimiento Normativo no contiene una lista de comunas.")
+    if not communes:
+        raise ValueError("Seguimiento Normativo está vacío.")
 
-    if not raw.startswith("window.VIGENCIA_IPT_ROWS=[];"):
-        raise ValueError("Formato inválido: vigencia_cartografica.js")
-
-    references = [
-        reference.split("?", 1)[0].split("#", 1)[0]
-        for reference in re.findall(r'src="([^"]+)"', raw)
-    ]
-    required_references = {
-        "data/vigencia_finalizar.js",
-        "data/comparaciones_ipt.js",
-        "data/actos_ipt.js",
-    }
-    missing_references = sorted(required_references - set(references))
-    if missing_references:
+    expected_total = summary.get("total")
+    if isinstance(expected_total, int) and expected_total != len(communes):
         raise ValueError(
-            "El cargador de vigencia no referencia: " + ", ".join(missing_references)
+            f"Seguimiento Normativo declara {expected_total} comunas y contiene {len(communes)}."
         )
 
-    rows: list = []
-    row_files = [reference for reference in references if "ipt_vigentes_" in reference]
-    if not row_files:
-        raise ValueError("El cargador de vigencia no contiene bloques de instrumentos.")
+    seen = set()
+    detailed_acts = 0
+    for position, commune in enumerate(communes):
+        if not isinstance(commune, dict):
+            raise ValueError(f"Comuna de seguimiento {position} inválida.")
+        missing = sorted(SEGUIMIENTO_COMMUNE_REQUIRED - set(commune))
+        if missing:
+            raise ValueError(
+                f"Comuna de seguimiento {position} incompleta: {', '.join(missing)}"
+            )
 
-    prefix = "window.VIGENCIA_IPT_ROWS=(window.VIGENCIA_IPT_ROWS||[]).concat("
-    for reference in row_files:
-        path = ROOT / reference
-        validate_file(path, reference)
-        content = path.read_text(encoding="utf-8").strip()
-        if not content.startswith(prefix) or not content.endswith(");"):
-            raise ValueError(f"Formato inválido: {path.name}")
-        block = json.loads(content[len(prefix):-2])
-        if not isinstance(block, list):
-            raise ValueError(f"Bloque IPT no es lista: {path.name}")
-        rows.extend(block)
+        key = (str(commune.get("region", "")).strip(), str(commune.get("comuna", "")).strip())
+        if key in seen:
+            raise ValueError(f"Comuna duplicada en Seguimiento Normativo: {key[0]} / {key[1]}")
+        seen.add(key)
 
-    for position, row in enumerate(rows):
-        if not isinstance(row, list) or len(row) < 8:
-            raise ValueError(f"Fila IPT fuente {position} inválida.")
+        acts = commune.get("actos_posteriores_detalle")
+        candidates = commune.get("candidatos_normativos_detalle")
+        if not isinstance(acts, list) or not isinstance(candidates, list):
+            raise ValueError(f"Actos/candidatos inválidos para {key[1]}.")
 
-    for reference in references:
-        validate_file(ROOT / reference, reference)
+        for act_position, act in enumerate(acts):
+            if not isinstance(act, dict):
+                raise ValueError(f"Acto {position}:{act_position} inválido.")
+            act_missing = sorted(SEGUIMIENTO_ACT_REQUIRED - set(act))
+            if act_missing:
+                raise ValueError(
+                    f"Acto {position}:{act_position} incompleto: {', '.join(act_missing)}"
+                )
+            if act.get("verificado_fuente") and not str(act.get("fuente", "")).strip():
+                raise ValueError(f"Acto verificado sin fuente en {key[1]}: {act.get('id', '')}")
+        detailed_acts += len(acts)
 
-    return rows
-
-
-def load_national_ipt_acts() -> list:
-    encoded_parts: list[str] = []
-    for index in range(1, 11):
-        path = ROOT / "data" / f"actos_ipt_nacional_{index:02d}.js"
-        validate_file(path, path.name)
-        raw = path.read_text(encoding="utf-8").strip()
-        match = re.fullmatch(
-            r'window\.ACTOS_IPT_GZ=\(window\.ACTOS_IPT_GZ\|\|""\)\+(".*");',
-            raw,
+    declared_acts = summary.get("actos_posteriores_detallados")
+    if isinstance(declared_acts, int) and declared_acts != detailed_acts:
+        raise ValueError(
+            f"Seguimiento Normativo declara {declared_acts} actos detallados y contiene {detailed_acts}."
         )
-        if not match:
-            raise ValueError(f"Formato inválido: {path.name}")
-        encoded_parts.append(json.loads(match.group(1)))
 
-    try:
-        compressed = base64.b64decode("".join(encoded_parts), validate=True)
-        acts = json.loads(gzip.decompress(compressed).decode("utf-8"))
-    except Exception as error:
-        raise ValueError(f"No se pudo abrir la base nacional IPT: {error}") from error
-
-    if not isinstance(acts, list) or not acts:
-        raise ValueError("La base nacional IPT está vacía o no es una lista.")
-    if len(acts) != 1784:
-        raise ValueError(f"Se esperaban 1.784 actos IPT y se obtuvieron {len(acts)}.")
-    for position, row in enumerate(acts):
-        if not isinstance(row, list) or len(row) < 17:
-            raise ValueError(f"Acto IPT nacional {position} inválido.")
-
-    for filename in (
-        "actos_ipt_nacionales_finalizar.js",
-        "../vigencia-pilotos.js",
-        "../vigencia-nacional-ui.js",
-    ):
-        path = ROOT / "data" / filename if not filename.startswith("../") else ROOT / filename[3:]
-        validate_file(path, filename)
-
-    return acts
+    return communes
 
 
 def main() -> int:
     try:
-        for filename in ("index.html", "styles.css", "app.js", "ux-refresh.js"):
+        for filename in (
+            "index.html", "styles.css", "app.js", "ux-refresh.js",
+            "vigencia-seguimiento-unificado.js",
+        ):
             validate_file(ROOT / filename, filename)
 
         daily = load_js_array(
@@ -227,13 +195,13 @@ def main() -> int:
                     validate_file(ROOT / report[key], key)
 
         vigencia_rows = load_vigencia_source_rows()
-        national_acts = load_national_ipt_acts()
+        detailed_acts = sum(len(row.get("actos_posteriores_detalle", [])) for row in vigencia_rows)
 
         print(
             f"Validación correcta. Diarios: {len(daily)} · "
             f"IPT: {len(ipt)} · Históricos: {len(historic)} · "
-            f"Instrumentos fuente: {len(vigencia_rows)} · "
-            f"Actos IPT nacionales: {len(national_acts)}"
+            f"Comunas seguimiento: {len(vigencia_rows)} · "
+            f"Actos normativos detallados: {detailed_acts}"
         )
         return 0
 
