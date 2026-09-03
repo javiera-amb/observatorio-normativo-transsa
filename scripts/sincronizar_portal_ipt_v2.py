@@ -2,16 +2,23 @@ from __future__ import annotations
 
 """Sincronizador Portal IPT tolerante a cambios de interfaz.
 
-Reutiliza la validación/exportación estable, pero reemplaza la descarga. Además
-de aceptar distintos nombres del control, captura CSV servidos como descarga,
-respuesta HTTP, data URL o blob generado en el navegador.
+Reutiliza la validación/exportación estable, pero reemplaza la descarga. Primero
+lee el enlace CSV oficial que publica la propia interfaz del Portal IPT y pide
+la clasificación Modificación con un tamaño de página suficiente para el
+universo nacional. Si el endpoint cambia, conserva como respaldo los caminos de
+Playwright (download, respuesta HTTP, data URL o blob generado en navegador).
 """
 
 import base64
 import re
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+import requests
 
 import sincronizar_portal_ipt as base
+
+API_HOST = "portalipt-api.minvu.cl"
 
 
 def _save_browser_url(page, href: str, destination: Path) -> bool:
@@ -49,6 +56,60 @@ def _save_browser_url(page, href: str, destination: Path) -> bool:
     return False
 
 
+def _modifications_url(href: str) -> str | None:
+    try:
+        parts = urlsplit(href)
+    except ValueError:
+        return None
+    if parts.hostname != API_HOST or not parts.path.rstrip("/").endswith("/instrumentos"):
+        return None
+
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query.update({
+        "paginated": "true",
+        "page": "1",
+        "perPage": "10000",
+        "clasificacion": "Modificación",
+        "format": "csv",
+    })
+    return urlunsplit((parts.scheme or "https", parts.netloc, parts.path, urlencode(query), ""))
+
+
+def _download_direct_csv(href: str, destination: Path) -> bool:
+    url = _modifications_url(href)
+    if not url:
+        return False
+
+    response = requests.get(
+        url,
+        timeout=120,
+        headers={
+            "User-Agent": "Mozilla/5.0 (compatible; TranssaUrbanIntelligence/1.0)",
+            "Accept": "text/csv,text/plain,*/*",
+            "Referer": base.PORTAL_URL,
+        },
+    )
+    response.raise_for_status()
+    body = response.content
+    if not body:
+        return False
+
+    destination.write_bytes(body)
+    try:
+        records = base.read_csv(destination)
+        rows = base.build_rows(records)
+    except Exception:
+        destination.unlink(missing_ok=True)
+        return False
+
+    # Evita aceptar silenciosamente una respuesta parcial o una página vacía.
+    if not rows:
+        destination.unlink(missing_ok=True)
+        return False
+    print(f"CSV Portal IPT recuperado directamente: {len(rows)} modificaciones.")
+    return True
+
+
 def robust_download_report(destination: Path) -> Path:
     try:
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -82,37 +143,7 @@ def robust_download_report(destination: Path) -> Path:
             page.wait_for_load_state("networkidle", timeout=30_000)
         except PlaywrightTimeoutError:
             pass
-        page.wait_for_timeout(8_000)
-
-        # Captura enlaces efímeros creados por librerías tipo export-to-csv.
-        page.evaluate(
-            """() => {
-                window.__tuiDownloads = [];
-                const remember = anchor => {
-                    if (!anchor) return;
-                    const href = anchor.href || anchor.getAttribute('href') || '';
-                    const download = anchor.download || anchor.getAttribute('download') || '';
-                    if (href && (download || href.startsWith('blob:') || href.startsWith('data:'))) {
-                        window.__tuiDownloads.push({href, download});
-                    }
-                };
-                document.addEventListener('click', event => remember(event.target.closest?.('a')), true);
-                const originalClick = HTMLAnchorElement.prototype.click;
-                HTMLAnchorElement.prototype.click = function(...args) {
-                    remember(this);
-                    return originalClick.apply(this, args);
-                };
-                new MutationObserver(mutations => {
-                    for (const mutation of mutations) {
-                        for (const node of mutation.addedNodes) {
-                            if (!(node instanceof Element)) continue;
-                            if (node.matches?.('a')) remember(node);
-                            node.querySelectorAll?.('a').forEach(remember);
-                        }
-                    }
-                }).observe(document.documentElement, {childList: true, subtree: true});
-            }"""
-        )
+        page.wait_for_timeout(5_000)
 
         selectors = [
             page.get_by_role("button", name=re.compile(r"descarg|export", re.I)),
@@ -152,8 +183,40 @@ def robust_download_report(destination: Path) -> Path:
                 signatures.append(signature)
                 targets.append(candidate)
 
+        # Camino preferido: la propia UI expone el endpoint CSV oficial.
+        for signature in signatures:
+            href = str(signature[4] or "")
+            if not href:
+                continue
+            try:
+                if _download_direct_csv(href, destination):
+                    browser.close()
+                    return destination
+            except Exception as error:
+                print(f"Advertencia endpoint CSV directo: {type(error).__name__}: {error}")
+
+        # Respaldo para futuros cambios del Portal IPT.
+        page.evaluate(
+            """() => {
+                window.__tuiDownloads = [];
+                const remember = anchor => {
+                    if (!anchor) return;
+                    const href = anchor.href || anchor.getAttribute('href') || '';
+                    const download = anchor.download || anchor.getAttribute('download') || '';
+                    if (href && (download || href.startsWith('blob:') || href.startsWith('data:'))) {
+                        window.__tuiDownloads.push({href, download});
+                    }
+                };
+                document.addEventListener('click', event => remember(event.target.closest?.('a')), true);
+                const originalClick = HTMLAnchorElement.prototype.click;
+                HTMLAnchorElement.prototype.click = function(...args) {
+                    remember(this);
+                    return originalClick.apply(this, args);
+                };
+            }"""
+        )
+
         for target in targets:
-            # Camino estándar de Playwright.
             try:
                 with page.expect_download(timeout=12_000) as download_info:
                     target.click(timeout=10_000, force=True)
@@ -165,8 +228,6 @@ def robust_download_report(destination: Path) -> Path:
                 pass
 
             page.wait_for_timeout(1_500)
-
-            # Camino blob/data creado íntegramente en el frontend.
             try:
                 captured = page.evaluate("() => window.__tuiDownloads || []")
             except Exception:
@@ -176,7 +237,6 @@ def robust_download_report(destination: Path) -> Path:
                     browser.close()
                     return destination
 
-            # Camino respuesta HTTP CSV sin evento de descarga.
             for response in reversed(csv_responses):
                 try:
                     body = response.body()
@@ -207,21 +267,13 @@ def robust_download_report(destination: Path) -> Path:
                     labels.append(text[:160])
         except Exception:
             pass
-
-        body_text = ""
-        try:
-            body_text = page.locator("body").inner_text(timeout=3_000)
-        except Exception:
-            pass
-        no_records = bool(re.search(r"0\s+registros|no se encontraron", body_text, re.I))
         browser.close()
 
         detail = "; ".join(labels[:12]) or "sin controles visibles identificables"
         signature_text = "; ".join(str(value)[:220] for value in signatures[:4]) or "sin candidatos"
-        suffix = " El portal mostró 0 registros." if no_records else ""
         raise RuntimeError(
             "No se pudo recuperar el CSV del Portal IPT. "
-            f"Controles visibles: {detail}. Candidatos: {signature_text}.{suffix}"
+            f"Controles visibles: {detail}. Candidatos: {signature_text}."
         )
 
 
