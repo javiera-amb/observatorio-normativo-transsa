@@ -2,10 +2,10 @@ from __future__ import annotations
 
 """Control de salud del seguimiento normativo nacional.
 
-Falla si Portal IPT, el seguimiento por comuna o el barrido multifuente llevan
-más días sin revisión que el máximo permitido. No intenta afirmar que una fuente
-oficial sea exhaustiva: controla que el sistema efectivamente la haya vuelto a
-consultar y que el universo nacional siga íntegro.
+Falla si Portal IPT, el seguimiento por comuna o las fuentes complementarias
+llevan más días sin revisión que el máximo permitido. No intenta afirmar que una
+fuente oficial sea exhaustiva: controla que el sistema efectivamente la haya
+vuelto a consultar y que el universo nacional siga íntegro.
 """
 
 import argparse
@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PORTAL_SYNC = ROOT / "data" / "actos_ipt_sync.json"
 SEGUIMIENTO = ROOT / "data" / "seguimiento_normativo.js"
 IPT_REPORTS = ROOT / "data" / "ipt_reportes.js"
+BCN_SWEEP = ROOT / "data" / "bcn_prc_candidatos.json"
 
 
 def read_assignment(path: Path, prefix: str) -> Any:
@@ -147,12 +148,37 @@ def validate_multisource(max_age_days: int, today: date) -> list[dict[str, Any]]
     if not reviewed:
         raise RuntimeError("Los reportes multifuente no contienen una fecha de revisión válida.")
     require_recent_date(
-        "Última revisión multifuente",
+        "Última revisión Diario Oficial",
         max(reviewed).isoformat(),
         max_age_days,
         today,
     )
     return reports
+
+
+def validate_bcn(max_age_days: int, today: date) -> dict[str, Any]:
+    if not BCN_SWEEP.exists():
+        raise RuntimeError("Aún no existe el barrido nacional BCN/LeyChile.")
+    payload = json.loads(BCN_SWEEP.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise RuntimeError("El barrido BCN/LeyChile no es un objeto válido.")
+    require_recent_date(
+        "Última revisión BCN/LeyChile",
+        payload.get("ultima_revision"),
+        max_age_days,
+        today,
+    )
+    if payload.get("bootstrap_complete") is not True:
+        raise RuntimeError("El backfill inicial BCN/LeyChile aún no está completo.")
+    if int(payload.get("comunas_esperadas") or 0) != 346:
+        raise RuntimeError("El barrido BCN no declara un universo esperado de 346 comunas.")
+    if int(payload.get("comunas_revisadas") or 0) != 346:
+        raise RuntimeError(
+            f"BCN/LeyChile no revisó las 346 comunas: {payload.get('comunas_revisadas')}/346."
+        )
+    if payload.get("fallos"):
+        raise RuntimeError(f"El barrido BCN registra fallos: {payload.get('fallos')}")
+    return payload
 
 
 def main() -> int:
@@ -161,7 +187,12 @@ def main() -> int:
     parser.add_argument(
         "--require-multifuente",
         action="store_true",
-        help="Exige que el barrido complementario también haya corrido recientemente.",
+        help="Exige que Diario Oficial también haya corrido recientemente.",
+    )
+    parser.add_argument(
+        "--require-bcn",
+        action="store_true",
+        help="Exige barrido nacional BCN/LeyChile reciente y 346/346 comunas.",
     )
     args = parser.parse_args()
     if args.max_age_days < 1:
@@ -172,15 +203,23 @@ def main() -> int:
     portal = validate_portal(args.max_age_days, now)
     tracking = validate_tracking(args.max_age_days, today, int(portal["total"]))
     reports: list[dict[str, Any]] = []
+    bcn: dict[str, Any] = {}
     if args.require_multifuente:
         reports = validate_multisource(args.max_age_days, today)
+    if args.require_bcn:
+        bcn = validate_bcn(args.max_age_days, today)
 
     summary = tracking.get("resumen") or {}
     print(
         "Frescura normativa OK · "
         f"Portal IPT: {portal['total']} actos · "
         f"346 comunas · actos evaluados: {summary.get('actos_totales_evaluados', 0)}"
-        + (f" · reportes multifuente: {len(reports)}" if args.require_multifuente else "")
+        + (f" · reportes Diario Oficial: {len(reports)}" if args.require_multifuente else "")
+        + (
+            f" · BCN: {bcn.get('comunas_revisadas', 0)}/346; "
+            f"{bcn.get('actos_relevantes_acumulados', 0)} actos acumulados"
+            if args.require_bcn else ""
+        )
     )
     return 0
 
