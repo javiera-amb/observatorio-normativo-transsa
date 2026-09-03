@@ -10,7 +10,7 @@ on:
       - main
     paths:
       - ".github/workflows/actualizar-ipt.yml"
-      - "automation/actualizar_ipt_semanal.py"
+      - "scripts/barrido_ipt_diario_oficial.py"
       - "scripts/sincronizar_portal_ipt.py"
       - "scripts/sincronizar_portal_ipt_v2.py"
       - "scripts/refrescar_seguimiento_publico.py"
@@ -52,13 +52,10 @@ jobs:
         continue-on-error: true
         run: python scripts/sincronizar_portal_ipt_v2.py
 
-      - name: Barrido multifuente oficial con recuperación de huecos
+      - name: Revisar Diario Oficial sin servicios locales ni API pagada
         id: multifuente
         continue-on-error: true
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
-        run: python automation/actualizar_ipt_semanal.py
+        run: python scripts/barrido_ipt_diario_oficial.py
 
       - name: Refrescar inventario normativo detallado nacional
         run: python scripts/refrescar_seguimiento_publico_v2.py
@@ -82,10 +79,7 @@ jobs:
 
           git config user.name "Observatorio IPT Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add \
-            data/actos_ipt.js data/actos_ipt_nacional_*.js data/actos_ipt_sync.json \
-            data/ipt_reportes.js data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/vigencia_cartografica.js \
-            documentos/ipt/ documentos/vigencia/ consolidados/ipt/ consolidados/vigencia/
+          git add -A data documentos consolidados
           git commit -m "Sincronización normativa nacional $(date +'%Y-%m-%d')"
           git pull --rebase origin main
           git push origin main
@@ -95,10 +89,10 @@ jobs:
         run: |
           python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente
           if [ "${{ steps.portal.outcome }}" != "success" ]; then
-            echo "El Portal IPT no pudo sincronizarse en esta ejecución; se conservó su último snapshot y continuó el barrido multifuente."
+            echo "El Portal IPT no pudo sincronizarse en esta ejecución; se conservó su último snapshot y continuó el barrido del Diario Oficial."
             exit 1
           fi
           if [ "${{ steps.multifuente.outcome }}" != "success" ]; then
-            echo "El barrido multifuente falló en esta ejecución."
+            echo "El barrido del Diario Oficial falló en esta ejecución."
             exit 1
           fi
