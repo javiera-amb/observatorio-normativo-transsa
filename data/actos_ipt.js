@@ -1,3 +1,1 @@
-window.ACTOS_IPT_ROWS=[];
-document.write('<script src="data/revision_sig_ipt.js"><\/script>');
-document.write('<script src="data/actos_ipt_finalizar.js"><\/script>');
+// Compatibilidad: la interfaz nacional carga actos_ipt_nacional_01.js a actos_ipt_nacional_10.js.
