@@ -34,15 +34,8 @@
     if (!input || !iptButton || !dailyButton) return;
 
     const query = () => input.value.trim();
-
-    iptButton.addEventListener("click", () => {
-      focusAndSearch("vigencia", "vigenciaSearchInput", query());
-    });
-
-    dailyButton.addEventListener("click", () => {
-      focusAndSearch("diario", "searchInput", query());
-    });
-
+    iptButton.addEventListener("click", () => focusAndSearch("vigencia", "vigenciaSearchInput", query()));
+    dailyButton.addEventListener("click", () => focusAndSearch("diario", "searchInput", query()));
     input.addEventListener("keydown", event => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -54,7 +47,6 @@
   function makeMetricInteractive(metricId, moduleName, selectId, filterValue, targetSelector) {
     const card = document.getElementById(metricId)?.closest(".metric-card, .ipt-kpi");
     if (!card) return;
-
     card.dataset.filterAction = filterValue;
     card.tabIndex = 0;
     card.setAttribute("role", "button");
@@ -84,9 +76,8 @@
     const replacements = [
       ["iptEmptyState", "Los reportes mensuales aparecerán aquí cuando existan registros disponibles."],
       ["annualEmptyState", "El archivo histórico se mostrará aquí cuando termine su carga y validación."],
-      ["vigenciaEmptyState", "Las comunas aparecerán aquí cuando exista información normativa y cartográfica para evaluar."]
+      ["vigenciaEmptyState", "Las comunas aparecerán aquí cuando exista información en el seguimiento nacional."]
     ];
-
     replacements.forEach(([id, message]) => {
       const element = document.getElementById(id);
       if (!element) return;
@@ -102,7 +93,6 @@
         resolve();
         return;
       }
-
       const script = document.createElement("script");
       script.src = src;
       script.dataset.tuiExtension = key;
@@ -121,7 +111,6 @@
         resolve();
         return;
       }
-
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = href;
@@ -137,25 +126,11 @@
 
   async function ensureLeaflet() {
     if (typeof window.L !== "undefined") return true;
-
     const candidates = [
-      {
-        css: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-        js: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-        key: "unpkg"
-      },
-      {
-        css: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css",
-        js: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
-        key: "jsdelivr"
-      },
-      {
-        css: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css",
-        js: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
-        key: "cdnjs"
-      }
+      { css: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", js: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", key: "unpkg" },
+      { css: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css", js: "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js", key: "jsdelivr" },
+      { css: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css", js: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js", key: "cdnjs" }
     ];
-
     for (const candidate of candidates) {
       try {
         await Promise.all([
@@ -167,43 +142,18 @@
         console.warn(error.message);
       }
     }
-
     return false;
   }
 
   function showMapFallback() {
     const container = document.getElementById("territorialMap");
     if (!container || container.querySelector("iframe")) return;
-    container.innerHTML = `
-      <iframe
-        title="Mapa interactivo de Chile"
-        src="https://www.openstreetmap.org/export/embed.html?bbox=-76.2%2C-56.2%2C-66.0%2C-17.2&amp;layer=mapnik"
-        style="width:100%;height:100%;min-height:520px;border:0;border-radius:16px;"
-        loading="eager"
-      ></iframe>
-    `;
-  }
-
-  async function loadNationalIptActs() {
-    window.ACTOS_IPT_GZ = "";
-    const historyRelease = "20260814-historial-2";
-    const files = Array.from(
-      { length: 10 },
-      (_value, index) => `data/actos_ipt_nacional_${String(index + 1).padStart(2, "0")}.js?v=${historyRelease}`
-    );
-
-    for (let index = 0; index < files.length; index += 1) {
-      await loadScript(files[index], `actos-ipt-nacional-${index + 1}`);
-    }
-    await loadScript(`data/actos_ipt_nacionales_finalizar.js?v=${historyRelease}`, "actos-ipt-nacional-finalizar");
-    if (window.ACTOS_IPT_NACIONALES_READY) {
-      await window.ACTOS_IPT_NACIONALES_READY;
-    }
+    container.innerHTML = `<iframe title="Mapa interactivo de Chile" src="https://www.openstreetmap.org/export/embed.html?bbox=-76.2%2C-56.2%2C-66.0%2C-17.2&amp;layer=mapnik" style="width:100%;height:100%;min-height:520px;border:0;border-radius:16px;" loading="eager"></iframe>`;
   }
 
   async function loadContentExtensions() {
     const leafletReady = await ensureLeaflet();
-    const vigenciaRelease = "20260814-linea-tiempo-1";
+    const release = "20260903-vigencia-unificada-1";
 
     try {
       await loadScript("data/noticias.js?v=20260813-noticias-1", "data-noticias");
@@ -213,26 +163,10 @@
     }
 
     try {
-      await loadNationalIptActs();
-    } catch (error) {
-      console.error("No se pudo cargar el historial nacional de actos IPT:", error);
-      window.ACTOS_IPT_NACIONALES = { resumen: { total: 0 }, actos: [], error: error.message };
-    }
-
-    try {
-      await loadScript(`vigencia-comunal-v2.js?v=${vigenciaRelease}`, "vigencia-comunal");
-      await loadScript("data/comparaciones_ipt.js", "comparaciones-ipt");
-      await loadScript(`data/comparacion_coquimbo_detallada_v2.js?v=${vigenciaRelease}`, "comparacion-coquimbo-detallada");
-      await loadScript(`data/fuentes_multifuente_ipt.js?v=${vigenciaRelease}`, "fuentes-multifuente-ipt");
-      await loadScript(`vigencia-pilotos-v2.js?v=${vigenciaRelease}`, "vigencia-pilotos");
-      await loadScript(`vigencia-estrategica.js?v=${vigenciaRelease}`, "vigencia-estrategica");
-      await loadScript(`vigencia-nacional-ui.js?v=${vigenciaRelease}`, "vigencia-nacional-ui");
-      await loadScript(`vigencia-comparacion-detallada.js?v=${vigenciaRelease}`, "vigencia-comparacion-detallada");
-      await loadScript(`vigencia-refundidos-fuentes.js?v=${vigenciaRelease}`, "vigencia-refundidos-fuentes");
-      await loadScript(`vigencia-simplificada.js?v=${vigenciaRelease}`, "vigencia-simplificada");
+      await loadScript(`vigencia-seguimiento-unificado.js?v=${release}`, "vigencia-seguimiento-unificado");
       if (typeof renderVigencia === "function") renderVigencia();
     } catch (error) {
-      console.error("No se pudo cargar la vista comunal de IPT:", error);
+      console.error("No se pudo cargar la vista unificada de IPT y vigencia:", error);
     }
 
     const renderMap = typeof window.renderTerritorialMap === "function"
@@ -251,7 +185,7 @@
     initHomeSearch();
     makeMetricInteractive("metricChanges", "diario", "statusFilter", "Con novedades", "#reportes");
     makeMetricInteractive("vigenciaMetricReview", "vigencia", "vigenciaStatusFilter", "Revisión necesaria", ".vigencia-workspace");
-    makeMetricInteractive("vigenciaMetricAlert", "vigencia", "vigenciaStatusFilter", "Desactualizado", ".vigencia-workspace");
+    makeMetricInteractive("vigenciaMetricAlert", "vigencia", "vigenciaStatusFilter", "Sin cartografía", ".vigencia-workspace");
     improveEmptyStates();
     loadContentExtensions();
   }
