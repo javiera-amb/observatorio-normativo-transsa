@@ -29,17 +29,17 @@ def test_chiguayante_es_migracion_de_version_y_no_publicable():
     assert result["current_zone_count"] == 38
 
 
-def test_chiguayante_actos_explican_todas_las_zonas_nuevas():
+def test_chiguayante_migracion_queda_estructuralmente_explicada():
     plan = version_migration.plan_for(
         version_migration.load_migration_plans(MIGRATIONS), "CHIGUAYANTE"
     )
     result = version_migration.analyze_zone_migration(plan, LEGACY_CHIGUAYANTE)
 
-    # Todo el universo vigente está explicado por continuidad de nomenclatura o actos
-    # oficiales 2015/2018. Queda una fila legacy U2 cuyo destino no se debe adivinar.
     assert result["unexplained_current_zones"] == []
-    assert result["unexplained_legacy_zones"] == ["U2"]
-    assert result["structurally_explained"] is False
+    assert result["unexplained_legacy_zones"] == []
+    assert result["structurally_explained"] is True
+    retired = {item["legacy_zone"]: item for item in result["retired_legacy_zones"]}
+    assert retired["U2"]["treatment"] == "PRESERVAR_EN_ORIGINAL_EXCLUIR_DE_VERSION_VIGENTE"
 
 
 def test_chiguayante_registra_splits_oficiales_clave():
@@ -60,7 +60,7 @@ def test_chiguayante_registra_splits_oficiales_clave():
     assert "ZRE" in current_for("RD")
 
 
-def test_migracion_no_autoriza_codigo_prc_inventado():
+def test_migracion_no_reescribe_codigos_existentes():
     plan = version_migration.plan_for(
         version_migration.load_migration_plans(MIGRATIONS), "Chiguayante"
     )

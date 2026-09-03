@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "comuna": "CHIGUAYANTE",
+  "scope": "ONLY_NEW_UNITS_IN_VERSION_MIGRATION",
+  "rule": "{RIALCOMSII}-{ZONA}",
+  "global": false,
+  "rewrite_existing_codes": false,
+  "evidence": {
+    "source": "PRC_SQL2.xlsx / PRC_CHIGUAYANTE",
+    "rows_checked": 222,
+    "rows_matching": 222,
+    "exceptions": 0,
+    "statement": "Las 222 filas actuales de Chiguayante cumplen exactamente CODIGO_PRC = RIALCOMSII + '-' + ZONA. La regla se autoriza sólo para nuevas unidades creadas durante la migración normativa de Chiguayante."
+  }
+}

@@ -72,6 +72,13 @@
     "VNR": "ZVNR",
     "ZM": "ZM"
   },
+  "legacy_retired_zones": [
+    {
+      "zone": "U2",
+      "reason": "La unidad 8211-U2 del maestro carece de usos, definición y fuente; no existe una zona U2/ZU2 en la ordenanza refundida 2024 ni en la cartografía oficial vigente de 38 zonas. Se conserva sólo en el maestro histórico y se excluye de la versión normativa vigente.",
+      "source_url": "https://www.chiguayante.cl/attachments/article/69/ordenanza_refundido2024.pdf"
+    }
+  ],
   "transformaciones_zona": [
     {
       "type": "PARTIAL_SPLIT",
