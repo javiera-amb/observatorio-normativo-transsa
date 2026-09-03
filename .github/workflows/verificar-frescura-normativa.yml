@@ -1,0 +1,28 @@
+name: Verificar frescura normativa semanal
+
+on:
+  schedule:
+    - cron: "30 9 * * 1"
+      timezone: "America/Santiago"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Comprobar actualización nacional de IPT
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Exigir revisión no mayor a 8 días
+        run: python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente
