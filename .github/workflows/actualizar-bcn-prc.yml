@@ -12,6 +12,7 @@ on:
       - ".github/workflows/actualizar-bcn-prc.yml"
       - "scripts/barrido_bcn_leychile_prc.py"
       - "scripts/refrescar_seguimiento_publico_v2.py"
+      - "scripts/validar_frescura_normativa.py"
 
 permissions:
   contents: write
@@ -41,7 +42,7 @@ jobs:
         run: pip install -r automation/requirements.txt
 
       - name: Barrer BCN LeyChile nacional
-        run: python scripts/barrido_bcn_leychile_prc.py --lookback-days 21 --bootstrap-days 730
+        run: python scripts/barrido_bcn_leychile_prc.py --lookback-days 21 --bootstrap-days 1000
 
       - name: Recalcular seguimiento normativo nacional
         run: python scripts/refrescar_seguimiento_publico_v2.py
@@ -56,15 +57,14 @@ jobs:
         run: |
           if [ -z "$(git status --porcelain -- data documentos consolidados)" ]; then
             echo "BCN revisada: no hubo cambios de archivos."
-            exit 0
+          else
+            git config user.name "Observatorio BCN Bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A data documentos consolidados
+            git commit -m "Revisión BCN LeyChile PRC $(date +'%Y-%m-%d')"
+            git pull --rebase origin main
+            git push origin main
           fi
-
-          git config user.name "Observatorio BCN Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add -A data documentos consolidados
-          git commit -m "Revisión BCN LeyChile PRC $(date +'%Y-%m-%d')"
-          git pull --rebase origin main
-          git push origin main
 
       - name: Confirmar cobertura BCN 346 de 346
         run: |
@@ -73,6 +73,7 @@ jobs:
           from pathlib import Path
           p = json.loads(Path('data/bcn_prc_candidatos.json').read_text(encoding='utf-8'))
           assert p.get('bootstrap_complete') is True
+          assert p.get('bootstrap_days', 0) >= 1000
           assert p.get('comunas_esperadas') == 346
           assert p.get('comunas_revisadas') == 346
           assert not p.get('fallos')
@@ -81,3 +82,6 @@ jobs:
               f"{p.get('actos_relevantes_acumulados', 0)} actos PRC acumulados."
           )
           PY
+
+      - name: Comprobar frescura de las tres fuentes oficiales
+        run: python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente --require-bcn
