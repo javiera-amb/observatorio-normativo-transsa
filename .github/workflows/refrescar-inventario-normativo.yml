@@ -2,14 +2,15 @@ name: Sincronizar vigencia normativa nacional
 
 on:
   schedule:
-    # Después de la sincronización diaria del Portal IPT (12:45 UTC).
-    - cron: "20 13 * * *"
+    # Reconciliación nacional posterior a los barridos de fuentes.
+    - cron: "30 14 * * *"
   push:
     branches: [main]
     paths:
       - "data/actos_ipt_nacional_*.js"
       - "data/actos_ipt_sync.json"
       - "data/ipt_reportes.js"
+      - "data/bcn_prc_candidatos.json"
       - "data/tablas_normativas_sharepoint.js"
       - "config/vigencia_actos_verificados.json"
       - "config/tablas_normativas_cobertura.json"
@@ -29,14 +30,16 @@ on:
 permissions:
   contents: write
 
+# Comparte candado con el barrido diario y el watchdog BCN. Ninguno puede
+# regenerar/publicar el mismo inventario mientras otro escritor está activo.
 concurrency:
-  group: sincronizar-vigencia-normativa-nacional
-  cancel-in-progress: true
+  group: observatorio-normativo-escritura
+  cancel-in-progress: false
 
 jobs:
   refrescar:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,6 +52,9 @@ jobs:
           cache-dependency-path: automation/requirements.txt
 
       - run: pip install -r automation/requirements.txt
+
+      - name: Actualizar base antes de regenerar
+        run: git pull --ff-only origin main
 
       - name: Probar gate y certificación fail-closed
         run: python -m unittest discover -s tests -p 'test_vigencia_nacional.py' -v
@@ -75,18 +81,9 @@ jobs:
                   raise SystemExit(f'Formato inválido: {path}')
               return json.loads(raw[len(prefix):-1])
 
-          tracking = assignment(
-              'data/seguimiento_normativo.js',
-              'window.SEGUIMIENTO_NORMATIVO = '
-          )
-          vigencia = assignment(
-              'data/vigencia_tablas_normativas.js',
-              'window.VIGENCIA_TABLAS_NORMATIVAS = '
-          )
-          cola = assignment(
-              'data/cola_tablas_normativas.js',
-              'window.COLA_TABLAS_NORMATIVAS = '
-          )
+          tracking = assignment('data/seguimiento_normativo.js', 'window.SEGUIMIENTO_NORMATIVO = ')
+          vigencia = assignment('data/vigencia_tablas_normativas.js', 'window.VIGENCIA_TABLAS_NORMATIVAS = ')
+          cola = assignment('data/cola_tablas_normativas.js', 'window.COLA_TABLAS_NORMATIVAS = ')
 
           comunas = tracking.get('comunas') or []
           vigencia_rows = vigencia.get('comunas') or []
@@ -115,15 +112,12 @@ jobs:
               if key in seen:
                   raise SystemExit(f'Comuna duplicada en seguimiento: {region} / {comuna}')
               seen.add(key)
-
               expected = int(row.get('actos_posteriores') or 0)
               detail = row.get('actos_posteriores_detalle') or []
               ids = [str(item.get('official_id') or item.get('id') or '').strip() for item in detail]
               ids = [value for value in ids if value]
               if expected != len(ids) or len(ids) != len(set(ids)):
-                  raise SystemExit(
-                      f'Inventario inconsistente en {comuna}: contador={expected}, ids={len(ids)}.'
-                  )
+                  raise SystemExit(f'Inventario inconsistente en {comuna}: contador={expected}, ids={len(ids)}.')
 
           tracking_names = {str(row.get('comuna') or '').strip().casefold() for row in comunas}
           vigencia_names = {str(row.get('comuna') or '').strip().casefold() for row in vigencia_rows}
@@ -136,22 +130,10 @@ jobs:
               blockers = row.get('bloqueantes_vigencia') or []
               if row.get('vigencia_certificada'):
                   certified += 1
-                  if blockers:
-                      raise SystemExit(
-                          f"Certificación inválida con bloqueantes: {row.get('comuna')}"
-                      )
-                  if row.get('estado_vigencia') != 'VIGENTE_SINCRONIZADA':
-                      raise SystemExit(
-                          f"Certificación con estado incoherente: {row.get('comuna')}"
-                      )
-                  if not row.get('version_normativa_id'):
-                      raise SystemExit(
-                          f"Certificación sin versión normativa: {row.get('comuna')}"
-                      )
+                  if blockers or row.get('estado_vigencia') != 'VIGENTE_SINCRONIZADA' or not row.get('version_normativa_id'):
+                      raise SystemExit(f"Certificación incoherente: {row.get('comuna')}")
               elif row.get('estado_vigencia') == 'VIGENTE_SINCRONIZADA':
-                  raise SystemExit(
-                      f"Comuna marcada sincronizada sin certificación: {row.get('comuna')}"
-                  )
+                  raise SystemExit(f"Comuna sincronizada sin certificación: {row.get('comuna')}")
 
           if int(vigencia.get('certificadas') or 0) != certified:
               raise SystemExit('El contador global de certificadas no coincide con el detalle.')
@@ -185,5 +167,4 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/seguimiento_normativo.js data/vigencia_tablas_normativas.js data/cola_tablas_normativas.js
           git commit -m "data: sincronizar vigencia normativa nacional"
-          git pull --rebase origin main
           git push origin main
