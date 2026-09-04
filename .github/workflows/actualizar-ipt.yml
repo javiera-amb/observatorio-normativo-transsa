@@ -23,8 +23,10 @@ on:
 permissions:
   contents: write
 
+# Mismo candado que BCN y la reconciliación nacional: un solo escritor de
+# seguimiento/certificación/cola a la vez, sin cancelar una revisión en curso.
 concurrency:
-  group: actualizar-ipt-diaria
+  group: observatorio-normativo-escritura
   cancel-in-progress: false
 
 jobs:
@@ -36,6 +38,8 @@ jobs:
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -49,6 +53,9 @@ jobs:
           pip install -r automation/requirements.txt
           pip install playwright
           python -m playwright install --with-deps chromium
+
+      - name: Actualizar base antes de revisar fuentes
+        run: git pull --ff-only origin main
 
       - name: Sincronizar Portal IPT MINVU
         id: portal
