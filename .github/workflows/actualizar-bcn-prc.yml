@@ -5,23 +5,15 @@ on:
     - cron: "15 9 * * 1"
       timezone: "America/Santiago"
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/actualizar-bcn-prc.yml"
-      - "scripts/barrido_bcn_leychile_prc.py"
-      - "scripts/barrido_bcn_leychile_prc_v2.py"
-      - "scripts/barrido_bcn_leychile_prc_v3.py"
-      - "scripts/refrescar_seguimiento_publico_v2.py"
-      - "scripts/validar_frescura_normativa.py"
 
 permissions:
   contents: write
 
+# Todos los procesos que regeneran/publican seguimiento normativo usan la misma
+# exclusión mutua. Así nunca intentan reescribir seguimiento_normativo.js a la vez.
 concurrency:
-  group: actualizar-bcn-prc
-  cancel-in-progress: true
+  group: observatorio-normativo-escritura
+  cancel-in-progress: false
 
 jobs:
   revisar-bcn:
@@ -32,6 +24,8 @@ jobs:
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -42,6 +36,9 @@ jobs:
 
       - name: Instalar dependencias
         run: pip install -r automation/requirements.txt
+
+      - name: Actualizar base antes del barrido
+        run: git pull --ff-only origin main
 
       - name: Barrer BCN LeyChile nacional
         run: python scripts/barrido_bcn_leychile_prc_v3.py --lookback-days 21 --bootstrap-days 1000
@@ -55,20 +52,7 @@ jobs:
       - name: Validar estructura de la TUI
         run: python automation/validar_sitio.py
 
-      - name: Guardar hallazgos BCN y seguimiento
-        run: |
-          if [ -z "$(git status --porcelain -- data documentos consolidados)" ]; then
-            echo "BCN revisada: no hubo cambios de archivos."
-          else
-            git config user.name "Observatorio BCN Bot"
-            git config user.email "actions@users.noreply.github.com"
-            git add -A data documentos consolidados
-            git commit -m "Revisión BCN LeyChile PRC $(date +'%Y-%m-%d')"
-            git pull --rebase origin main
-            git push origin main
-          fi
-
-      - name: Confirmar cobertura BCN 346 de 346
+      - name: Confirmar cobertura BCN 346 de 346 antes de publicar
         run: |
           python - <<'PY'
           import json
@@ -84,6 +68,18 @@ jobs:
               f"{p.get('actos_relevantes_acumulados', 0)} actos PRC acumulados."
           )
           PY
+
+      - name: Guardar hallazgos BCN y seguimiento
+        run: |
+          if [ -z "$(git status --porcelain -- data documentos consolidados)" ]; then
+            echo "BCN revisada: no hubo cambios de archivos."
+          else
+            git config user.name "Observatorio BCN Bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A data documentos consolidados
+            git commit -m "Revisión BCN LeyChile PRC $(date +'%Y-%m-%d')"
+            git push origin main
+          fi
 
       - name: Comprobar frescura de las tres fuentes oficiales
         run: python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente --require-bcn
