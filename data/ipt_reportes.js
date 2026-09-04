@@ -2,8 +2,8 @@ window.IPT_REPORTES = [
   {
     "periodo": "2026-09",
     "titulo": "Actualizaciones IPT · 2026-09",
-    "fecha_generacion": "2026-09-04 09:55",
-    "ultima_revision_semanal": "2026-09-04 09:55",
+    "fecha_generacion": "2026-09-04 10:36",
+    "ultima_revision_semanal": "2026-09-04 10:36",
     "ultima_edicion_diario_oficial": "2026-09-04",
     "edicion_diario_oficial": "44.542.",
     "resumen_ejecutivo": "Barrido oficial de la edición 44.542.: 1 publicaciones normativas inspeccionadas y 1 vinculaciones comunales nuevas/detectadas.",
