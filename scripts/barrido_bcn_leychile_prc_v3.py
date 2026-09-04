@@ -3,9 +3,9 @@ from __future__ import annotations
 """Barrido BCN v3 con fallback a Datos Abiertos/SPARQL oficial.
 
 La ruta principal sigue siendo la ficha comunal "Normas que la rigen". Si esa
-interfaz falla para una comuna (por ejemplo, caracteres especiales), consultamos
-el dataset estructurado oficial de normas de BCN. Una comuna sólo cuenta como
-revisada si una de las dos fuentes oficiales responde de forma verificable.
+interfaz falla para una comuna —ya sea al descargarla o al interpretarla— se
+consulta el dataset estructurado oficial de normas de BCN. Una comuna sólo cuenta
+como revisada si una de las dos rutas oficiales responde de forma verificable.
 """
 
 import re
@@ -27,6 +27,8 @@ core.BCN_QUERY_ALIASES.update(
 
 SPARQL_URL = "https://datos.bcn.cl/sparql"
 ORIGINAL_PARSE_REPORT = core.parse_report
+ORIGINAL_GET_TEXT = core.get_text
+FALLBACK_ROWS_BY_COMMUNE: dict[str, list[dict[str, str]]] = {}
 
 
 def _binding_value(binding: dict, key: str) -> str:
@@ -57,7 +59,6 @@ def _org_tokens(commune: str) -> str:
     words = [word for word in core.norm(commune).split() if word]
     if not words:
         raise RuntimeError("Nombre comunal vacío para fallback BCN SPARQL.")
-    # Ej.: O'Higgins -> O.*HIGGINS. Exigimos además que sea municipalidad.
     return ".*".join(re.escape(word.upper()) for word in words)
 
 
@@ -77,7 +78,6 @@ LIMIT 20
 '''
     org_rows = _sparql(http, org_query)
     if not org_rows:
-        # Algunas versiones históricas usan subclases sin el rdf:type esperado.
         org_query = f'''
 PREFIX bcnnorms: <http://datos.bcn.cl/ontologies/bcn-norms#>
 SELECT DISTINCT ?org ?orgname
@@ -93,8 +93,6 @@ LIMIT 20
             f"BCN SPARQL no encontró organismo municipal para {commune!r}."
         )
 
-    # Preferimos el nombre que termina exactamente en la comuna para evitar
-    # confundir municipalidades con organismos regionales que contengan O'Higgins.
     candidates = []
     commune_key = core.norm(commune)
     for item in org_rows:
@@ -140,10 +138,6 @@ ORDER BY DESC(?date)
         document = _binding_value(item, "doc")
         norma = _binding_value(item, "norma")
         identifier = _binding_value(item, "identifier")
-        # hasHtmlDocument es la mejor fuente para abrir cuerpo. Si BCN no lo
-        # entrega, el recurso RDF sigue siendo evidencia estructurada y el título
-        # puede bastar para el filtro inicial; para títulos ambiguos el core
-        # intentará abrirlo y fallará antes de publicar una falsa revisión.
         url = document or norma
         if identifier and identifier.isdigit():
             url = f"https://www.bcn.cl/leychile/navegar?idNorma={identifier}"
@@ -160,25 +154,65 @@ ORDER BY DESC(?date)
     return rows
 
 
-def parse_report_with_fallback(html: str, page_url: str) -> list[dict[str, str]]:
+def _commune_from_report_url(url: str) -> str:
+    parsed = urlparse(url)
+    if "bcn.cl" not in parsed.netloc or "reportescomunales/normas.html" not in parsed.path:
+        return ""
+    query = parse_qs(parsed.query)
+    return str((query.get("com") or [""])[0]).strip()
+
+
+def get_text_with_fallback(
+    http: requests.Session,
+    url: str,
+    *,
+    attempts: int = 3,
+) -> str:
     try:
-        return ORIGINAL_PARSE_REPORT(html, page_url)
+        return ORIGINAL_GET_TEXT(http, url, attempts=attempts)
     except RuntimeError as primary_error:
-        query = parse_qs(urlparse(page_url).query)
-        commune = str((query.get("com") or [""])[0]).strip()
+        commune = _commune_from_report_url(url)
         if not commune:
-            raise primary_error
+            raise
         try:
             rows = _sparql_report(commune)
-        except Exception as fallback_error:  # noqa: BLE001 - queremos causa doble
+        except Exception as fallback_error:  # noqa: BLE001
             raise RuntimeError(
                 f"Fallaron ficha SIIT y fallback SPARQL para {commune}: "
                 f"SIIT={primary_error}; SPARQL={type(fallback_error).__name__}: {fallback_error}"
             ) from fallback_error
+        FALLBACK_ROWS_BY_COMMUNE[core.norm(commune)] = rows
+        print(
+            f"BCN fallback SPARQL activado por error HTTP para {commune}: "
+            f"{len(rows)} normas recuperadas."
+        )
+        return "<html><body>BCN SPARQL fallback</body></html>"
+
+
+def parse_report_with_fallback(html: str, page_url: str) -> list[dict[str, str]]:
+    commune = _commune_from_report_url(page_url)
+    cached = FALLBACK_ROWS_BY_COMMUNE.get(core.norm(commune)) if commune else None
+    if cached is not None:
+        return cached
+
+    try:
+        return ORIGINAL_PARSE_REPORT(html, page_url)
+    except RuntimeError as primary_error:
+        if not commune:
+            raise primary_error
+        try:
+            rows = _sparql_report(commune)
+        except Exception as fallback_error:  # noqa: BLE001
+            raise RuntimeError(
+                f"Fallaron ficha SIIT y fallback SPARQL para {commune}: "
+                f"SIIT={primary_error}; SPARQL={type(fallback_error).__name__}: {fallback_error}"
+            ) from fallback_error
+        FALLBACK_ROWS_BY_COMMUNE[core.norm(commune)] = rows
         print(f"BCN fallback SPARQL usado para {commune}: {len(rows)} normas recuperadas.")
         return rows
 
 
+core.get_text = get_text_with_fallback
 core.parse_report = parse_report_with_fallback
 
 
