@@ -11,6 +11,9 @@ on:
     paths:
       - ".github/workflows/actualizar-ipt.yml"
       - "scripts/barrido_ipt_diario_oficial.py"
+      - "scripts/barrido_bcn_leychile_prc.py"
+      - "scripts/barrido_bcn_leychile_prc_v2.py"
+      - "scripts/barrido_bcn_leychile_prc_v3.py"
       - "scripts/sincronizar_portal_ipt.py"
       - "scripts/sincronizar_portal_ipt_v2.py"
       - "scripts/refrescar_seguimiento_publico.py"
@@ -26,9 +29,9 @@ concurrency:
 
 jobs:
   actualizar:
-    name: Revisar IPT, actos y vigencia de Chile
+    name: Revisar IPT, BCN, Diario Oficial y vigencia de Chile
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
 
     steps:
       - name: Descargar repositorio
@@ -57,6 +60,11 @@ jobs:
         continue-on-error: true
         run: python scripts/barrido_ipt_diario_oficial.py
 
+      - name: Revisar BCN LeyChile nacional
+        id: bcn
+        continue-on-error: true
+        run: python scripts/barrido_bcn_leychile_prc_v3.py --lookback-days 21 --bootstrap-days 1000
+
       - name: Refrescar inventario normativo detallado nacional
         run: python scripts/refrescar_seguimiento_publico_v2.py
 
@@ -72,7 +80,7 @@ jobs:
       - name: Guardar cambios normativos disponibles
         id: publicar
         run: |
-          if git diff --quiet; then
+          if [ -z "$(git status --porcelain -- data documentos consolidados)" ]; then
             echo "La revisión terminó sin cambios de archivos."
             exit 0
           fi
@@ -84,15 +92,19 @@ jobs:
           git pull --rebase origin main
           git push origin main
 
-      - name: Comprobar frescura integral
+      - name: Comprobar frescura integral de las tres fuentes
         if: always() && steps.publicar.outcome == 'success'
         run: |
-          python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente
+          python scripts/validar_frescura_normativa.py --max-age-days 8 --require-multifuente --require-bcn
           if [ "${{ steps.portal.outcome }}" != "success" ]; then
-            echo "El Portal IPT no pudo sincronizarse en esta ejecución; se conservó su último snapshot y continuó el barrido del Diario Oficial."
+            echo "El Portal IPT no pudo sincronizarse en esta ejecución."
             exit 1
           fi
           if [ "${{ steps.multifuente.outcome }}" != "success" ]; then
             echo "El barrido del Diario Oficial falló en esta ejecución."
+            exit 1
+          fi
+          if [ "${{ steps.bcn.outcome }}" != "success" ]; then
+            echo "El barrido nacional BCN LeyChile falló en esta ejecución."
             exit 1
           fi
