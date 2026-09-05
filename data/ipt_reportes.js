@@ -2,11 +2,11 @@ window.IPT_REPORTES = [
   {
     "periodo": "2026-09",
     "titulo": "Actualizaciones IPT · 2026-09",
-    "fecha_generacion": "2026-09-04 10:36",
-    "ultima_revision_semanal": "2026-09-04 10:36",
-    "ultima_edicion_diario_oficial": "2026-09-04",
-    "edicion_diario_oficial": "44.542.",
-    "resumen_ejecutivo": "Barrido oficial de la edición 44.542.: 1 publicaciones normativas inspeccionadas y 1 vinculaciones comunales nuevas/detectadas.",
+    "fecha_generacion": "2026-09-05 09:35",
+    "ultima_revision_semanal": "2026-09-05 09:35",
+    "ultima_edicion_diario_oficial": "2026-09-05",
+    "edicion_diario_oficial": "44.543.",
+    "resumen_ejecutivo": "Barrido oficial de la edición 44.543.: 0 publicaciones normativas inspeccionadas y 0 vinculaciones comunales nuevas/detectadas.",
     "cambios": [
       {
         "region": "Metropolitana de Santiago",
