@@ -1,5 +1,5 @@
 window.VIGENCIA_CARTOGRAFICA = {
-  "fecha_generacion": "2026-09-05 09:40",
+  "fecha_generacion": "2026-09-06 10:19",
   "resumen": {
     "instrumentos": 1,
     "actualizados": 0,
